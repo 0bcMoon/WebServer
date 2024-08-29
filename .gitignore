@@ -6,7 +6,6 @@
 *.lo
 *.o
 *.obj
-
 # Precompiled Headers
 *.gch
 *.pch
@@ -30,3 +29,11 @@
 *.exe
 *.out
 *.app
+
+
+# user
+
+obj/
+compile_commands.json
+webserv
+serveTest
