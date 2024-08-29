@@ -6,7 +6,7 @@
 #    By: hibenouk <hibenouk@1337.ma>                +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/08/29 18:18:38 by hibenouk          #+#    #+#              #
-#    Updated: 2024/08/29 18:39:55 by hibenouk         ###   ########.fr        #
+#    Updated: 2024/08/29 18:48:12 by zkotbi           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -27,7 +27,7 @@ INC = $(shell find . -name "*.hpp" | grep -v "test")
 CFLAGS = -std=c++17 -Wall -Wextra -Werror
 
 GLIB = ./gtest/lib/libgtest.a  \
-	   /Users/hibenouk/Desktop/WebServer/gtest/lib/libgtest_main.a \
+	   ./gtest/lib/libgtest_main.a \
 		-lpthread
 
 GINC = ./gtest/googletest/include

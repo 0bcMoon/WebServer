@@ -34,6 +34,7 @@ re : fclean all
 
 test:
 	make -f MakeTest
+	@./serverTest
 
 
 .PHONY: all clean fclean re test
