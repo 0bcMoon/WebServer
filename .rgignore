@@ -1,0 +1,9 @@
+# Ignore all .log files
+*.log
+
+# Ignore the build directory
+build/
+
+temp/
+gtest/
+
