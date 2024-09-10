@@ -1,8 +1,11 @@
 #include <iostream>
-
-int main(int argc, char **argv)
+#include "Tokenizer.hpp"
+int main()
 {
-	(void)argc;
-	(void)argv;
-	std::cout << "Welcome to the web server!\n";
+	{
+		Tokenizer tokenizer;
+		if (!tokenizer.readConfig("config/server.conf"))
+			return (1);
+		tokenizer.CreateTokens();
+	}
 }

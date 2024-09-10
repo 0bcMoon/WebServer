@@ -5,8 +5,9 @@ TEST(Welcome, Welcome)
 {
 	std::string expected_out = "Welcome to the web server!\n";
 	testing::internal::CaptureStdout();
-	std::cout << "Welcome to the web server\n";
+	std::cout << "Welcome to the web server!\n";
 	std::string output = testing::internal::GetCapturedStdout();
+	// testing::internal::
 	EXPECT_EQ(expected_out, output);
 }
 

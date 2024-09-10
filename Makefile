@@ -8,8 +8,9 @@ OBJ = $(addprefix $(OBJ_DIR), $(SRC:.cpp=.o))
 
 CC = c++
 
-INC = $(shell find . -name "*.hpp" | grep -v "test")
+INCD = $(shell find . -name "*.hpp" | grep -v "test")
 
+INC = include/
 CFLAGS = -std=c++98 -Wall -Wextra -Werror
 
 
@@ -20,7 +21,7 @@ all : $(NAME)
 $(NAME) : $(OBJ)
 	$(CC)  $(CFLAGS)  $(OBJ)  -o $(NAME) 
 
-$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp $(INC)
+$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp $(INCD)
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -I$(INC)  -c $< -o $@
 
@@ -28,6 +29,7 @@ clean :
 	rm -rf $(OBJ_DIR)
 
 fclean : clean
+	make -f MakeTest fclean
 	rm -f $(NAME)
 
 re : fclean all
