@@ -1,4 +1,7 @@
 #include "Tokenizer.hpp"
+#include <iostream>
+#include <string>
+#include "ParserException.hpp"
 
 Tokenizer::Tokenizer()
 {
@@ -12,26 +15,25 @@ Tokenizer::~Tokenizer()
 	delete this->config;
 }
 
-bool Tokenizer::readConfig(std::string path)
+void Tokenizer::readConfig(const std::string path)
 {
 	std::string line;
+	std::ifstream configFile;
 
-	this->configFile.open(path);
-	if (!this->configFile.is_open())
+	configFile.open(path);
+	if (!configFile.is_open())
+		throw ParserException("WebServ: could not open file: " + path);
+	while (std::getline(configFile, line))
 	{
-		std::cout << "Error: could not open file :" << path << std::endl;
-		return (false);
-	}
-	while (std::getline(this->configFile, line))
+		line.push_back('\n'); // getline trim last \n in line 
 		*this->config += line;
-	if (!this->configFile.eof())
-	{
-		std::cout << "Warning: file reading stopped before reaching the end" << std::endl;
-		this->configFile.close();
-		return false;
 	}
-	this->configFile.close();
-	return (true);
+	if (!configFile.eof())
+	{
+		configFile.close();
+		throw ParserException("WebServ: could not open file: " + path);
+	}
+	configFile.close();
 }
 
 bool Tokenizer::IsId(char c) const
@@ -44,15 +46,41 @@ bool Tokenizer::IsSpace(char c) const
 	return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r');
 }
 
+std::string Tokenizer::getQuotedString(size_t &offset)
+{
+	std::string token = "";
+	char quote;
+	if (offset >= this->config->size())
+		return "";
+	quote = this->config->at(offset);
+	if (quote != '"' && quote != '\'')
+		return "";
+	token.push_back(quote);
+	offset++;
+	while (offset < this->config->size() && this->config->at(offset) != quote)
+		token.push_back(this->config->at(offset++));
+	if (offset >= this->config->size())
+		throw ParserException("Error: missing closing quote");
+	offset++;
+	token.push_back(quote);
+	if (!this->IsSpace(this->config->at(offset)))
+		throw ParserException("Error: unexpected  token: " + std::string(1, this->config->at(offset)));// cpp  whats i can do else 
+	return token;
+}
+
 std::string Tokenizer::getNextToken()
 {
-	static size_t offset = 0;
-	std::string token;
+	static size_t offset;
+	std::string token = "";
 
 	while (offset < this->config->size() && IsSpace(this->config->at(offset)))
 		offset++;
+	token = getQuotedString(offset);
+	if (token != "")
+		return token;
 	if (offset < this->config->size() && IsId(this->config->at(offset)))
 		return std::string(1, this->config->at(offset++));
+
 	while (offset < this->config->size() && !IsSpace(this->config->at(offset)) && !this->IsId(this->config->at(offset)))
 		token.push_back((*this->config)[offset++]);
 	return token;
@@ -68,16 +96,16 @@ void Tokenizer::CreateTokens()
 	for (size_t i = 0; i < this->tokens->size(); i++)
 	{
 		if (this->tokens->at(i) == "{")
-		{
-			std::cout << this->tokens->at(i) << std::endl;
 			level++;
-		}
-		if (this->tokens->at(i) == "}")
-		{
-			std::cout << this->tokens->at(i) << std::endl;
+		else if (this->tokens->at(i) == "}")
 			level--;
+		if (this->tokens->at(i) == "{")
+		{
+			if (level > 0)
+				std::cout << std::string((level - 1) * 4, ' ');
 		}
 		else
 			std::cout << std::string(level * 4, ' ');
+		std::cout << this->tokens->at(i) << std::endl;
 	}
 }
