@@ -16,7 +16,7 @@ CFLAGS = -std=c++98 -Wall -Wextra -Werror
 
 NAME = webserv
 
-all : $(NAME)
+all : $(NAME) run
 
 $(NAME) : $(OBJ)
 	$(CC)  $(CFLAGS)  $(OBJ)  -o $(NAME) 
@@ -37,6 +37,8 @@ re : fclean all
 test:
 	make -f MakeTest
 	@./serverTest
+run :
+	@./$(NAME)
 
 
 .PHONY: all clean fclean re test

@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#define PORT 80
+#define PORT 8080
 #define BUFFER_SIZE 4096
 
 void error(const char *msg) {
@@ -21,9 +21,8 @@ int main() {
     char buffer[BUFFER_SIZE];
     const char *host = "localhost";
     const char *request = 
-        "POST / HTTP/1.1\r\n"
-        "Host: ana\r\n"
-        "JLK: ana\r\n"
+        "GET / HTTP/1.1\r\n"
+        "Host: localhost\r\n"
         "Connection: close\r\n"
         "\r\n";
 
@@ -33,6 +32,7 @@ int main() {
         fprintf(stderr, "Error: no such host\n");
         exit(EXIT_FAILURE);
     }
+	printf("server->h_name: %s\n", server->h_name);
 
     // Create a socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -51,18 +51,9 @@ int main() {
         error("Error connecting");
     }
 
-
     if (write(sockfd, request, strlen(request)) < 0) {
         error("Error writing to socket");
-    }
-    // Send the HTTP GET request
-    // if (write(sockfd, request, 30) < 0) {
-    //     error("Error writing to socket");
-    // }
-	// sleep(2);
- //    if (write(sockfd, request + 31, 26) < 0) {
- //        error("Error writing to socket");
-	// }
+	}
 
     // Read the response
     bzero(buffer, BUFFER_SIZE);
