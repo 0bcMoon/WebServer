@@ -1,7 +1,10 @@
 #include "Tokenizer.hpp"
 #include <iostream>
+#include <stack>
 #include <string>
+#include "HttpContext.hpp"
 #include "ParserException.hpp"
+#include "Server.hpp"
 
 Tokenizer::Tokenizer()
 {
@@ -108,4 +111,27 @@ void Tokenizer::CreateTokens()
 			std::cout << std::string(level * 4, ' ');
 		std::cout << this->tokens->at(i) << std::endl;
 	}
+}
+Server * parseServer()
+{
+	Server *server = new Server;
+
+
+	return (server);
+}
+HttpContext *Tokenizer::parseConfig()
+{
+	HttpContext *context = new HttpContext;
+	std::stack<std::string> stack;
+	if (this->tokens->size() == 0)
+		throw ParserException("Error: empty config");
+	else if (this->tokens->at(0) != "http")
+		throw ParserException("Error: missing http block");
+	for (size_t i = 0; i < this->tokens->size(); i++)
+	{
+		std::string	&token  =this->tokens->at(i);;
+
+
+	}
+	// return context;
 }

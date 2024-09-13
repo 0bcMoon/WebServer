@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include "HttpContext.hpp"
 
 class Tokenizer
 {
@@ -20,6 +21,7 @@ class Tokenizer
   public:
 	void readConfig(const std::string path);
 	void CreateTokens();
+	HttpContext *parseConfig();
 	Tokenizer();
 	~Tokenizer();
 };
