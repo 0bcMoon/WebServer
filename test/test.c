@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#define PORT 80
+#define PORT 8080
 #define BUFFER_SIZE 4096
 
 void error(const char *msg) {
@@ -21,11 +21,14 @@ int main() {
     char buffer[BUFFER_SIZE];
     const char *host = "localhost";
     const char *request = 
-        "POST / HTTP/1.1\r\n"
-        "Host: ana\r\n"
-        "JLK: ana\r\n"
-        "Connection: close\r\n"
-        "\r\n";
+        "GET /  HTTP/1.000000000000009\r\n"
+        // "Connection: close\r\n"
+		// "Content-Length: 67"
+		"Host:ana\r\n"
+        "\r\n"
+		"JLK: ana\r\n"
+		"hjkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkklllllllllllllll"
+		;
 
     // Resolve the hostname
     server = gethostbyname(host);
