@@ -1,10 +1,11 @@
 #include "Tokenizer.hpp"
-#include <iostream>
-#include <stack>
-#include <string>
+#include "DataType.hpp"
 #include "HttpContext.hpp"
 #include "ParserException.hpp"
 #include "Server.hpp"
+#include <iostream>
+#include <stack>
+#include <string>
 
 Tokenizer::Tokenizer()
 {
@@ -23,12 +24,12 @@ void Tokenizer::readConfig(const std::string path)
 	std::string line;
 	std::ifstream configFile;
 
-	configFile.open(path);
+	configFile.open(path.c_str());
 	if (!configFile.is_open())
 		throw ParserException("WebServ: could not open file: " + path);
 	while (std::getline(configFile, line))
 	{
-		line.push_back('\n'); // getline trim last \n in line 
+		line.push_back('\n'); // getline trim last \n in line
 		*this->config += line;
 	}
 	if (!configFile.eof())
@@ -39,7 +40,7 @@ void Tokenizer::readConfig(const std::string path)
 	configFile.close();
 }
 
-bool Tokenizer::IsId(char c) const
+bool Tokenizer::IsId(char c)
 {
 	return (c == '{' || c == '}' || c == ';');
 }
@@ -67,7 +68,8 @@ std::string Tokenizer::getQuotedString(size_t &offset)
 	offset++;
 	token.push_back(quote);
 	if (!this->IsSpace(this->config->at(offset)))
-		throw ParserException("Error: unexpected  token: " + std::string(1, this->config->at(offset)));// cpp  whats i can do else 
+		throw ParserException("Error: unexpected  token: " +
+							  std::string(1, this->config->at(offset))); // cpp  whats i can do else
 	return token;
 }
 
@@ -85,7 +87,9 @@ std::string Tokenizer::getNextToken()
 		return std::string(1, this->config->at(offset++));
 
 	while (offset < this->config->size() && !IsSpace(this->config->at(offset)) && !this->IsId(this->config->at(offset)))
+	{
 		token.push_back((*this->config)[offset++]);
+	}
 	return token;
 }
 
@@ -95,43 +99,38 @@ void Tokenizer::CreateTokens()
 	while ((token = this->getNextToken()) != "")
 		this->tokens->push_back(token);
 
-	int level = 0;
-	for (size_t i = 0; i < this->tokens->size(); i++)
-	{
-		if (this->tokens->at(i) == "{")
-			level++;
-		else if (this->tokens->at(i) == "}")
-			level--;
-		if (this->tokens->at(i) == "{")
-		{
-			if (level > 0)
-				std::cout << std::string((level - 1) * 4, ' ');
-		}
-		else
-			std::cout << std::string(level * 4, ' ');
-		std::cout << this->tokens->at(i) << std::endl;
-	}
+	// int level = 0;
+	// for (size_t i = 0; i < this->tokens->size(); i++)
+	// {
+	// 	if (this->tokens->at(i) == "{")
+	// 		level++;
+	// 	else if (this->tokens->at(i) == "}")
+	// 		level--;
+	// 	if (this->tokens->at(i) == "{")
+	// 	{
+	// 		if (level > 0)
+	// 			std::cout << std::string((level - 1) * 4, ' ');
+	// 	}
+	// 	else
+	// 		std::cout << std::string(level * 4, ' ');
+	// 	std::cout << this->tokens->at(i) << std::endl;
+	// }
 }
-Server * parseServer()
-{
-	Server *server = new Server;
 
-
-	return (server);
-}
 HttpContext *Tokenizer::parseConfig()
 {
-	HttpContext *context = new HttpContext;
-	std::stack<std::string> stack;
+	HttpContext		*context;
+	tokens_it		token; // typedef of vector<string>::it;
+	tokens_it		end;
+
+	end = this->tokens->end();
 	if (this->tokens->size() == 0)
 		throw ParserException("Error: empty config");
-	else if (this->tokens->at(0) != "http")
-		throw ParserException("Error: missing http block");
-	for (size_t i = 0; i < this->tokens->size(); i++)
+	context = new HttpContext;
+	for (token = this->tokens->begin(); token != end; token++)
 	{
-		std::string	&token  =this->tokens->at(i);;
-
-
+		if (*token == "server")
+			context->pushServer(token, end);
 	}
-	// return context;
+	return (context);
 }

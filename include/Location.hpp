@@ -13,5 +13,6 @@ class Location
 		GlobalParam					globalParam;
 	public:
 		Location(std::string &path);
+		Location();
 };
 #endif

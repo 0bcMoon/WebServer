@@ -14,11 +14,11 @@ class Tokenizer
 	std::vector<std::string> *tokens;
 	std::string getNextToken();
 	bool IsSpace(char c) const ;
-	bool IsId(char c) const ;
 	std::string getQuotedString(size_t &offset);
 
 
   public:
+	static bool IsId(char c);
 	void readConfig(const std::string path);
 	void CreateTokens();
 	HttpContext *parseConfig();
