@@ -5,44 +5,65 @@
 #include <string>
 #include <vector>
 
-typedef std::vector<std::string>::iterator tokens_it;
-
-struct CGI 
-{
-	std::string cgiPath;
-	std::string cgiExt;
-	CGI() 
-		: cgiPath(""), cgiExt("") {}
-	CGI(std::string &path, std::string &ext) 
-		: cgiPath(path), cgiExt(ext) {}
-};
+typedef std::vector<std::string>::iterator Tokens;
 
 struct ErrorPage
 {
+	bool IsRedirection;
 	std::map<int, std::string> errorPages;
 	ErrorPage(); // todo default pages
 };
 
+
 struct GlobalParam
 {
-	std::vector<std::string>	errorPages;
-	std::string					accessLog;
-	std::string					errorLog;
-	CGI							cgi;
-	bool						autoIndex;
-	long						maxBodySize; // in bytes
-	std::vector<std::string>	indexes;
-	std::string					root;
+	private:
+		std::string							accessLog;
+		std::string							errorLog;
 
-	// todo add setters and getters
+		std::string							root;
+		bool								autoIndex;
+		long								maxBodySize; // in bytes
+		long								maxHeaderSize; // in bytes
+		std::vector<ErrorPage>				errorPages;
+		std::map<std::string, std::string>	cgi_map;
+		std::vector<std::string>			indexes;
+
+		void validateOrFaild(Tokens &token, Tokens &end);
+	public:
+		static bool IsId(std::string &token);
+
+		// getter and setter
+		void setRoot(Tokens &token, Tokens &end);
+		std::string getRoot() const;
+
+		void setAutoIndex(Tokens &token, Tokens &end);
+		bool getAutoIndex() const;
+
+		void setAccessLog(Tokens &token, Tokens &end);
+		std::string getAccessLog() const;
+
+		void setErrorLog(Tokens &token, Tokens &end);
+		std::string getErrorLog() const;
+
+		void setMaxBodySize(Tokens &token, Tokens &end);
+		long getMaxBodySize() const ;
+
+		void setMaxHeaderSize(Tokens &token, Tokens &end);
+		long getMaxHeaderSize() const;
+
+		void setIndexes(Tokens &token, Tokens &end);
+		// TODO Indexes getter may be with caching ??
+
+		void setCGI(Tokens &token, Tokens &end);
+		// TODO CGI getter may be with caching ??
+
+		void setErrorPages(Tokens &token, Tokens &end);
+
+ 
+
 };
 
-enum e_level
-{
-	SERVER,
-	LOCATION,
-	L_BRACE,
-	R_BRACE,
-};
+
 
 #endif	
