@@ -10,7 +10,7 @@ Server::Server()
 }
 
 
-void Server::pushLocation(tokens_it &token, tokens_it &end)
+void Server::pushLocation(Tokens &token, Tokens &end)
 {
 	Location *location;
 
@@ -26,10 +26,10 @@ void Server::pushLocation(tokens_it &token, tokens_it &end)
 	if (token == end && *token != "{")
 		throw ParserException("Unexpact token: " + *token);
 	token++;
-	std::cout << "Location\n";
+	std::cout << "\n\t\t--->Location<---\n";
 	while (token != end && *token != "}")
 	{
-		std::cout << *token << "\n";
+		std::cout <<"\t\t\t"<< *token << "\n";
 		token++;
 	}
 	if (token == end)
