@@ -13,6 +13,7 @@ class HttpContext
 	public:
 		HttpContext();
 		~HttpContext();
-		void pushServer(tokens_it &token, tokens_it &end);
+		void pushServer(Tokens &token, Tokens &end);
+		void parseTokens(Tokens &token, Tokens &end);
 };
 #endif

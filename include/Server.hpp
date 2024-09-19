@@ -14,7 +14,7 @@ class Server
 		std::vector<Location>		locations;
 		std::vector<std::string>	*listen;
 	public:
-		void pushLocation(tokens_it &tokens, tokens_it &end);
+		void pushLocation(Tokens &tokens, Tokens &end);
 		Server();
 };
 

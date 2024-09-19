@@ -120,17 +120,19 @@ void Tokenizer::CreateTokens()
 HttpContext *Tokenizer::parseConfig()
 {
 	HttpContext		*context;
-	tokens_it		token; // typedef of vector<string>::it;
-	tokens_it		end;
+	Tokens		token; // typedef of vector<string>::it;
+	Tokens		end;
 
 	end = this->tokens->end();
 	if (this->tokens->size() == 0)
 		throw ParserException("Error: empty config");
 	context = new HttpContext;
-	for (token = this->tokens->begin(); token != end; token++)
+	for (token = this->tokens->begin(); token < end; token++)
 	{
 		if (*token == "server")
 			context->pushServer(token, end);
+		else
+			context->parseTokens(token, end);
 	}
 	return (context);
 }
