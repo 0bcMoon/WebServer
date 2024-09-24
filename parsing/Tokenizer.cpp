@@ -54,6 +54,7 @@ std::string Tokenizer::getQuotedString(size_t &offset)
 {
 	std::string token = "";
 	char quote;
+
 	if (offset >= this->config->size())
 		return "";
 	quote = this->config->at(offset);
@@ -80,9 +81,9 @@ std::string Tokenizer::getNextToken()
 
 	while (offset < this->config->size() && IsSpace(this->config->at(offset)))
 		offset++;
-	token = getQuotedString(offset);
-	if (token != "")
-		return token;
+	// token = getQuotedString(offset);
+	// if (token != "")
+	// 	return token;
 	if (offset < this->config->size() && IsId(this->config->at(offset)))
 		return std::string(1, this->config->at(offset++));
 
@@ -120,19 +121,19 @@ void Tokenizer::CreateTokens()
 HttpContext *Tokenizer::parseConfig()
 {
 	HttpContext		*context;
-	Tokens		token; // typedef of vector<string>::it;
-	Tokens		end;
+	Tokens			token; // typedef of vector<string>::it;
+	Tokens			end;
 
 	end = this->tokens->end();
 	if (this->tokens->size() == 0)
 		throw ParserException("Error: empty config");
 	context = new HttpContext;
-	for (token = this->tokens->begin(); token < end; token++)
+	for (token = this->tokens->begin(); token < end;)
 	{
 		if (*token == "server")
 			context->pushServer(token, end);
 		else
-			context->parseTokens(token, end);
+			context->parseTokens(token, end); // TODO;
 	}
 	return (context);
 }

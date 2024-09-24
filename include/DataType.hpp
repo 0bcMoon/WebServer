@@ -6,6 +6,7 @@
 #include <vector>
 
 typedef std::vector<std::string>::iterator Tokens;
+// #define ParserException(msg) Debug(msg, __FILE__, __LINE__);
 
 struct ErrorPage
 {
@@ -15,7 +16,7 @@ struct ErrorPage
 };
 
 
-struct GlobalParam
+class GlobalParam
 {
 	private:
 		std::string							accessLog;
@@ -26,15 +27,24 @@ struct GlobalParam
 		long								maxBodySize; // in bytes
 		long								maxHeaderSize; // in bytes
 		std::vector<ErrorPage>				errorPages;
-		std::map<std::string, std::string>	cgi_map;
+		std::map<std::string, std::string>	cgiMap;
 		std::vector<std::string>			indexes;
 
-		void validateOrFaild(Tokens &token, Tokens &end);
 	public:
+		void validateOrFaild(Tokens &token, Tokens &end);
+		GlobalParam &operator=(const GlobalParam &globalParam);
+		GlobalParam();
+		// GlobalParam(const GlobalParam& globalParam);
+		~GlobalParam();
+
+
+		bool parseTokens(Tokens &token, Tokens &end);
+
 		static bool IsId(std::string &token);
 
 		// getter and setter
 		void setRoot(Tokens &token, Tokens &end);
+
 		std::string getRoot() const;
 
 		void setAutoIndex(Tokens &token, Tokens &end);
@@ -59,9 +69,6 @@ struct GlobalParam
 		// TODO CGI getter may be with caching ??
 
 		void setErrorPages(Tokens &token, Tokens &end);
-
- 
-
 };
 
 

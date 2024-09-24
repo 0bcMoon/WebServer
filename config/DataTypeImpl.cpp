@@ -1,7 +1,18 @@
 #include <sys/stat.h>
+#include <iostream>
 #include "DataType.hpp"
+#include "Debug.hpp"
 #include "ParserException.hpp"
 #include "WebServer.hpp"
+
+GlobalParam::GlobalParam()
+{
+	this->autoIndex = false;
+	this->maxBodySize = 100 * 1024 * 1024;
+	this->maxHeaderSize = 100 * 1024 * 1024;
+}
+
+GlobalParam::~GlobalParam() {}
 
 void GlobalParam::setRoot(Tokens &token, Tokens &end)
 {
@@ -35,8 +46,10 @@ void GlobalParam::setAutoIndex(Tokens &token, Tokens &end)
 		this->autoIndex = false;
 	else
 		throw ParserException("Invalid value for autoindex");
+	token++;
 	if (token == end || *token != ";")
 		throw ParserException("Unexpected end of file");
+	token++;
 }
 
 bool GlobalParam::getAutoIndex() const
@@ -82,14 +95,11 @@ static long toBytes(std::string &size)
 	}
 	switch (size[size.size() - 1])
 	{
-		case 'K':
-			sizeValue *= 1024;
-			break;
+		case 'k':
+		case 'K': sizeValue *= 1024; break;
 		case 'M':
-			sizeValue *= 1024 * 1024;
-			break;
-		default:
-			return (-1);
+		case 'm': sizeValue *= 1024 * 1024; break;
+		default: return (-1);
 	}
 	if (sizeValue > MAX_REQ_SIZE) // max size 30M;
 		return (-1);
@@ -153,13 +163,15 @@ void GlobalParam::setCGI(Tokens &token, Tokens &end)
 	cgi_ext = *token;
 	validateOrFaild(token, end);
 	cgi_path = *token;
+	token++;
 	if (token == end || *token != ";")
 		throw ParserException("Unexpected end of file");
 	if (cgi_ext[0] != '.')
 		throw ParserException("Invalid CGI extension" + cgi_ext);
-	if (this->cgi_map.find(cgi_ext) != this->cgi_map.end())
+	if (this->cgiMap.find(cgi_ext) != this->cgiMap.end())
 		throw ParserException("Duplicate CGI extension" + cgi_ext);
-	this->cgi_map[cgi_ext] = cgi_path;
+	token++;
+	this->cgiMap[cgi_ext] = cgi_path;
 }
 
 void GlobalParam::setErrorPages(Tokens &token, Tokens &end)
@@ -177,4 +189,25 @@ void GlobalParam::validateOrFaild(Tokens &token, Tokens &end)
 	token++;
 	if (token == end || IsId(*token))
 		throw ParserException("Unexpected end of file");
+}
+
+bool GlobalParam::parseTokens(Tokens &token, Tokens &end)
+{
+	if (token == end)
+		throw ParserException("Unexpected end of file");
+	else if (*token == "root")
+		this->setRoot(token, end);
+	else if (*token == "autoindex")
+		this->setAutoIndex(token, end);
+	else if (*token == "index")
+		this->setIndexes(token, end);
+	else if (*token == "max_body_size")
+		this->setMaxBodySize(token, end);
+	else if (*token == "max_header_size")
+		this->setMaxHeaderSize(token, end);
+	else if (*token == "cgi_path")
+		this->setCGI(token, end);
+	else
+		throw ParserException("Invalid token: " + *token);
+	return (true);
 }

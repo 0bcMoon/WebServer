@@ -3,6 +3,7 @@
 
 #include <exception>
 #include <string>
+#include "Debug.hpp"
 
 class ParserException: public std::exception
 {
@@ -18,4 +19,5 @@ class ParserException: public std::exception
 };
 
 
+#define ParserException(msg) Debug(msg, __FILE__, __LINE__)
 #endif

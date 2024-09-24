@@ -43,6 +43,7 @@ int main() {
     // Setup the server address structure
     bzero((char *) &servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
+	
     bcopy((char *)server->h_addr, (char *)&servaddr.sin_addr.s_addr, server->h_length);
     servaddr.sin_port = htons(PORT);
 

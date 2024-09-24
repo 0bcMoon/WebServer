@@ -8,11 +8,19 @@
 class Location
 {
 	private:
+		struct Redirection // if  there 4xx or 5xx error it return error page else 3xx it redirect to url
+		{
+			std::string status;
+			std::string url;
+		};
+		Redirection					redirect;
 		std::string					path; // todo as redix tree
-		std::string					redirection[2];
 		GlobalParam					globalParam;
 	public:
-		Location(std::string &path);
 		Location();
+		void setPath(std::string &path);
+		void setRedirect(Tokens &token, Tokens &end);
+		void parseTokens(Tokens &token, Tokens &end);
+		static bool isValidStatusCode(std::string &str);
 };
 #endif

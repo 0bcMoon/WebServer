@@ -4,18 +4,24 @@
 #include "ParserException.hpp"
 #include "Server.hpp"
 #include <iostream>
+#include <vector>
 
 HttpContext::HttpContext()
 {
 }
 
+// TODO : check if value is was set  for duplicates
+//
+std::vector<Server> &HttpContext::getServers()
+{
+	return this->servers;
+}
 void HttpContext::parseTokens(Tokens &token, Tokens &end)
 {
-
+	this->globalParam.parseTokens(token, end);
 }
 void HttpContext::pushServer(Tokens &token, Tokens &end)
 {
-	Server *server;
 
 	token++;
 	if (token == end)
@@ -24,18 +30,16 @@ void HttpContext::pushServer(Tokens &token, Tokens &end)
 		throw ParserException("Unexpact token: " + *token);
 	token++;
 	std::cout << "\n---------------->Server<---------------\n\n";
-	server = new Server;
+	Server server;
 	while (token != end && *token != "}")
 	{
 		if (*token == "location")
-			server->pushLocation(token, end);
-		else if (*token == "{")
-			throw ParserException("Unexpact token: " + *token);
-
-		// std::cout << *token << "\n";
-		token++;
+			server.pushLocation(token, end);
+		else
+			server.parseTokens(token, end);
 	}
-	if (token == end)
+	if (token == end || *token != "}")
 		throw ParserException("Unexpected end of file");
 	this->servers.push_back(server);
+	token++;
 }
