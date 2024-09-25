@@ -19,16 +19,12 @@ void GlobalParam::setRoot(Tokens &token, Tokens &end)
 	struct stat buf;
 
 	validateOrFaild(token, end);
-	this->root = *token;
-
+	this->root = consume(token, end);
 	if (stat(this->root.c_str(), &buf) != 0)
 		throw ParserException("Root directory does not exist");
 	if (S_ISDIR(buf.st_mode) == 0)
 		throw ParserException("Root is not a directory");
-	token++;
-	if (token == end || *token != ";")
-		throw ParserException("Unexpected end of file");
-	token++;
+	CheckIfEnd(token, end);
 }
 
 std::string GlobalParam::getRoot() const
@@ -47,9 +43,8 @@ void GlobalParam::setAutoIndex(Tokens &token, Tokens &end)
 	else
 		throw ParserException("Invalid value for autoindex");
 	token++;
-	if (token == end || *token != ";")
-		throw ParserException("Unexpected end of file");
-	token++;
+
+	CheckIfEnd(token, end);
 }
 
 bool GlobalParam::getAutoIndex() const
@@ -57,29 +52,29 @@ bool GlobalParam::getAutoIndex() const
 	return this->autoIndex; // Return autoIndex
 }
 
-void GlobalParam::setAccessLog(Tokens &token, Tokens &end)
-{
-	throw ParserException("TODO");
-	// Empty implementation
-}
+// void GlobalParam::setAccessLog(Tokens &token, Tokens &end)
+// {
+// 	throw ParserException("TODO");
+// 	// Empty implementation
+// }
 
-std::string GlobalParam::getAccessLog() const
-{
-	throw ParserException("TODO");
-	return this->accessLog; // Return the access log path
-}
+// std::string GlobalParam::getAccessLog() const
+// {
+// 	throw ParserException("TODO");
+// 	return this->accessLog; // Return the access log path
+// }
 
-void GlobalParam::setErrorLog(Tokens &token, Tokens &end)
-{
-	throw ParserException("TODO");
-	// Empty implementation
-}
+// void GlobalParam::setErrorLog(Tokens &token, Tokens &end)
+// {
+// 	throw ParserException("TODO");
+// 	// Empty implementation
+// }
 
-std::string GlobalParam::getErrorLog() const
-{
-	throw ParserException("TODO");
-	return this->errorLog; // Return the error log path
-}
+// std::string GlobalParam::getErrorLog() const
+// {
+// 	throw ParserException("TODO");
+// 	return this->errorLog; // Return the error log path
+// }
 
 static long toBytes(std::string &size)
 {
@@ -113,9 +108,7 @@ void GlobalParam::setMaxBodySize(Tokens &token, Tokens &end)
 	if (this->maxBodySize == -1)
 		throw ParserException("Invalid max body size or too large max is 100");
 	token++;
-	if (token == end || *token != ";")
-		throw ParserException("Unexpected end of file");
-	token++;
+	CheckIfEnd(token, end);
 }
 
 long GlobalParam::getMaxBodySize() const
@@ -131,9 +124,7 @@ void GlobalParam::setMaxHeaderSize(Tokens &token, Tokens &end)
 	if (this->maxHeaderSize == -1)
 		throw ParserException("Invalid max header size or too large max is 100");
 	token++;
-	if (token == end || *token != ";")
-		throw ParserException("Unexpected end of file");
-	token++;
+	CheckIfEnd(token, end);
 }
 
 long GlobalParam::getMaxHeaderSize() const
@@ -145,13 +136,8 @@ void GlobalParam::setIndexes(Tokens &token, Tokens &end)
 {
 	validateOrFaild(token, end);
 	while (token != end && *token != ";")
-	{
-		this->indexes.push_back(*token);
-		token++;
-	}
-	if (token == end)
-		throw ParserException("Unexpected end of file");
-	token++;
+		this->indexes.push_back(consume(token, end));
+	CheckIfEnd(token, end);
 }
 
 void GlobalParam::setCGI(Tokens &token, Tokens &end)
@@ -160,24 +146,20 @@ void GlobalParam::setCGI(Tokens &token, Tokens &end)
 	std::string cgi_ext;
 
 	validateOrFaild(token, end);
-	cgi_ext = *token;
-	validateOrFaild(token, end);
-	cgi_path = *token;
-	token++;
-	if (token == end || *token != ";")
-		throw ParserException("Unexpected end of file");
+	cgi_ext = consume(token, end);
+	cgi_path = consume(token, end);
+	CheckIfEnd(token, end);
 	if (cgi_ext[0] != '.')
 		throw ParserException("Invalid CGI extension" + cgi_ext);
 	if (this->cgiMap.find(cgi_ext) != this->cgiMap.end())
 		throw ParserException("Duplicate CGI extension" + cgi_ext);
-	token++;
 	this->cgiMap[cgi_ext] = cgi_path;
 }
 
-void GlobalParam::setErrorPages(Tokens &token, Tokens &end)
-{
-	// Empty implementation
-}
+// void GlobalParam::setErrorPages(Tokens &token, Tokens &end)
+// {
+// 	// Empty implementation
+// }
 
 bool GlobalParam::IsId(std::string &token)
 {
@@ -191,6 +173,23 @@ void GlobalParam::validateOrFaild(Tokens &token, Tokens &end)
 		throw ParserException("Unexpected end of file");
 }
 
+void GlobalParam::CheckIfEnd(Tokens &token, Tokens &end)
+{
+	if (token == end )
+		throw ParserException("Unexpected end of file");
+	else if (*token != ";")
+		throw ParserException("Unexpected `;` found: " + *token);
+	token++;
+}
+
+std::string GlobalParam::consume(Tokens &token, Tokens &end)
+{
+	if (token == end)
+		throw ParserException("Unexpected end of file");
+	if (IsId(*token))
+		throw ParserException("Unexpected token: " + *token);
+	return *token++;
+}
 bool GlobalParam::parseTokens(Tokens &token, Tokens &end)
 {
 	if (token == end)

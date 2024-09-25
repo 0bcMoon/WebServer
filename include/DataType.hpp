@@ -32,6 +32,8 @@ class GlobalParam
 
 	public:
 		void validateOrFaild(Tokens &token, Tokens &end);
+		void CheckIfEnd(Tokens &token, Tokens &end);
+		std::string consume(Tokens &token, Tokens &end);
 		GlobalParam &operator=(const GlobalParam &globalParam);
 		GlobalParam();
 		// GlobalParam(const GlobalParam& globalParam);

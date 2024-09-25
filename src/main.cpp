@@ -37,5 +37,9 @@ int main()
 		return (1);
 	}
 	std::vector<Server> servers = http->getServers();
+	for (auto it: servers)
+	{
+		std::cout << "Server: " << it.isListen(Server::SocketAddr(12, 10)) << std::endl;
+	}
 	std::cout << "Number of servers: " << servers.size() << std::endl;
 }

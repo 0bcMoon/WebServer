@@ -11,7 +11,6 @@ void Location::setPath(std::string &path)
 {
 	// TODO validate path
 	// maybe encode and decode path
-
 	this->path = path;
 }
 

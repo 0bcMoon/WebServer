@@ -12,11 +12,10 @@ Server::Server() {}
 void Server::pushLocation(Tokens &token, Tokens &end)
 {
 	Location location;
-	token++;
-	if (token == end)
-		throw ParserException("Unexpected end of file");
-	if (GlobalParam::IsId(*token))
-		throw ParserException("Unexpected token: " + *token);
+
+	this->globalParam.validateOrFaild(token, end);
+	if (this->location[*token] != "")
+		throw ParserException("Duplicate location
 	location.setPath(*token);
 	token++;
 	if (token == end || *token != "{")
@@ -98,9 +97,7 @@ void Server::setListen(Tokens &token, Tokens &end)
 		throw ParserException("dublicate listen: " + host + ":" + port);
 	listen.insert(socketAddr);
 	token++;
-	if (token == end || *token != ";")
-		throw ParserException("Unexpected end of file");
-	token++;
+	this->globalParam.CheckIfEnd(token, end);
 }
 
 std::set<Server::SocketAddr> &Server::getListen()
@@ -118,13 +115,8 @@ void Server::setServerNames(Tokens &token, Tokens &end)
 	this->globalParam.validateOrFaild(token, end);
 
 	while (token != end && *token != ";")
-	{
-		serverNames.insert(*token);
-		token++;
-	}
-	if (token == end || *token != ";")
-		throw ParserException("Unexpected end of file"); 
-	token++;
+		serverNames.insert(this->globalParam.consume(token, end));
+	this->globalParam.CheckIfEnd(token, end);
 }
 
 void Server::parseTokens(Tokens &token, Tokens &end)
@@ -137,6 +129,6 @@ void Server::parseTokens(Tokens &token, Tokens &end)
 		this->setServerNames(token, end);
 	else if (*token == "location")
 		this->pushLocation(token, end);
-	else if (!globalParam.parseTokens(token, end))
-		throw ParserException("Unexpected token: " + *token);
+	else
+		globalParam.parseTokens(token, end);
 }

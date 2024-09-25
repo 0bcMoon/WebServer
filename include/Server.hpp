@@ -10,7 +10,7 @@
 
 class Server
 {
-  private:
+  public:
 	struct SocketAddr
 	{
 		int port;
@@ -21,11 +21,17 @@ class Server
 				return host < rhs.host;
 			return port < rhs.port;
 		}
+		SocketAddr(int port, int host) : port(port), host(host) {}
+		SocketAddr()  {}
+
 	};
+
+  private:
 	std::vector<int> fds;
 	std::set<std::string> serverNames; // todo as trie
 	GlobalParam globalParam;
-	std::vector<Location> locations;
+	// std::vector<Location> locations;
+	std::map<std::string, Location> locations; // prefix tree;
 	std::set<SocketAddr> listen;
 
   public:
