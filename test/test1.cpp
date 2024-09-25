@@ -1,7 +1,8 @@
-
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -21,12 +22,11 @@ int main() {
     char buffer[BUFFER_SIZE];
     const char *host = "localhost";
     const char *request = 
-        "GET /  HTTP/1.000000000000009\r\n"
-        // "Connection: close\r\n"
+        "\n\rGET / HTTP/1.1\r\n"
+        "Connection:\r\n"
 		// "Content-Length: 67"
-		"Host:ana\r\n"
-        "\r\n"
-		"JLK: ana\r\n"
+		"Host: j  \r\r\n\n"
+		// "JLK: ana\r\n"
 		"hjkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkklllllllllllllll"
 		;
 
@@ -84,3 +84,10 @@ int main() {
 
     return 0;
 }
+
+// int main()
+// {
+// 	std::string str("");
+// 	str = "";
+// 	std::cout << str.size() << std::endl;
+// }

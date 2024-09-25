@@ -1,5 +1,6 @@
 #include "../include/HttpRequest.hpp"
 #include <cstddef>
+#include <map>
 #include <string>
 #include <unistd.h>
 #include <iostream>
@@ -43,12 +44,13 @@ void HttpRequest::readRequest()
 	else
 		reqBuffer = tmp;
 }
-
+typedef std::map<std::string, std::string>::iterator map_it;
 void HttpRequest::feed()
 {
 	readRequest();
+	reqBuffer = "GET / HTTP/1.1        \nHost: llklklkl\nlklklk:kjkjkjk\njkjkj: kkh\n";
 	reqBufferIndex = 0;
-	while (reqBufferIndex < reqBuffer.size() && state != ERROR)
+	while (reqBufferIndex < reqBuffer.size() - 1 && state != ERROR && state != DEBUG)
 	{
 		if (state == METHODE)
 			parseMethod();
@@ -57,13 +59,13 @@ void HttpRequest::feed()
 		if (state == HTTP_VERSION)
 			parseHttpVersion();
 		if (state == REQUEST_LINE_FINISH)
-			state = HEADER_NAME;
+			crlfGetting();
 		if (state == HEADER_NAME)
 			parseHeaderName();
 		if (state == HEADER_VALUE)
 			parseHeaderVal();
 		if (state == HEADER_FINISH)
-			state = BODY;
+			crlfGetting();
 		if (state == BODY)
 			parseBody();
 		if (state == BODY_FINISH)
@@ -73,7 +75,14 @@ void HttpRequest::feed()
 		if (state == ERROR)
 			break;
 	}
+	if (state == DEBUG)
+		std::cout << "HI\n";
 	std::cout << error.code << ": " << error.description << std::endl; 
+	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	// std::cout << headers["Host"] << std::endl;
+	for (map_it it = headers.begin(); it != headers.end(); ++it) {
+        std::cout << "Key: " << it->first << ", Value: " << it->second << std::endl;
+    }
 }
 
 void HttpRequest::setHttpError(int code, std::string str)
@@ -118,7 +127,7 @@ int HttpRequest::verifyUriChar(char c)
 
 void HttpRequest::parsePath()
 {
-	while (reqBufferIndex < reqBuffer.size() - 1)
+	while (reqBufferIndex < reqBuffer.size())
 	{
 		if (path.size() == 0 && reqBuffer[reqBufferIndex] == ' ')
 		{
@@ -145,86 +154,298 @@ void HttpRequest::parsePath()
 	}
 }
 
-void HttpRequest::checkHttpVersion()
+// void HttpRequest::checkHttpVersion()
+// {
+// 	std::string str(&httpVersion.c_str()[5]);
+// 	int state = 0;
+// 	for (size_t i = 0;i < str.size(); i++)
+// 	{
+// 		if (state == 0 && str[i] == '.' && i != 0)
+// 			state++;
+// 		else if (str[i] != '0' && state == 1)
+// 		{
+// 			if (i != str.size() - 1 || str[i] < '1' || str[i] > '9')
+// 			{
+// 				setHttpError(400, "Bad Request");
+// 				return ;
+// 			}
+// 			else if (str[i] > '1')
+// 			{
+// 				setHttpError(505, "HTTP Version Not Supported");
+// 				return ;
+// 			}
+// 			else
+// 				return ;
+// 		}
+// 		else if ((state == 0 && (str[i] < '1' || str[i] > '9'))
+// 			|| (state == 1 && str[i] != '0'))
+// 		{
+// 			setHttpError(400, "Bad Request*");
+// 			return ;
+// 		}
+// 		else if (state == 0 && str[i] != '1')
+// 		{
+// 			setHttpError(505, "HTTP Version Not Supported");
+// 			return;
+// 		}
+// 	}
+// 	std::cout << "Hi" << std::endl;
+// }
+
+void HttpRequest::checkHttpVersion(int *state)
 {
-	std::string str(&httpVersion.c_str()[5]);
-	int state = 0;
-	for (size_t i = 0;i < str.size(); i++)
+	if (*state == 0)
 	{
-		if (state == 0 && str[i] == '.' && i != 0)
-			state++;
-		else if (str[i] != '0' && state == 1)
-		{
-			if (i != str.size() - 1 || str[i] < '1' || str[i] > '9')
-			{
-				setHttpError(400, "Bad Request");
-				return ;
-			}
-			else if (str[i] > '1')
-			{
-				setHttpError(505, "HTTP Version Not Supported");
-				return ;
-			}
-			else
-				return ;
-		}
-		else if ((state == 0 && (str[i] < '1' || str[i] > '9'))
-			|| (state == 1 && str[i] != '0'))
+		if (httpVersion.size() == 6
+			&& (httpVersion[httpVersion.size() - 1] < '1' 
+			|| httpVersion[httpVersion.size() - 1] > '9'))
 		{
 			setHttpError(400, "Bad Request");
 			return ;
 		}
-		else if (state == 0 && str[i] != 1)
+		else if (httpVersion.size() == 6 
+			&& (httpVersion[httpVersion.size() -1] != '1'))
+		{
+			setHttpError(505, "HTTP Version Not Supported");
+			return;
+		}
+		else if (httpVersion.size() > 6 && httpVersion[httpVersion.size() -1] == '.')
+		{
+			(*state)++;
+			return;
+		}
+		else if (httpVersion.size() > 6
+			&& (httpVersion[httpVersion.size() - 1] < '0'
+			|| httpVersion[httpVersion.size() - 1] > '9'))
+		{
+			setHttpError(400, "Bad Request");
+			return;
+		}
+		else if (httpVersion.size() > 6
+			&& (httpVersion[httpVersion.size() - 1] >= '0'
+			&& httpVersion[httpVersion.size() - 1] <= '9'))
 		{
 			setHttpError(505, "HTTP Version Not Supported");
 			return;
 		}
 	}
+	else if (*state == 1)
+	{
+		if (httpVersion[httpVersion.size() - 1] == '1')
+			(*state)++;
+		else
+		{
+			if (httpVersion[httpVersion.size() - 1] < '0'
+				|| httpVersion[httpVersion.size() - 1] > '9')
+			{
+				setHttpError(400, "Bad Request");
+				return;
+			}
+			else
+			{
+				setHttpError(505, "HTTP Version Not Supported");
+				return;
+			}
+		}
+	}
+	else if (*state == 2)
+	{
+		setHttpError(400, "Bad Request");
+		return;
+	}
 }
 
 void HttpRequest::parseHttpVersion()
 {
-	const std::string tmp("HTTP/");
-	while (reqBufferIndex < reqBuffer.size())
+	const std::string	tmp("HTTP/");
+	int					_state = 0;
+
+	while (reqBufferIndex < reqBuffer.size() - 1 && state != ERROR)
 	{
 		if (httpVersion.size() == 0 && reqBuffer[reqBufferIndex] == ' ')
 		{
 			reqBufferIndex++;
 			continue;
 		}
-		if (httpVersion.size() != 0 && reqBuffer[reqBufferIndex] == ' ')
+		if (httpVersion.size() != 0 && (reqBuffer[reqBufferIndex] == ' '
+			|| reqBuffer[reqBufferIndex] == '\n' || reqBuffer[reqBufferIndex] == '\r'))
 		{
+			crlfState = READING;
 			state = REQUEST_LINE_FINISH;
-			checkHttpVersion();
 			break;
 		}
 		httpVersion.push_back(reqBuffer[reqBufferIndex]);
 		reqBufferIndex++;
-		if (tmp.size() > httpVersion.size())
+		if (tmp.size() >= httpVersion.size()
+			&& httpVersion[httpVersion.size() - 1] != tmp[httpVersion.size() - 1])
 		{
-			if (httpVersion[httpVersion.size() - 1] != tmp[httpVersion.size() - 1])
-			{
-				setHttpError(400, "Bad Request");
-				return ;
-			}
+			setHttpError(400, "Bad Request");
+			return ;
 		}
+		checkHttpVersion(&_state);
 	}
 }
 
-void HttpRequest::parseHeaderName()
+void HttpRequest::returnHandle()
 {
+	if (crlfState == READING)
+		crlfState = RETURN;
+	else if (crlfState == NLINE)
+		crlfState = LRETURN;
+	else if (crlfState == RETURN)
+	;
+	else if (crlfState == LRETURN)
+	;
+	else if (crlfState == LNLINE)
+	;
+}
 
+void HttpRequest::nLineHandle()
+{
+	if (crlfState == READING || crlfState == RETURN)
+		crlfState = NLINE;
+	else if (crlfState == NLINE)
+		crlfState = LNLINE;
+	else if (crlfState == LRETURN)
+		crlfState = LNLINE;
+	else if (crlfState == LNLINE)
+		;
+}
+
+void		HttpRequest::crlfGetting()
+{
+	while (reqBuffer.size() > reqBufferIndex && crlfState != LNLINE)
+	{
+		if (crlfState == READING && reqBuffer[reqBufferIndex] == ' ')
+			;
+		else if (reqBuffer[reqBufferIndex] == '\n')
+			nLineHandle();
+		else if (reqBuffer[reqBufferIndex] == '\r')
+			returnHandle();
+		else if (crlfState == NLINE)
+		{
+			state = HEADER_NAME;
+			crlfState = READING;
+			return;
+		}
+		else if (crlfState != NLINE)
+		{
+			setHttpError(400, "Bad Request");
+			return ;
+		}
+		reqBufferIndex++;
+		// std::cout << reqBuffer[reqBufferIndex] << std::endl;
+		// std::cout << "HI\n";
+	}
+	if (crlfState == LNLINE)
+	{
+		state = DEBUG;
+		crlfState = READING;
+	}
+}
+// if (reqBuffer[reqBufferIndex])
+// if (reqBuffer[reqBufferIndex] == '\n' && crlfState != '\n')
+// 	crlfState = NLINE;
+// else if (reqBuffer[reqBufferIndex] == '\n')
+// while (reqBuffer.size() > reqBufferIndex && state != ERROR)
+// {
+// 	if (crlfState == READING)
+// 	{
+// 		if (reqBuffer[reqBufferIndex] == ' ')
+// 		{
+// 			reqBufferIndex++;
+// 			continue;
+// 		}
+// 		else if (reqBuffer[reqBufferIndex] == '\n')
+// 			crlfState = NLINE;
+// 		else 
+// 		{
+// 			setHttpError(400, "Bad Request");
+// 			return ;
+// 		}
+// 		reqBufferIndex++;
+// 	}
+// 	if (crlfState == NLINE)
+// 	{
+// 		if (reqBuffer[reqBufferIndex] != '\r')
+// 		{
+// 			setHttpError(400, "Bad Request");
+// 			return ;
+// 		}
+// 		crlfState = RETURN;
+// 		reqBufferIndex++;
+// 	}
+// 	if (crlfState == RETURN)
+// 	{
+// 		if (reqBuffer[reqBufferIndex] == '\n')
+// 		{
+// 			crlfState = LNLINE;
+// 			reqBufferIndex++;
+// 		}
+// 		else
+// 		{
+// 			crlfState = READING;
+// 			state = HEADER_NAME;
+// 			return;
+// 		}
+// 	}
+// }
+
+static int isAlpha(char c)
+{
+	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+}
+
+static int isValidHeaderChar(char c)
+{
+	return (isAlpha(c) || (c >='1' && c <= '9') || c == '-' || c == ':');
+}
+
+void	HttpRequest::parseHeaderName()
+{
+	while (reqBuffer.size() > reqBufferIndex && state == HEADER_NAME)
+	{
+		if ((currHeaderName.size() == 0 && !isAlpha(reqBuffer[reqBufferIndex]))
+			|| !isValidHeaderChar(reqBuffer[reqBufferIndex]))
+		{
+			setHttpError(400, "Bad Request");
+			return ;
+		}
+		if (reqBuffer[reqBufferIndex] == ':' && currHeaderName.size() == 0)
+		{
+			setHttpError(400, "Bad Request");
+			return ;
+		}
+		if (reqBuffer[reqBufferIndex] == ':')
+		{
+			state = HEADER_VALUE;
+			reqBufferIndex++;
+			// headers[currHeaderName];
+		}
+		currHeaderName.push_back(reqBuffer[reqBufferIndex]);
+		reqBufferIndex++;
+	}
 }
 
 void HttpRequest::parseHeaderVal()
 {
-
+	while (reqBuffer.size() > reqBufferIndex && state == HEADER_VALUE)
+	{
+		if (reqBuffer[reqBufferIndex] == '\n' || reqBuffer[reqBufferIndex] == '\r')
+		{
+			state = HEADER_FINISH;
+			return;
+		}
+		headers[currHeaderName].push_back(reqBuffer[reqBufferIndex]);
+		reqBufferIndex++;
+	}
 }
 
 void HttpRequest::parseBody()
 {
-
+	
 }
+
 // void HttpRequest::parseMethod()
 // {	
 // 	if (methodeStr.eqMethodeStr.size() == 0)

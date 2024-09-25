@@ -31,7 +31,16 @@ enum reqState
 	BODY,
 	BODY_FINISH,
 	REQUEST_FINISH,
-	ERROR
+	ERROR,
+	DEBUG
+};
+
+enum crlfState {
+	READING,
+	NLINE,
+	RETURN,
+	LNLINE,
+	LRETURN
 };
 
 typedef struct httpError 
@@ -52,25 +61,28 @@ class HttpRequest
 {
 	private:
 		const int							fd;
+		enum crlfState						crlfState;
 
 		enum reqMethode						methode;
 		std::string                         path;
-		std::map<std::string, std::string>	headers;
 
-		std::string							body;
+		std::map<std::string, std::string>	headers;
+		std::string							currHeaderName;
+
+		std::string							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;
 
 		int                                 reqSize;
 		int									reqBufferSize;
 		size_t								reqBufferIndex;
-		std::string							reqBuffer;
+		std::string							reqBuffer; // buffer  may be binary (include '\0') fix this;
 
 		httpError							error;
 
 		methodeStr							methodeStr;
 		std::string							httpVersion;
 
-		void readRequest();
+		void		readRequest();
 
 		void		parseMethod();
 		void		parsePath();
@@ -78,9 +90,14 @@ class HttpRequest
 		void		parseHeaderName();
 		void		parseHeaderVal();
 		void		parseBody();
+		void		crlfGetting();
 
 		int			verifyUriChar(char c);
-		void		checkHttpVersion();
+		void		checkHttpVersion(int *state);
+
+
+		void returnHandle();
+		void nLineHandle();
 
 	public:
 		enum reqState state;
