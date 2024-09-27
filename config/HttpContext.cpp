@@ -29,7 +29,6 @@ void HttpContext::pushServer(Tokens &token, Tokens &end)
 	else if (*token != "{")
 		throw ParserException("Unexpact token: " + *token);
 	token++;
-	std::cout << "\n---------------->Server<---------------\n\n";
 	Server server;
 	while (token != end && *token != "}")
 	{
@@ -40,6 +39,6 @@ void HttpContext::pushServer(Tokens &token, Tokens &end)
 	}
 	if (token == end || *token != "}")
 		throw ParserException("Unexpected end of file");
-	this->servers.push_back(server);
 	token++;
+	this->servers.push_back(server);
 }

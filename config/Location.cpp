@@ -7,6 +7,13 @@ Location::Location()
 {
 }
 
+Location &Location::operator=(const Location &location)
+{
+	this->path = location.path;
+	this->redirect = location.redirect;
+	this->globalParam = location.globalParam;
+	return *this;
+}
 void Location::setPath(std::string &path)
 {
 	// TODO validate path
@@ -31,26 +38,26 @@ bool Location::isValidStatusCode(std::string &str)
 }
 void Location::setRedirect(Tokens &token, Tokens &end)
 {
-	token++;
 	this->globalParam.validateOrFaild(token, end);
-	if (isValidStatusCode(*token))
+	if (!isValidStatusCode(*token))
 		throw ParserException("Invalid status code: " + *token);
-	this->redirect.status = *token;
+	this->redirect.status = this->globalParam.consume(token, end);
 	if (token == end)
 		throw ParserException("Unexpected end of file");
 	if (*token != ";")
-		this->redirect.url = *token;
-	token++;
-	if (token == end || *token != ";")
-		throw ParserException("Unexpected token: " + *token);
+		this->redirect.url = *token++;
+	this->globalParam.CheckIfEnd(token, end);
+}
+
+std::string &Location::getPath()
+{
+	return this->path;
 }
 
 void Location::parseTokens(Tokens &token, Tokens &end)
 {
-	if (token == end)
-		throw ParserException("Unexpected end of file");
-
 	if (*token == "return")
 		this->setRedirect(token, end);
-
+	else
+		this->globalParam.parseTokens(token, end);
 }

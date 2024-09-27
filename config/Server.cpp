@@ -9,22 +9,37 @@
 
 Server::Server() {}
 
+void Server::insertRoute(Location &location)
+{
+	try
+	{
+		this->routes->insert(location);
+	}
+	catch (ParserException &e)
+	{
+		delete this->routes;
+		throw ParserException(std::string(e.what()));
+	}
+}
+
 void Server::pushLocation(Tokens &token, Tokens &end)
 {
 	Location location;
 
 	this->globalParam.validateOrFaild(token, end);
-	if (this->location[*token] != "")
-		throw ParserException("Duplicate location
 	location.setPath(*token);
 	token++;
 	if (token == end || *token != "{")
-		throw ParserException("Unexpected end of file");
+		throw ParserException("Unexpected Token: " + *token);
 	token++;
 	while (token != end && *token != "}")
 	{
 		location.parseTokens(token, end);
 	}
+	if (token == end)
+		throw ParserException("Unexpected end of file");
+	token++;
+	this->insertRoute(location);
 }
 
 int parseNumber(std::string &str)
@@ -74,7 +89,6 @@ int parseHost(std::string s_host)
 }
 void Server::setListen(Tokens &token, Tokens &end)
 {
-
 	std::string host;
 	std::string port;
 	SocketAddr socketAddr;

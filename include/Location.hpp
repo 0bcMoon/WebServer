@@ -18,7 +18,9 @@ class Location
 		GlobalParam					globalParam;
 	public:
 		Location();
+		Location &operator=(const Location &location);
 		void setPath(std::string &path);
+		std::string &getPath();
 		void setRedirect(Tokens &token, Tokens &end);
 		void parseTokens(Tokens &token, Tokens &end);
 		static bool isValidStatusCode(std::string &str);

@@ -21,7 +21,7 @@ int main() {
     char buffer[BUFFER_SIZE];
     const char *host = "localhost";
     const char *request = 
-        "GET / HTTP/1.1\r\n"
+        "GET  /intra/ HTTP/1.1\r\n"
         "Host: localhost\r\n"
         "Connection: close\r\n"
         "\r\n";

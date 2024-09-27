@@ -12,6 +12,22 @@ GlobalParam::GlobalParam()
 	this->maxHeaderSize = 100 * 1024 * 1024;
 }
 
+GlobalParam &GlobalParam::operator=(const GlobalParam &other)
+{
+	if (this != &other)
+	{ // Check for self-assignment
+		accessLog = other.accessLog;
+		errorLog = other.errorLog;
+		root = other.root;
+		autoIndex = other.autoIndex;
+		maxBodySize = other.maxBodySize;
+		maxHeaderSize = other.maxHeaderSize;
+		errorPages = other.errorPages;
+		cgiMap = other.cgiMap;
+		indexes = other.indexes;
+	}
+	return *this; // Return *this to allow chained assignments
+}
 GlobalParam::~GlobalParam() {}
 
 void GlobalParam::setRoot(Tokens &token, Tokens &end)
@@ -175,7 +191,7 @@ void GlobalParam::validateOrFaild(Tokens &token, Tokens &end)
 
 void GlobalParam::CheckIfEnd(Tokens &token, Tokens &end)
 {
-	if (token == end )
+	if (token == end)
 		throw ParserException("Unexpected end of file");
 	else if (*token != ";")
 		throw ParserException("Unexpected `;` found: " + *token);

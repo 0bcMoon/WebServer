@@ -7,6 +7,7 @@
 #include <vector>
 #include "DataType.hpp"
 #include "Location.hpp"
+#include "Trie.hpp"
 
 class Server
 {
@@ -23,15 +24,14 @@ class Server
 		}
 		SocketAddr(int port, int host) : port(port), host(host) {}
 		SocketAddr()  {}
-
 	};
 
   private:
 	std::vector<int> fds;
 	std::set<std::string> serverNames; // todo as trie
 	GlobalParam globalParam;
-	// std::vector<Location> locations;
-	std::map<std::string, Location> locations; // prefix tree;
+	std::vector<Location> locations;
+	Trie *routes;
 	std::set<SocketAddr> listen;
 
   public:
@@ -41,6 +41,7 @@ class Server
 	void setServerNames(Tokens &Token, Tokens &end);
 	void pushLocation(Tokens &tokens, Tokens &end);
 	void parseTokens(Tokens &tokens, Tokens &end);
+	void insertRoute(Location &location);
 	Server();
 };
 
