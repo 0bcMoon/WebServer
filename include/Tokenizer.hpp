@@ -1,10 +1,8 @@
 #ifndef TOKENIZER_HPP
 #define TOKENIZER_HPP
 
-#include <fstream>
 #include <vector>
 #include <string>
-#include <iostream>
 #include "HttpContext.hpp"
 
 class Tokenizer

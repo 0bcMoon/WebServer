@@ -1,12 +1,9 @@
 #include <cassert>
 #include <cstdlib>
-#include <exception>
 #include <iostream>
-#include <new>
 #include <vector>
 #include "Debug.hpp"
-#include "ParserException.hpp"
-#include "Server.hpp"
+#include "VirtualServer.hpp"
 #include "Tokenizer.hpp"
 #ifdef __cplusplus
 extern "C"
@@ -16,9 +13,15 @@ extern "C"
 {
 	return "detect_leaks=0";
 }
+void atexist()
+{
+		system("leaks  webserv");
+}
 int main()
 {
-	HttpContext *http;
+	atexit(atexist);
+	
+	HttpContext *http = NULL;
 	try // ugly but fix the problem
 	{
 		Tokenizer tokenizer;
@@ -36,10 +39,5 @@ int main()
 		std::cout << e.what() << std::endl;
 		return (1);
 	}
-	std::vector<Server> servers = http->getServers();
-	for (auto it: servers)
-	{
-		std::cout << "Server: " << it.isListen(Server::SocketAddr(12, 10)) << std::endl;
-	}
-	std::cout << "Number of servers: " << servers.size() << std::endl;
+	delete http;
 }

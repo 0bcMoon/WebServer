@@ -1,36 +1,40 @@
 #include <sys/stat.h>
+#include <cstddef>
 #include <iostream>
+#include <string>
+#include <vector>
 #include "DataType.hpp"
 #include "Debug.hpp"
 #include "ParserException.hpp"
 #include "WebServer.hpp"
 
-GlobalParam::GlobalParam()
+GlobalConfig::GlobalConfig()
 {
 	this->autoIndex = false;
 	this->maxBodySize = 100 * 1024 * 1024;
 	this->maxHeaderSize = 100 * 1024 * 1024;
+		this->methods = GET; // default method is GET only
 }
 
-GlobalParam &GlobalParam::operator=(const GlobalParam &other)
+GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 {
 	if (this != &other)
-	{ // Check for self-assignment
-		accessLog = other.accessLog;
-		errorLog = other.errorLog;
-		root = other.root;
-		autoIndex = other.autoIndex;
-		maxBodySize = other.maxBodySize;
-		maxHeaderSize = other.maxHeaderSize;
-		errorPages = other.errorPages;
-		cgiMap = other.cgiMap;
-		indexes = other.indexes;
-	}
+		return *this;
+	
+	accessLog = other.accessLog;
+	errorLog = other.errorLog;
+	root = other.root;
+	autoIndex = other.autoIndex;
+	maxBodySize = other.maxBodySize;
+	maxHeaderSize = other.maxHeaderSize;
+	errorPages = other.errorPages;
+	cgiMap = other.cgiMap;
+	indexes = other.indexes;
 	return *this; // Return *this to allow chained assignments
 }
-GlobalParam::~GlobalParam() {}
+GlobalConfig::~GlobalConfig() {}
 
-void GlobalParam::setRoot(Tokens &token, Tokens &end)
+void GlobalConfig::setRoot(Tokens &token, Tokens &end)
 {
 	struct stat buf;
 
@@ -43,12 +47,12 @@ void GlobalParam::setRoot(Tokens &token, Tokens &end)
 	CheckIfEnd(token, end);
 }
 
-std::string GlobalParam::getRoot() const
+std::string GlobalConfig::getRoot() const
 {
 	return this->root; // Return the root
 }
 
-void GlobalParam::setAutoIndex(Tokens &token, Tokens &end)
+void GlobalConfig::setAutoIndex(Tokens &token, Tokens &end)
 {
 	validateOrFaild(token, end);
 
@@ -63,30 +67,30 @@ void GlobalParam::setAutoIndex(Tokens &token, Tokens &end)
 	CheckIfEnd(token, end);
 }
 
-bool GlobalParam::getAutoIndex() const
+bool GlobalConfig::getAutoIndex() const
 {
 	return this->autoIndex; // Return autoIndex
 }
 
-// void GlobalParam::setAccessLog(Tokens &token, Tokens &end)
+// void GlobalConfig::setAccessLog(Tokens &token, Tokens &end)
 // {
 // 	throw ParserException("TODO");
 // 	// Empty implementation
 // }
 
-// std::string GlobalParam::getAccessLog() const
+// std::string GlobalConfig::getAccessLog() const
 // {
 // 	throw ParserException("TODO");
 // 	return this->accessLog; // Return the access log path
 // }
 
-// void GlobalParam::setErrorLog(Tokens &token, Tokens &end)
+// void GlobalConfig::setErrorLog(Tokens &token, Tokens &end)
 // {
 // 	throw ParserException("TODO");
 // 	// Empty implementation
 // }
 
-// std::string GlobalParam::getErrorLog() const
+// std::string GlobalConfig::getErrorLog() const
 // {
 // 	throw ParserException("TODO");
 // 	return this->errorLog; // Return the error log path
@@ -117,7 +121,7 @@ static long toBytes(std::string &size)
 	return (sizeValue);
 }
 
-void GlobalParam::setMaxBodySize(Tokens &token, Tokens &end)
+void GlobalConfig::setMaxBodySize(Tokens &token, Tokens &end)
 {
 	validateOrFaild(token, end);
 	this->maxBodySize = toBytes(*token);
@@ -127,12 +131,12 @@ void GlobalParam::setMaxBodySize(Tokens &token, Tokens &end)
 	CheckIfEnd(token, end);
 }
 
-long GlobalParam::getMaxBodySize() const
+long GlobalConfig::getMaxBodySize() const
 {
 	return this->maxBodySize; // Return max body size
 }
 
-void GlobalParam::setMaxHeaderSize(Tokens &token, Tokens &end)
+void GlobalConfig::setMaxHeaderSize(Tokens &token, Tokens &end)
 {
 	validateOrFaild(token, end);
 	this->maxHeaderSize = toBytes(*token);
@@ -143,12 +147,12 @@ void GlobalParam::setMaxHeaderSize(Tokens &token, Tokens &end)
 	CheckIfEnd(token, end);
 }
 
-long GlobalParam::getMaxHeaderSize() const
+long GlobalConfig::getMaxHeaderSize() const
 {
 	return this->maxHeaderSize; // Return max header size
 }
 
-void GlobalParam::setIndexes(Tokens &token, Tokens &end)
+void GlobalConfig::setIndexes(Tokens &token, Tokens &end)
 {
 	validateOrFaild(token, end);
 	while (token != end && *token != ";")
@@ -156,7 +160,7 @@ void GlobalParam::setIndexes(Tokens &token, Tokens &end)
 	CheckIfEnd(token, end);
 }
 
-void GlobalParam::setCGI(Tokens &token, Tokens &end)
+void GlobalConfig::setCGI(Tokens &token, Tokens &end)
 {
 	std::string cgi_path;
 	std::string cgi_ext;
@@ -172,24 +176,24 @@ void GlobalParam::setCGI(Tokens &token, Tokens &end)
 	this->cgiMap[cgi_ext] = cgi_path;
 }
 
-// void GlobalParam::setErrorPages(Tokens &token, Tokens &end)
+// void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 // {
 // 	// Empty implementation
 // }
 
-bool GlobalParam::IsId(std::string &token)
+bool GlobalConfig::IsId(std::string &token)
 {
 	return (token == ";" || token == "}" || token == "{");
 }
 
-void GlobalParam::validateOrFaild(Tokens &token, Tokens &end)
+void GlobalConfig::validateOrFaild(Tokens &token, Tokens &end)
 {
 	token++;
 	if (token == end || IsId(*token))
 		throw ParserException("Unexpected end of file");
 }
 
-void GlobalParam::CheckIfEnd(Tokens &token, Tokens &end)
+void GlobalConfig::CheckIfEnd(Tokens &token, Tokens &end)
 {
 	if (token == end)
 		throw ParserException("Unexpected end of file");
@@ -198,7 +202,7 @@ void GlobalParam::CheckIfEnd(Tokens &token, Tokens &end)
 	token++;
 }
 
-std::string GlobalParam::consume(Tokens &token, Tokens &end)
+std::string &GlobalConfig::consume(Tokens &token, Tokens &end)
 {
 	if (token == end)
 		throw ParserException("Unexpected end of file");
@@ -206,7 +210,7 @@ std::string GlobalParam::consume(Tokens &token, Tokens &end)
 		throw ParserException("Unexpected token: " + *token);
 	return *token++;
 }
-bool GlobalParam::parseTokens(Tokens &token, Tokens &end)
+bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 {
 	if (token == end)
 		throw ParserException("Unexpected end of file");
@@ -222,7 +226,66 @@ bool GlobalParam::parseTokens(Tokens &token, Tokens &end)
 		this->setMaxHeaderSize(token, end);
 	else if (*token == "cgi_path")
 		this->setCGI(token, end);
+	else if (*token == "allow")
+		this->setMethods(token, end);
+	else if (*token == "error_pages")
+		this->setErrorPages(token, end);
 	else
 		throw ParserException("Invalid token: " + *token);
 	return (true);
+}
+void GlobalConfig::setMethods(Tokens &token, Tokens &end)
+{
+	this->validateOrFaild(token, end);
+	while (token != end && *token != ";")
+	{
+		if (*token == "GET")
+			this->methods |= GET;
+		else if (*token == "POST")
+			this->methods |= POST;
+		else if (*token == "DELETE")
+			this->methods |= DELETE;
+		else
+			throw ParserException("Invalid or un support method: " + *token);
+		token++;
+	}
+	this->CheckIfEnd(token, end);
+}
+
+void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
+{
+	throw ParserException("TODO: with better implementation");
+	// std::vector<std::string> status;
+	// std::string redirectStatus = "";
+
+
+	// this->validateOrFaild(token, end);
+	// while (token != end && this->isValidStatusCode(*token))
+	// 	status.push_back(this->consume(token, end));
+	// if (token == end)
+	// 	throw ParserException("Unexpected end of file");
+
+	// if (token->at(0) == '=')
+	// {
+	// 	redirectStatus = token->substr(1);
+	// 	if (!this->isValidStatusCode(redirectStatus) || redirectStatus.at(0) != '3')
+	// 		throw ParserException("Invalid status code on error_pages" + *token);
+	// 	token++;
+	// }
+
+	// // TODO : find better implementation to save memory 
+	// //
+	// // for (size_t i = 0;i<status.size();i++)
+	// // {
+	// // 	if (redirectStatus.empty())
+	// // 		// map
+	// // }
+	// 	
+	// this->CheckIfEnd(token, end);
+}
+
+
+void GlobalConfig::loadFile(Tokens &token, Tokens &end, std::string &buffer)
+{
+
 }

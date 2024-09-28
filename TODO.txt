@@ -1,3 +1,4 @@
 
 - add logging support
 - may add include other file (if there time)
+- make some global file table save memory

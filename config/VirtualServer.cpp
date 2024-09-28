@@ -1,45 +1,38 @@
 
-#include "Server.hpp"
+#include "VirtualServer.hpp"
 #include <cstddef>
 #include <string>
 #include <vector>
-#include "Debug.hpp"
 #include "Location.hpp"
 #include "ParserException.hpp"
 
-Server::Server() {}
-
-void Server::insertRoute(Location &location)
+VirtualServer::VirtualServer() 
 {
-	try
-	{
-		this->routes->insert(location);
-	}
-	catch (ParserException &e)
-	{
-		delete this->routes;
-		throw ParserException(std::string(e.what()));
-	}
 }
 
-void Server::pushLocation(Tokens &token, Tokens &end)
+VirtualServer::~VirtualServer() 
+{
+}
+
+VirtualServer::SocketAddr::SocketAddr(int port, int host) : port(port), host(host) {}
+VirtualServer::SocketAddr::SocketAddr() {};
+
+void VirtualServer::pushLocation(Tokens &token, Tokens &end)
 {
 	Location location;
 
-	this->globalParam.validateOrFaild(token, end);
-	location.setPath(*token);
-	token++;
+	this->globalConfig.validateOrFaild(token, end);
+	location.setPath(this->globalConfig.consume(token, end));
 	if (token == end || *token != "{")
 		throw ParserException("Unexpected Token: " + *token);
 	token++;
 	while (token != end && *token != "}")
-	{
 		location.parseTokens(token, end);
-	}
+
 	if (token == end)
 		throw ParserException("Unexpected end of file");
 	token++;
-	this->insertRoute(location);
+	this->routes.insert(location);
 }
 
 int parseNumber(std::string &str)
@@ -59,6 +52,7 @@ int parseNumber(std::string &str)
 	return (number);
 }
 
+//art
 int parseHost(std::string s_host)
 {
 	std::vector<std::string> octets;
@@ -87,13 +81,13 @@ int parseHost(std::string s_host)
 	}
 	return (addr);
 }
-void Server::setListen(Tokens &token, Tokens &end)
+void VirtualServer::setListen(Tokens &token, Tokens &end)
 {
 	std::string host;
 	std::string port;
 	SocketAddr socketAddr;
 
-	this->globalParam.validateOrFaild(token, end);
+	this->globalConfig.validateOrFaild(token, end);
 	size_t pos = token->find(':');
 	if (pos == 0 || pos == token->size() - 1)
 		throw ParserException("Unvalid [host:]port " + *token);
@@ -111,29 +105,30 @@ void Server::setListen(Tokens &token, Tokens &end)
 		throw ParserException("dublicate listen: " + host + ":" + port);
 	listen.insert(socketAddr);
 	token++;
-	this->globalParam.CheckIfEnd(token, end);
+	this->globalConfig.CheckIfEnd(token, end);
 }
 
-std::set<Server::SocketAddr> &Server::getListen()
+std::set<VirtualServer::SocketAddr> &VirtualServer::getListen()
 {
 	return (this->listen);
 }
 
-bool Server::isListen(const SocketAddr &addr) const
+bool VirtualServer::isListen(const SocketAddr &addr) const
 {
 	return (listen.find(addr) != listen.end());
 }
 
-void Server::setServerNames(Tokens &token, Tokens &end)
+void VirtualServer::setServerNames(Tokens &token, Tokens &end)
 {
-	this->globalParam.validateOrFaild(token, end);
+	this->globalConfig.validateOrFaild(token, end);
 
 	while (token != end && *token != ";")
-		serverNames.insert(this->globalParam.consume(token, end));
-	this->globalParam.CheckIfEnd(token, end);
+		serverNames.insert(
+			this->globalConfig.consume(token, end)); // CONSUME  take curr token and check if its an id then
+	this->globalConfig.CheckIfEnd(token, end);
 }
 
-void Server::parseTokens(Tokens &token, Tokens &end)
+void VirtualServer::parseTokens(Tokens &token, Tokens &end)
 {
 	if (token == end)
 		throw ParserException("Unexpected end of file");
@@ -144,5 +139,5 @@ void Server::parseTokens(Tokens &token, Tokens &end)
 	else if (*token == "location")
 		this->pushLocation(token, end);
 	else
-		globalParam.parseTokens(token, end);
+		globalConfig.parseTokens(token, end);
 }

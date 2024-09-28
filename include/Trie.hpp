@@ -14,10 +14,11 @@ class Trie
 		TrieNode();
 		~TrieNode();
 	};
-	TrieNode *root;
 
+	TrieNode *root;
   public:
 	Trie();
+	void deleteNode(TrieNode *node);
 	~Trie();
 	void insert(Location &location);
 	Location *findPath(std::string &route);

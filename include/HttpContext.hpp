@@ -2,19 +2,19 @@
 # define HttpContext_H
 
 #include "DataType.hpp"
-#include "Server.hpp"
+#include "VirtualServer.hpp"
 
 class HttpContext
 {
 	private:
-		int				keepAliveTimeout;
-		GlobalParam		globalParam;
-		std::vector<Server> servers;
+		// int				keepAliveTimeout;
+		GlobalConfig		globalParam;
+		std::vector<VirtualServer> servers;
 	public:
 		HttpContext();
 		~HttpContext();
 		void pushServer(Tokens &token, Tokens &end);
-		std::vector<Server> &getServers();
+		std::vector<VirtualServer> &getServers();
 		void parseTokens(Tokens &token, Tokens &end);
 };
 

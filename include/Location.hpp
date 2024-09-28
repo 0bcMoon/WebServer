@@ -11,11 +11,11 @@ class Location
 		struct Redirection // if  there 4xx or 5xx error it return error page else 3xx it redirect to url
 		{
 			std::string status;
-			std::string url;
+			std::string url; // will  file path if status != 3xx 
 		};
 		Redirection					redirect;
 		std::string					path; // todo as redix tree
-		GlobalParam					globalParam;
+		GlobalConfig				globalConfig;
 	public:
 		Location();
 		Location &operator=(const Location &location);

@@ -9,32 +9,33 @@
 #include "Location.hpp"
 #include "Trie.hpp"
 
-class Server
+class VirtualServer
 {
   public:
 	struct SocketAddr
 	{
-		int port;
-		int host; // wich interface bind to (require ip address )
+		int		port;
+		int		host; // wich interface bind to (require ip address )
 		bool operator<(const SocketAddr &rhs) const // code from the great chatGpt
 		{
 			if (host != rhs.host)
 				return host < rhs.host;
 			return port < rhs.port;
 		}
-		SocketAddr(int port, int host) : port(port), host(host) {}
-		SocketAddr()  {}
+		SocketAddr(int port, int host);
+		SocketAddr();
 	};
 
   private:
-	std::vector<int> fds;
-	std::set<std::string> serverNames; // todo as trie
-	GlobalParam globalParam;
-	std::vector<Location> locations;
-	Trie *routes;
-	std::set<SocketAddr> listen;
+	std::vector<int>		fds;
+	std::set<std::string>	serverNames; // todo as trie
+	GlobalConfig			globalConfig;
+	std::vector<Location>	locations;
+	Trie					routes;
+	std::set<SocketAddr>	listen;
 
   public:
+	~VirtualServer();
 	void setListen(Tokens &Token, Tokens &end);
 	std::set<SocketAddr> &getListen();
 	bool isListen(const SocketAddr &addr) const;
@@ -42,7 +43,7 @@ class Server
 	void pushLocation(Tokens &tokens, Tokens &end);
 	void parseTokens(Tokens &tokens, Tokens &end);
 	void insertRoute(Location &location);
-	Server();
+	VirtualServer();
 };
 
 #endif
