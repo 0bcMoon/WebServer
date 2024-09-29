@@ -1,9 +1,10 @@
 #include "Trie.hpp"
 #include "ParserException.hpp"
+#include <cstring>
 
 Trie::TrieNode::TrieNode() : isEnd(false)
 {
-	std::memset(children, 0, sizeof(children));
+	memset(children, 0, sizeof(children));
 }
 
 Trie::TrieNode::~TrieNode()
@@ -15,11 +16,16 @@ Trie::Trie()
 {
 	std::cout << "Trie constructor" << std::endl;
 	root = new TrieNode();
-	std::cout << root << std::endl;
 }
 
-void Trie::deleteNode(TrieNode *node)
+void Trie::deleteNode()
 {
+	this->_deleteNode(root); // fuck destructor
+}
+
+void Trie::_deleteNode(TrieNode *node)
+{
+
 	if (node == NULL)
 		return;
 
@@ -27,7 +33,7 @@ void Trie::deleteNode(TrieNode *node)
 	{
 		if (node->children[i] != NULL)
 		{
-			deleteNode(node->children[i]);
+			_deleteNode(node->children[i]);
 			node->children[i] = NULL;
 		}
 	}
@@ -35,18 +41,11 @@ void Trie::deleteNode(TrieNode *node)
 }
 
 Trie::~Trie()
-{
-	for (size_t i = 0; i < 128; i++)
-	{
-		if (root->children[i] != NULL)
-		{
-			deleteNode(root->children[i]);
-			root->children[i] = NULL;
-		}
-	}
+{ 
+
 }
 
-void Trie::insert(Location &location)
+bool Trie::insert(Location &location)
 {
 	std::string &path = location.getPath();
 	TrieNode *currNode = root;
@@ -55,15 +54,16 @@ void Trie::insert(Location &location)
 	{
 		idx = path[i];
 		if (idx < 0 || idx > 128)
-			throw ParserException("Invalid character in path");
+			return false;
 		if (currNode->children[idx] == NULL)
 			currNode->children[idx] = new TrieNode();
 		currNode = currNode->children[idx];
 	}
 	if (currNode->isEnd)
-		throw ParserException("Location already exists");
+			return false;
 	currNode->isEnd = true;
 	currNode->location = location;
+	return (true);
 }
 
 

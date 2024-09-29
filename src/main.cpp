@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   main.cpp                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/29 11:55:48 by hicham            #+#    #+#             */
+/*   Updated: 2024/09/29 12:02:29 by hicham           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
@@ -11,7 +23,7 @@ extern "C"
 	const char *
 	__asan_default_options()
 {
-	return "detect_leaks=0";
+	return "detect_leaks=1";
 }
 void atexist()
 {
@@ -19,7 +31,7 @@ void atexist()
 }
 int main()
 {
-	atexit(atexist);
+	// atexit(atexist);
 	
 	HttpContext *http = NULL;
 	try // ugly but fix the problem

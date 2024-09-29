@@ -35,7 +35,9 @@ class VirtualServer
 	std::set<SocketAddr>	listen;
 
   public:
+	void deleteRoutes();
 	~VirtualServer();
+	VirtualServer();
 	void setListen(Tokens &Token, Tokens &end);
 	std::set<SocketAddr> &getListen();
 	bool isListen(const SocketAddr &addr) const;
@@ -43,7 +45,6 @@ class VirtualServer
 	void pushLocation(Tokens &tokens, Tokens &end);
 	void parseTokens(Tokens &tokens, Tokens &end);
 	void insertRoute(Location &location);
-	VirtualServer();
 };
 
 #endif

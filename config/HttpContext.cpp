@@ -15,6 +15,10 @@ HttpContext::~HttpContext()
 {
 	std::cout << "HttpContext destructor" << std::endl;
 	std::cout << "handle memory leaks"<<std::endl;
+	for (size_t i = 0; i < this->servers.size(); i++)
+	{
+		this->servers[i].deleteRoutes();
+	}
 }
 // TODO : check if value is was set  for duplicates
 //

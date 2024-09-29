@@ -1,10 +1,13 @@
 
 #include "Debug.hpp"
 
+#include <sstream>
 
 Debug::Debug(std::string msg, const char *file, int line)
 {
-	message = msg + " at " + file + ":" + std::to_string(line);
+	std::stringstream ss;
+	ss << msg << " at " << file << ":" << line;
+	message = ss.str();
 }
 
 Debug::Debug() : message("") {}

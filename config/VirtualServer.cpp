@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   VirtualServer.cpp                                  :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/29 12:54:14 by hicham            #+#    #+#             */
+/*   Updated: 2024/09/29 12:54:53 by hicham           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 
 #include "VirtualServer.hpp"
 #include <cstddef>
@@ -12,6 +24,7 @@ VirtualServer::VirtualServer()
 
 VirtualServer::~VirtualServer() 
 {
+	
 }
 
 VirtualServer::SocketAddr::SocketAddr(int port, int host) : port(port), host(host) {}
@@ -32,7 +45,14 @@ void VirtualServer::pushLocation(Tokens &token, Tokens &end)
 	if (token == end)
 		throw ParserException("Unexpected end of file");
 	token++;
-	this->routes.insert(location);
+	if (this->routes.insert(location))
+		return;
+	this->routes.deleteNode();
+	throw ParserException("Dublicate location: " + location.getPath());
+}
+void VirtualServer::deleteRoutes()
+{
+	this->routes.deleteNode();
 }
 
 int parseNumber(std::string &str)
