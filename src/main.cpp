@@ -6,7 +6,7 @@
 /*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/29 11:55:48 by hicham            #+#    #+#             */
-/*   Updated: 2024/09/29 12:02:29 by hicham           ###   ########.fr       */
+/*   Updated: 2024/09/29 19:34:52 by hicham           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,27 +29,31 @@ void atexist()
 {
 		system("leaks  webserv");
 }
-int main()
+ServerContext* LoadConfig(const char *path)
 {
-	// atexit(atexist);
-	
-	HttpContext *http = NULL;
+	ServerContext *http = NULL;
 	try // ugly but fix the problem
 	{
 		Tokenizer tokenizer;
-		tokenizer.readConfig("config/nginx.conf");
+		tokenizer.readConfig(path);
 		tokenizer.CreateTokens();
-		http = tokenizer.parseConfig();
+		http = new ServerContext();
+		tokenizer.parseConfig(http);
 	}
 	catch (const Debug &e)
 	{
 		std::cout << e.what() << std::endl;
-		return (1);
 	}
 	catch (const std::bad_alloc &e)
 	{
 		std::cout << e.what() << std::endl;
-		return (1);
 	}
+	return (http);
+}
+int main()
+{
+	// atexit(atexist);
+	ServerContext *http = NULL;
+	http = LoadConfig("config/nginx.conf");
 	delete http;
 }

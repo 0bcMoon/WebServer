@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Trie.cpp                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/29 16:45:56 by hicham            #+#    #+#             */
+/*   Updated: 2024/09/29 19:34:01 by hicham           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "Trie.hpp"
 #include "ParserException.hpp"
 #include <cstring>
@@ -9,12 +21,10 @@ Trie::TrieNode::TrieNode() : isEnd(false)
 
 Trie::TrieNode::~TrieNode()
 {
-
 }
 
 Trie::Trie()
 {
-	std::cout << "Trie constructor" << std::endl;
 	root = new TrieNode();
 }
 
@@ -28,7 +38,6 @@ void Trie::_deleteNode(TrieNode *node)
 
 	if (node == NULL)
 		return;
-
 	for (size_t i = 0; i < 128; i++)
 	{
 		if (node->children[i] != NULL)
@@ -41,8 +50,7 @@ void Trie::_deleteNode(TrieNode *node)
 }
 
 Trie::~Trie()
-{ 
-
+{
 }
 
 bool Trie::insert(Location &location)
@@ -54,18 +62,17 @@ bool Trie::insert(Location &location)
 	{
 		idx = path[i];
 		if (idx < 0 || idx > 128)
-			return false;
+			throw ParserException("InValide char in path " + path);
 		if (currNode->children[idx] == NULL)
 			currNode->children[idx] = new TrieNode();
 		currNode = currNode->children[idx];
 	}
 	if (currNode->isEnd)
-			return false;
+		throw ParserException("Duplicate location route at: " + path);
 	currNode->isEnd = true;
 	currNode->location = location;
 	return (true);
 }
-
 
 Location *Trie::findPath(std::string &route)
 {

@@ -27,10 +27,10 @@ class VirtualServer
 	};
 
   private:
+
 	std::vector<int>		fds;
 	std::set<std::string>	serverNames; // todo as trie
 	GlobalConfig			globalConfig;
-	std::vector<Location>	locations;
 	Trie					routes;
 	std::set<SocketAddr>	listen;
 

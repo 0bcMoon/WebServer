@@ -6,7 +6,7 @@
 /*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/29 12:54:14 by hicham            #+#    #+#             */
-/*   Updated: 2024/09/29 12:54:53 by hicham           ###   ########.fr       */
+/*   Updated: 2024/09/29 19:29:54 by hicham           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,10 +45,7 @@ void VirtualServer::pushLocation(Tokens &token, Tokens &end)
 	if (token == end)
 		throw ParserException("Unexpected end of file");
 	token++;
-	if (this->routes.insert(location))
-		return;
-	this->routes.deleteNode();
-	throw ParserException("Dublicate location: " + location.getPath());
+	 this->routes.insert(location);
 }
 void VirtualServer::deleteRoutes()
 {

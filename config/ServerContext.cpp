@@ -6,15 +6,14 @@
 #include <iostream>
 #include <vector>
 
-HttpContext::HttpContext()
+ServerContext::ServerContext()
 {
-
+	std::cout << "HttpContext created" << std::endl;
 }
 
-HttpContext::~HttpContext()
+ServerContext::~ServerContext()
 {
-	std::cout << "HttpContext destructor" << std::endl;
-	std::cout << "handle memory leaks"<<std::endl;
+	std::cout << "HttpContext  got delete" << std::endl;
 	for (size_t i = 0; i < this->servers.size(); i++)
 	{
 		this->servers[i].deleteRoutes();
@@ -22,15 +21,15 @@ HttpContext::~HttpContext()
 }
 // TODO : check if value is was set  for duplicates
 //
-std::vector<VirtualServer> &HttpContext::getServers()
+std::vector<VirtualServer> &ServerContext::getServers()
 {
 	return this->servers;
 }
-void HttpContext::parseTokens(Tokens &token, Tokens &end)
+void ServerContext::parseTokens(Tokens &token, Tokens &end)
 {
 	this->globalParam.parseTokens(token, end);
 }
-void HttpContext::pushServer(Tokens &token, Tokens &end)
+void ServerContext::pushServer(Tokens &token, Tokens &end)
 {
 	token++;
 	if (token == end)
@@ -38,7 +37,10 @@ void HttpContext::pushServer(Tokens &token, Tokens &end)
 	else if (*token != "{")
 		throw ParserException("Unexpact token: " + *token);
 	token++;
-	VirtualServer server;
+
+	this->servers.push_back(VirtualServer());  // push empty VirtualServer to keep the reference in http object in case of exception to cause memory leak
+	VirtualServer &server = this->servers.back(); // grants access to the last element
+
 	while (token != end && *token != "}")
 	{
 		if (*token == "location")
@@ -49,5 +51,4 @@ void HttpContext::pushServer(Tokens &token, Tokens &end)
 	if (token == end || *token != "}")
 		throw ParserException("Unexpected end of file");
 	token++;
-	this->servers.push_back(server);
 }

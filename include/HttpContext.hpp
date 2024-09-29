@@ -4,15 +4,15 @@
 #include "DataType.hpp"
 #include "VirtualServer.hpp"
 
-class HttpContext
+class ServerContext
 {
 	private:
 		// int				keepAliveTimeout;
 		GlobalConfig		globalParam;
 		std::vector<VirtualServer> servers;
 	public:
-		HttpContext();
-		~HttpContext();
+		ServerContext();
+		~ServerContext();
 		void pushServer(Tokens &token, Tokens &end);
 		std::vector<VirtualServer> &getServers();
 		void parseTokens(Tokens &token, Tokens &end);

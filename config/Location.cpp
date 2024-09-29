@@ -17,7 +17,7 @@ Location &Location::operator=(const Location &location)
 void Location::setPath(std::string &path)
 {
 	// TODO validate path
-	// maybe encode and decode path
+	// may be support encode 
 	this->path = path;
 }
 

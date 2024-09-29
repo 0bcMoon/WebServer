@@ -18,9 +18,10 @@ class Trie
 	TrieNode *root;
   public:
 	Trie();
+	~Trie();
+
 	void deleteNode();
 	void _deleteNode(TrieNode *node);
-	~Trie();
 	bool insert(Location &location);
 	Location *findPath(std::string &route);
 };
