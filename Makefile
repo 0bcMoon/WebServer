@@ -11,12 +11,14 @@ CC = c++
 INCD = $(shell find . -name "*.hpp" | grep -v "test")
 
 INC = include/
-CFLAGS = -std=c++98 -Wall -Wextra -Werror
+
+CFLAGS = -std=c++98 -Wall -Wextra  -g -ggdb3 
+# CFLAGS = -std=c++98 -Wall -Wextra -fsanitize=address -g -ggdb3 
 
 
 NAME = webserv
 
-all : $(NAME)
+all : $(NAME) run
 
 $(NAME) : $(OBJ)
 	$(CC)  $(CFLAGS)  $(OBJ)  -o $(NAME) 
@@ -37,6 +39,8 @@ re : fclean all
 test:
 	make -f MakeTest
 	@./serverTest
+run :
+	@./$(NAME)
 
 
 .PHONY: all clean fclean re test
