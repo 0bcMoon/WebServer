@@ -17,23 +17,25 @@ class Event
 	SocketMap_t											socketMap;
 	std::map<int, VirtualServer *>						defaultServer;
 
-	int		CreateSocket(SocketAddrSet_t::iterator  &address);
-	void	setNonBlockingIO(int serverFd);
-	bool	Listen(int serverFd);
-
-	std::string get_readable_ip(VirtualServer::SocketAddr address);
-	void insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd);
-	void InsertDefaultServer(VirtualServer *server, int socketFd);
-	struct kevent										changeEvent;
+	int													CreateSocket(SocketAddrSet_t::iterator  &address);
+	void												setNonBlockingIO(int serverFd);
+	bool												Listen(int serverFd);
+	std::string											get_readable_ip(VirtualServer::SocketAddr address);
+	void												insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd);
+	void												InsertDefaultServer(VirtualServer *server, int socketFd);
+	struct kevent										*eventChangeList;
 	struct kevent										*eventList;
-
+	int													kqueueFd;
+	void												CreateChangeList();
+	int													numOfSocket;
   public:
-	void initIOmutltiplexing();
+	void												initIOmutltiplexing();
 	Event();
 	~Event();
 	Event(int max_connection, int max_events);
-	void init(std::vector<VirtualServer> &VirtualServers);
-	bool Listen();
+	void												init(std::vector<VirtualServer> &VirtualServers);
+	bool												Listen();
+	void												eventLoop();
 };
 
 #endif
