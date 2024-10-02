@@ -1,5 +1,5 @@
-#ifndef HttpContext_H
-# define HttpContext_H
+#ifndef ServerContext_H
+# define ServerContext_H
 
 #include "DataType.hpp"
 #include "VirtualServer.hpp"
@@ -16,6 +16,7 @@ class ServerContext
 		void pushServer(Tokens &token, Tokens &end);
 		std::vector<VirtualServer> &getServers();
 		void parseTokens(Tokens &token, Tokens &end);
+		std::vector<VirtualServer> &getVirtualServers();
 };
 
 #endif

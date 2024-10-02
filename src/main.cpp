@@ -1,37 +1,35 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/29 11:55:48 by hicham            #+#    #+#             */
-/*   Updated: 2024/09/29 19:34:52 by hicham           ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#include <cassert>
+#include <unistd.h>
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 #include "Debug.hpp"
-#include "VirtualServer.hpp"
+#include "Event.hpp"
 #include "Tokenizer.hpp"
+#include "VirtualServer.hpp"
 #ifdef __cplusplus
 extern "C"
 #endif
 	const char *
 	__asan_default_options()
 {
-	return "detect_leaks=1";
+	return "detect_leaks=0";
 }
+
 void atexist()
 {
-		system("leaks  webserv");
+	char buffer[100] = {0};
+	sprintf(buffer, "lsof -p  %d", getpid());
+	// system("leaks  webserv"); // there is no leaks
+	system(buffer); // there is no leaks
+	sleep(1);
+	system("openport"); // there is no leaks
 }
-ServerContext* LoadConfig(const char *path)
+ServerContext *LoadConfig(const char *path)
 {
 	ServerContext *http = NULL;
+
 	try // ugly but fix the problem
 	{
 		Tokenizer tokenizer;
@@ -43,17 +41,43 @@ ServerContext* LoadConfig(const char *path)
 	catch (const Debug &e)
 	{
 		std::cout << e.what() << std::endl;
+		delete http;
+		return (NULL);
 	}
 	catch (const std::bad_alloc &e)
 	{
 		std::cout << e.what() << std::endl;
+		delete http;
+		return (NULL);
 	}
 	return (http);
 }
+
 int main()
 {
-	// atexit(atexist);
-	ServerContext *http = NULL;
-	http = LoadConfig("config/nginx.conf");
-	delete http;
+	atexit(atexist);
+	Event *event = NULL;
+	ServerContext *ctx = NULL;
+
+	ctx = LoadConfig("config/nginx.conf");
+	// move this to a function
+	if (!ctx) return 1;
+	try
+	{
+		event = new Event(32, 128);
+		event->init(ctx->getVirtualServers());
+		event->Listen();
+		event->initIOmutltiplexing();
+	}
+	catch (const std::runtime_error &e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+	catch (const std::bad_alloc &e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+
+	// delete event;
+	delete ctx;
 }

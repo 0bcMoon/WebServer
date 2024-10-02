@@ -83,7 +83,6 @@ class GlobalConfig
 
 	void setCGI(Tokens &token, Tokens &end);
 	// TODO CGI getter may be with caching ??
-
 	void setErrorPages(Tokens &token, Tokens &end);
 };
 

@@ -1,4 +1,7 @@
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/unistd.h>
+#include <unistd.h>
 #include <cstddef>
 #include <iostream>
 #include <string>
@@ -173,6 +176,8 @@ void GlobalConfig::setCGI(Tokens &token, Tokens &end)
 		throw ParserException("Invalid CGI extension" + cgi_ext);
 	if (this->cgiMap.find(cgi_ext) != this->cgiMap.end())
 		throw ParserException("Duplicate CGI extension" + cgi_ext);
+	if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
+		throw ParserException("Invalid CGI path" + cgi_path);
 	this->cgiMap[cgi_ext] = cgi_path;
 }
 
@@ -255,33 +260,7 @@ void GlobalConfig::setMethods(Tokens &token, Tokens &end)
 void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 {
 	throw ParserException("TODO: with better implementation");
-	// std::vector<std::string> status;
-	// std::string redirectStatus = "";
 
-
-	// this->validateOrFaild(token, end);
-	// while (token != end && this->isValidStatusCode(*token))
-	// 	status.push_back(this->consume(token, end));
-	// if (token == end)
-	// 	throw ParserException("Unexpected end of file");
-
-	// if (token->at(0) == '=')
-	// {
-	// 	redirectStatus = token->substr(1);
-	// 	if (!this->isValidStatusCode(redirectStatus) || redirectStatus.at(0) != '3')
-	// 		throw ParserException("Invalid status code on error_pages" + *token);
-	// 	token++;
-	// }
-
-	// // TODO : find better implementation to save memory 
-	// //
-	// // for (size_t i = 0;i<status.size();i++)
-	// // {
-	// // 	if (redirectStatus.empty())
-	// // 		// map
-	// // }
-	// 	
-	// this->CheckIfEnd(token, end);
 }
 
 
@@ -289,3 +268,4 @@ void GlobalConfig::loadFile(Tokens &token, Tokens &end, std::string &buffer)
 {
 
 }
+

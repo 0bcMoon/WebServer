@@ -1,7 +1,7 @@
 #ifndef TOKENIZER_HPP
 #define TOKENIZER_HPP
 
-#include "HttpContext.hpp"
+#include "ServerContext.hpp"
 #include <string>
 #include <vector>
 

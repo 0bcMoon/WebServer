@@ -1,17 +1,5 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   VirtualServer.cpp                                  :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/29 12:54:14 by hicham            #+#    #+#             */
-/*   Updated: 2024/09/29 19:29:54 by hicham           ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-
 #include "VirtualServer.hpp"
+#include <sys/socket.h>
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -125,7 +113,7 @@ void VirtualServer::setListen(Tokens &token, Tokens &end)
 	this->globalConfig.CheckIfEnd(token, end);
 }
 
-std::set<VirtualServer::SocketAddr> &VirtualServer::getListen()
+std::set<VirtualServer::SocketAddr> &VirtualServer::getAddress()
 {
 	return (this->listen);
 }
@@ -157,4 +145,9 @@ void VirtualServer::parseTokens(Tokens &token, Tokens &end)
 		this->pushLocation(token, end);
 	else
 		globalConfig.parseTokens(token, end);
+}
+
+std::set<std::string> &VirtualServer::getServerNames()
+{
+	return (this->serverNames);
 }

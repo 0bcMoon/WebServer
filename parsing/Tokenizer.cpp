@@ -1,6 +1,6 @@
 #include "Tokenizer.hpp"
 #include "DataType.hpp"
-#include "HttpContext.hpp"
+#include "ServerContext.hpp"
 #include "ParserException.hpp"
 #include "VirtualServer.hpp"
 #include <fstream>

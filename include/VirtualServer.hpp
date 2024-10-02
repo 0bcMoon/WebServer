@@ -22,24 +22,28 @@ class VirtualServer
 				return host < rhs.host;
 			return port < rhs.port;
 		}
+		bool operator==(const SocketAddr &rhs) const // code from the great chatGpt
+		{
+			return host == rhs.host && port == rhs.port;
+		}
 		SocketAddr(int port, int host);
 		SocketAddr();
 	};
 
   private:
-
-	std::vector<int>		fds;
+	std::vector<int>		sockets;
 	std::set<std::string>	serverNames; // todo as trie
 	GlobalConfig			globalConfig;
 	Trie					routes;
-	std::set<SocketAddr>	listen;
+	std::set<VirtualServer::SocketAddr>	listen;
 
   public:
 	void deleteRoutes();
 	~VirtualServer();
 	VirtualServer();
 	void setListen(Tokens &Token, Tokens &end);
-	std::set<SocketAddr> &getListen();
+	std::set<SocketAddr> &getAddress();
+		std::set<std::string> &getServerNames();
 	bool isListen(const SocketAddr &addr) const;
 	void setServerNames(Tokens &Token, Tokens &end);
 	void pushLocation(Tokens &tokens, Tokens &end);

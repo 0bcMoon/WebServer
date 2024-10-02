@@ -1,5 +1,5 @@
 
-#include "HttpContext.hpp"
+#include "ServerContext.hpp"
 #include "DataType.hpp"
 #include "ParserException.hpp"
 #include "VirtualServer.hpp"
@@ -8,12 +8,12 @@
 
 ServerContext::ServerContext()
 {
-	std::cout << "HttpContext created" << std::endl;
+	std::cout << "ServerContext created" << std::endl;
 }
 
 ServerContext::~ServerContext()
 {
-	std::cout << "HttpContext  got delete" << std::endl;
+	std::cout << "ServerContext  got delete" << std::endl;
 	for (size_t i = 0; i < this->servers.size(); i++)
 	{
 		this->servers[i].deleteRoutes();
@@ -38,7 +38,9 @@ void ServerContext::pushServer(Tokens &token, Tokens &end)
 		throw ParserException("Unexpact token: " + *token);
 	token++;
 
-	this->servers.push_back(VirtualServer());  // push empty VirtualServer to keep the reference in http object in case of exception to cause memory leak
+	this->servers.push_back(VirtualServer());  // push empty VirtualServer to keep 
+											   // the reference in http object in case of exception to cause memory leak
+
 	VirtualServer &server = this->servers.back(); // grants access to the last element
 
 	while (token != end && *token != "}")
@@ -51,4 +53,9 @@ void ServerContext::pushServer(Tokens &token, Tokens &end)
 	if (token == end || *token != "}")
 		throw ParserException("Unexpected end of file");
 	token++;
+}
+
+std::vector<VirtualServer> &ServerContext::getVirtualServers()
+{
+	return this->servers;
 }
