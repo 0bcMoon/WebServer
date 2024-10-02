@@ -17,6 +17,9 @@ extern "C"
 	return "detect_leaks=0";
 }
 
+#define MAX_EVENTS 64
+#define MAX_CONNECTIONS_QUEUE 128
+
 void atexist()
 {
 	char buffer[100] = {0};
@@ -26,6 +29,7 @@ void atexist()
 	sleep(1);
 	system("openport"); // there is no leaks
 }
+
 ServerContext *LoadConfig(const char *path)
 {
 	ServerContext *http = NULL;
@@ -54,8 +58,9 @@ ServerContext *LoadConfig(const char *path)
 }
 
 int main()
-{
-	atexit(atexist);
+{ 
+	// atexit(atexist);
+
 	Event *event = NULL;
 	ServerContext *ctx = NULL;
 
@@ -64,10 +69,11 @@ int main()
 	if (!ctx) return 1;
 	try
 	{
-		event = new Event(32, 128);
+		event = new Event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE);
 		event->init(ctx->getVirtualServers());
 		event->Listen();
 		event->initIOmutltiplexing();
+		event->eventLoop();
 	}
 	catch (const std::runtime_error &e)
 	{
@@ -78,6 +84,7 @@ int main()
 		std::cerr << e.what() << "\n";
 	}
 
-	// delete event;
+	delete event;
 	delete ctx;
 }
+
