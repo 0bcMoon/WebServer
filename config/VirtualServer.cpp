@@ -151,3 +151,4 @@ std::set<std::string> &VirtualServer::getServerNames()
 {
 	return (this->serverNames);
 }
+

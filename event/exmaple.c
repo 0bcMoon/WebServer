@@ -29,6 +29,9 @@ int set_non_blocking(int sockfd)
 		perror("fcntl(F_SETFL)");
 		return -1;
 	}
+	flags = fcntl(sockfd, F_GETFL, 0);
+	if (flags & O_NONBLOCK)
+		printf("socket is non-blocking\n");
 	return 0;
 }
 
@@ -48,11 +51,11 @@ int main()
 	int optval = 1;
 	 setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	// Set the server socket to non-blocking mode
-	if (set_non_blocking(server_fd) == -1)
-	{
-		close(server_fd);
-		exit(EXIT_FAILURE);
-	}
+	// if (set_non_blocking(server_fd) == -1)
+	// {
+	// 	close(server_fd);
+	// 	exit(EXIT_FAILURE);
+	// }
 
 	// Configure server address
 	address.sin_family = AF_INET;
