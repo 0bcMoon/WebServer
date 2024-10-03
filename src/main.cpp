@@ -22,12 +22,12 @@ extern "C"
 
 void atexist()
 {
-	char buffer[100] = {0};
-	sprintf(buffer, "lsof -p  %d", getpid());
-	// system("leaks  webserv"); // there is no leaks
-	system(buffer); // there is no leaks
-	sleep(1);
+	// char buffer[100] = {0};
+	// sprintf(buffer, "lsof -p  %d", getpid());
+	// // system("leaks  webserv"); // there is no leaks
+	// system(buffer); // there is no leaks
 	system("openport"); // there is no leaks
+	sleep(1);
 }
 
 ServerContext *LoadConfig(const char *path)

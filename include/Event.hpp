@@ -6,16 +6,18 @@
 class Event
 {
   private:
-	const int MAX_CONNECTION_QUEUE ;
-	const int MAX_EVENTS;
+	const int											MAX_CONNECTION_QUEUE ;
+	const int											MAX_EVENTS;
 	typedef std::map<std::string, VirtualServer *>		ServerNameMap_t;
 	typedef std::map<int,  ServerNameMap_t>				VirtualServerMap_t;
 	typedef std::map<VirtualServer::SocketAddr, int>	SocketMap_t;
+	typedef std::map<int, struct sockaddr_in>			SockAddr_in;
 	typedef std::set<VirtualServer::SocketAddr>			SocketAddrSet_t;
 
 	VirtualServerMap_t									VirtuaServers;
 	SocketMap_t											socketMap;
 	std::map<int, VirtualServer *>						defaultServer;
+	SockAddr_in											sockAddrInMap;
 
 	int													CreateSocket(SocketAddrSet_t::iterator  &address);
 	void												setNonBlockingIO(int serverFd);
@@ -28,6 +30,11 @@ class Event
 	int													kqueueFd;
 	void												CreateChangeList();
 	int													numOfSocket;
+	int													newConnection(int socketFd);
+	bool												checkNewClient(int socketFd);
+	int													RemoveClient(int clientFd);
+	int													RegsterClient(int clientFd);
+
   public:
 	void												initIOmutltiplexing();
 	Event();
