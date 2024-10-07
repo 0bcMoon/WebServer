@@ -11,6 +11,8 @@
 #define REQSIZE_MAX  50000
 #define BODY_MAX	 30000
 
+typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
+
 enum reqMethode
 {
 	GET,
@@ -35,6 +37,12 @@ enum reqState
 	DEBUG
 };
 
+enum chunkState {
+	SIZE,
+	LINE,
+	END_LINE
+};
+
 enum crlfState {
 	READING,
 	NLINE,
@@ -57,9 +65,16 @@ typedef struct methodeStr
 } methodeStr;
 
 
+
 class HttpRequest 
 {
 	private:
+		enum chunkState						chunkState;
+		size_t								totalChunkSize;
+		size_t								chunkSize;
+		size_t								chunkIndex;
+		std::string							sizeStr;
+
 		const int							fd;
 		enum crlfState						crlfState;
 
@@ -69,11 +84,11 @@ class HttpRequest
 		std::map<std::string, std::string>	headers;
 		std::string							currHeaderName;
 
-		std::string							body; // TODO : body  may be binary (include '\0') fix this;
+		std::vector<int>							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;
 
 		int                                 reqSize;
-		int									reqBufferSize;
+		size_t								reqBufferSize;
 		size_t								reqBufferIndex;
 		std::string							reqBuffer; // buffer  may be binary (include '\0') fix this;
 
@@ -81,6 +96,9 @@ class HttpRequest
 
 		methodeStr							methodeStr;
 		std::string							httpVersion;
+
+		int 		convertChunkSize();
+		void			chunkEnd();
 
 		void		readRequest();
 
@@ -92,9 +110,13 @@ class HttpRequest
 		void		parseBody();
 		void		crlfGetting();
 
+		int			firstHeadersCheck();
+
 		int			verifyUriChar(char c);
 		void		checkHttpVersion(int *state);
 
+		void		contentLengthBodyParsing();
+		void		chunkedBodyParsing();
 
 		void returnHandle();
 		void nLineHandle();
@@ -111,7 +133,7 @@ class HttpRequest
 
 		void		setFd(int fd);
 
-
+		static int isNum(const std::string& str);
 };
 
 #endif
