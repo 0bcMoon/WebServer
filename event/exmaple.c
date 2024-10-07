@@ -18,21 +18,7 @@
 // Set a socket to non-blocking mode
 int set_non_blocking(int sockfd)
 {
-	int flags = fcntl(sockfd, F_GETFL, 0);
-	if (flags == -1)
-	{
-		perror("fcntl(F_GETFL)");
-		return -1;
-	}
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
-	{
-		perror("fcntl(F_SETFL)");
-		return -1;
-	}
-	flags = fcntl(sockfd, F_GETFL, 0);
-	if (flags & O_NONBLOCK)
-		printf("socket is non-blocking\n");
-	return 0;
+
 }
 
 int main()
@@ -116,7 +102,7 @@ int main()
 			if (ev_list[i].ident == (u_long)server_fd)
 			{
 				// Incoming connection
-				client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+				client_fd = accept(server_fd, NULL, NULL);
 				if (client_fd == -1)
 				{
 					perror("accept");
