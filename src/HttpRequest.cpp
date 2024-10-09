@@ -2,17 +2,20 @@
 #include <cctype>
 #include <climits>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <map>
 #include <sstream>
 #include <string>
+#include <sys/fcntl.h>
 #include <unistd.h>
 #include <iostream>
 
 
 HttpRequest::HttpRequest() : fd(-1)
 {
-	methode = NONE;
+	// methode = NONE;
     reqSize = 0;
     bodySize = 0;
 	state = METHODE;
@@ -23,7 +26,7 @@ HttpRequest::HttpRequest() : fd(-1)
 
 HttpRequest::HttpRequest(int fd) : fd(fd)
 {
-	methode = NONE;
+	// methode = NONE;
     reqSize = 0;
     bodySize = -1;
 	state = METHODE;
@@ -34,6 +37,55 @@ HttpRequest::HttpRequest(int fd) : fd(fd)
 	totalChunkSize = 0;
 }
 
+void	HttpRequest::clear()
+{
+	chunkState = SIZE;
+	totalChunkSize = 0;
+	chunkSize = 0;
+	state = METHODE;
+	chunkIndex = 0;
+	sizeStr.clear();
+	crlfState = READING;
+	path.clear();
+	headers.clear();
+	currHeaderName.clear();
+	body.clear();
+	bodySize = 0;
+	reqSize = 0;
+	// reqBufferSize = 0;
+	// reqBufferIndex = 0;
+	// reqBuffer.clear();
+	error.code = 200;
+	error.description = "OK";
+	methodeStr.eqMethodeStr.clear();
+	methodeStr.tmpMethodeStr.clear();
+	httpVersion.clear();
+}
+
+std::string							HttpRequest::getPath() const
+{
+	return (path);
+}
+
+std::map<std::string, std::string>	HttpRequest::getHeaders() const
+{
+	return (headers);
+}
+
+std::vector<int>					HttpRequest::getBody() const
+{
+	return (body);
+}
+
+httpError							HttpRequest::getStatus() const
+{
+	return (error);
+}
+
+std::string							HttpRequest::getStrMethode() const
+{
+	return (methodeStr.tmpMethodeStr);
+}
 HttpRequest::~HttpRequest() {
 
 }
@@ -54,12 +106,35 @@ void HttpRequest::readRequest()
 	}
 }
 
+int response(int fd)
+{
+	std::string buffer;
+	char tmp[10000];
+
+	int resFd = open("request.req", O_RDWR, 0777);
+	read(resFd, tmp, 10000);
+	buffer = tmp;
+	write (fd, buffer.c_str(), buffer.size());
+	return (1);
+}
+
 void HttpRequest::feed()
 {
 	readRequest();
 	reqBufferIndex = 0;
-	reqBuffer = "POST /api/data HTTP/1.1\r\nHost: example.com\r\nContent-Type: application/json\r\nContent-Length: 81\r\n\r\n{user: johndoe,email: john@example.c om, essage Hello, this is a test.}";
-	while (reqBufferIndex < reqBuffer.size() - 1 && state != ERROR && state != DEBUG)
+	// reqBuffer = "POST /api/data HTTP/1.1\r\nHost: example.com\r\nContent-Type: application/json\r\nContent-Length: 81\r\r\n\r\n{user: johndoe,email: john@example.c om, essage Hello, this is a test.}";
+	// reqBuffer = "POST /api/data HTTP/1.1\r\n"
+	// 			"Host: \r\n"
+	// 			"Content-Type: application/json\r\n"
+	// 			"Transfer-Encoding: chunked\r\n\r\n"
+	// 			"1B\r\n"
+	// 			"012345678901234567890123456\r\n" 
+	// 			"1D\r\n"
+	// 			"01234567890123456789012345678\r\n"
+	// 			"1C\r\n"
+	// 			"0123456789012345678901234567\r\n"
+	// 			"0\r\n\n" ;
+ 	while (reqBufferIndex < reqBuffer.size() && state != ERROR && state != DEBUG)
 	{
 		if (state == METHODE)
 			parseMethod();
@@ -76,16 +151,16 @@ void HttpRequest::feed()
 		if (state == HEADER_FINISH)
 			crlfGetting();
 		if (state == BODY)
-		{
 			parseBody();
-		}
 		if (state == BODY_FINISH)
-			state = DEBUG;
-		if (state == REQUEST_FINISH)
-			state = METHODE;
+			state = REQUEST_FINISH;
+		// if (state == REQUEST_FINISH)
+		// 	state = METHODE;
 		if (state == ERROR)
 			break;
 	}
+	if (state == DEBUG && response(fd))
+		std::cout << "FUCKING DONE" << std::endl;
 	std::cout << error.code << ": " << error.description << std::endl; 
 	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
 	for (map_it it = headers.begin(); it != headers.end(); ++it) {
@@ -93,8 +168,8 @@ void HttpRequest::feed()
     }
 	for (auto& it : body)
 	{
-		std::cout << (char)it ;
-	}	
+		std::cout << (char)it;
+	}
 }
 
 void HttpRequest::setHttpError(int code, std::string str)
@@ -446,7 +521,7 @@ void HttpRequest::parseHeaderVal()
 		if (reqBuffer[reqBufferIndex] == '\n' || reqBuffer[reqBufferIndex] == '\r')
 		{
 			state = HEADER_FINISH;
-			currHeaderName = "";
+			currHeaderName.clear();
 			return;
 		}
 		headers[currHeaderName].push_back(reqBuffer[reqBufferIndex]);
@@ -478,6 +553,9 @@ int		HttpRequest::firstHeadersCheck()
 	if (headers.find("Content-Length ") != headers.end()
 		&& headers.find("Transfer-Encoding ") != headers.end())
 		return (setHttpError(400, "Bad Request"), 1);
+	if (headers.find("Content-Length ") == headers.end()
+		&& headers.find("Transfer-Encoding ") == headers.end())
+		return (state = BODY_FINISH, 1);
 	return (0);
 }
 
@@ -512,7 +590,7 @@ int		HttpRequest::convertChunkSize()
 	long tmp = std::strtol(sizeStr.c_str(), &end, 16);
 	if (*end != 0 || tmp > INT_MAX || sizeStr.size() == 0)
 		return (setHttpError(400, "Bad Request"), 1);
-	if (tmp + totalChunkSize > BODY_MAX)
+	if (tmp + body.size() > BODY_MAX)
 		return (setHttpError(413, "Payload Too Large"), 1);
 	chunkSize = tmp;
 	sizeStr = "";
@@ -573,7 +651,7 @@ void		HttpRequest::chunkedBodyParsing()
 		}
 		if (chunkState == LINE)
 		{
-			if (!convertChunkSize())
+			if (convertChunkSize())
 				return ;
 		}
 	}

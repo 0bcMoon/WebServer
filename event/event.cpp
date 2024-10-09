@@ -10,12 +10,14 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "../include/Client.hpp"
+#include "Connections.hpp"
 #include "HttpRequest.hpp"
 #include "VirtualServer.hpp"
 
 Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 {
-	this->eventList = NULL;
+	this->evList = NULL;
 	this->eventChangeList = NULL;
 	this->kqueueFd = -1;
 	this->numOfSocket = 0;
@@ -23,14 +25,14 @@ Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 
 Event::Event(int max_connection, int max_events) : MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
-	this->eventList = NULL;
+	this->evList = NULL;
 	this->eventChangeList = NULL;
 	this->kqueueFd = -1;
 	this->numOfSocket = 0;
 }
 Event::~Event()
 {
-	delete this->eventList;
+	delete this->evList;
 	VirtualServerMap_t::iterator it = this->VirtuaServers.begin();
 	for (; it != this->VirtuaServers.end(); it++)
 	{
@@ -117,27 +119,21 @@ int set_non_blocking(int sockfd)
 		printf("socket is non-blocking\n");
 	return 0;
 }
+
 int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 {
 	sockaddr_in address2;
-	int optval = 1;
 
 	int socketFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (socketFd < 0)
-	{
-		std::cout << "socket creation faild:" << strerror(errno) << std::endl;
-		return -1;
-	}
-	// if (setsockopt(socketFd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1)
-	// 	std::cout << "could not set socket port to reusable: " << strerror(errno) << '\n';
+		throw std::runtime_error("socket creation failed: " + std::string(strerror(errno)));
 
-	// set_non_blocking(socketFd);
+	memset(&address2, 0, sizeof(struct sockaddr_in));
 
-	memset(&address2, 0, sizeof(sockaddr_in));
 	address2.sin_family = AF_INET;
 	address2.sin_addr.s_addr = htonl(address->host);
 	address2.sin_port = htons(address->port);
-	if (bind(socketFd, (struct sockaddr *)&address2, sizeof(sockaddr)) < 0)
+	if (bind(socketFd, (struct sockaddr *)&address2, sizeof(address2)) < 0)
 	{
 		close(socketFd);
 		throw std::runtime_error("bind failed: " + std::string(strerror(errno)));
@@ -163,16 +159,25 @@ std::string Event::get_readable_ip(const VirtualServer::SocketAddr address)
 
 void Event::setNonBlockingIO(int socketFd)
 {
-	return;
-	if (fcntl(socketFd, F_SETFL, FD_CLOEXEC | O_NONBLOCK) == -1)
-		throw std::runtime_error("unable to set the socket as nonBlocking : " + std::string(strerror(errno)));
-	// TODO : handel error descount client;
+	int flags = fcntl(socketFd, F_GETFL, 0);
+	if (flags == -1)
+		perror("fcntl(F_GETFL)");
+	if (fcntl(socketFd, F_SETFL, flags | O_NONBLOCK) == -1)
+		perror("fcntl(F_SETFL)");
+	flags = fcntl(socketFd, F_GETFL, 0);
+	if (flags & O_NONBLOCK)
+		printf("socket is non-blocking\n");
 }
 
 bool Event::Listen(int socketFd)
 {
-	if (listen(socketFd, this->MAX_CONNECTION_QUEUE) < 0)
+	// TODO: this->MAX_CONNECTION_QUEUE
+
+	if (listen(socketFd, 5) < 0)
+	{
+		perror("listen failed");
 		return false;
+	}
 	return true;
 }
 
@@ -193,6 +198,7 @@ void Event::CreateChangeList()
 {
 	int i = 0;
 	SockAddr_in::iterator it = this->sockAddrInMap.begin();
+	// TODO : monitor read and write
 	for (; it != this->sockAddrInMap.end(); it++)
 	{
 		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
@@ -207,7 +213,7 @@ void Event::CreateChangeList()
 
 void Event::initIOmutltiplexing()
 {
-	this->eventList = new struct kevent[this->MAX_EVENTS];
+	this->evList = new struct kevent[this->MAX_EVENTS];
 	this->eventChangeList = new struct kevent[this->numOfSocket * 2];
 	this->kqueueFd = kqueue();
 	if (this->kqueueFd < 0)
@@ -229,28 +235,27 @@ int Event::newConnection(int socketFd)
 }
 void read_from_client(int fd)
 {
-	std::cout << "try to read from client\n";
-	int flags = fcntl(fd, F_GETFL, 0);
-	if (flags & O_NONBLOCK)
-		printf("socket is non-blocking\n");
 	char buffer[2048] = {0};
+	printf("try to read from %d", fd);
 	int r = read(fd, buffer, 254);
-
 	if (r <= 0)
 	{
+		if (r < 0)
+			perror("read faild");
 		close(fd);
 		printf("client %d disconnected\n", fd);
 		return;
 	}
-	buffer[r] = 0;
-	printf("new message from %d: %s\n", fd, buffer);
-	std::cout << "read is done \n";
+	else
+	{
+		buffer[r] = 0;
+		printf("new message from %d: %s\n", fd, buffer);
+	}
 }
-
 
 int Event::RemoveClient(int clientFd)
 {
-	// TODO : hendel if there is an error never go down
+	// TODO : hendel if there is an error server should never go down
 	struct kevent ev_set;
 	EV_SET(&ev_set, clientFd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
@@ -262,8 +267,9 @@ int Event::RemoveClient(int clientFd)
 
 int Event::RegsterClient(int clientFd)
 {
-	// TODO : hendel if there is an error never go down
+	// TODO : hendel if there is an error server should never go down
 	struct kevent ev_set;
+
 	EV_SET(&ev_set, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
 
@@ -272,48 +278,50 @@ int Event::RegsterClient(int clientFd)
 	return 0;
 }
 
+#define PORT 8080
+#define BUFFER_SIZE 1024
+#define MAX_EVENTS 10
+
 void Event::eventLoop()
 {
-	int nevents;
-	std::map<int, HttpRequest *> request;
+	int client_fd;
+	int socketFd;
+	Connections connections;
+	// HttpRequest *req;
 
-	std::cout << "Server is listening on for new connnection\n";
 	while (1)
 	{
-		std::cout << "waiting for new event\n";
-		nevents = kevent(this->kqueueFd, NULL, 0, this->eventList, this->MAX_EVENTS, NULL);
-		if (nevents < 0)
-			throw std::runtime_error("kevent failed:could not pull event " + std::string(strerror(errno)));
-		std::cout << "new event found\n";
-		for (int i = 0; i < nevents; i++)
+		int nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
+		if (nev == -1)
+			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
+
+		for (int i = 0; i < nev; i++)
 		{
-			uint16_t event = this->eventList[i].flags;
-			int32_t clientFd = this->eventList[i].ident;
-			if (event & EVFILT_READ)
+			socketFd = this->evList[i].ident;
+			if (this->checkNewClient(socketFd))
 			{
-				if (this->checkNewClient(clientFd))
-				{
-					int newClientFd = this->newConnection(clientFd); // store client fd
-					if (newClientFd < 0)
-						throw std::runtime_error("could not accept new connection"); // TODO :handel error later
-					this->RegsterClient(newClientFd); // add client to kevent to track
-					request[newClientFd] = new HttpRequest(newClientFd);
-				}
-				else
-				{
-					// read_from_client(clientFd); // for test
-					request[clientFd]->feed();
-				}
+				client_fd = this->newConnection(socketFd);
+				this->RegsterClient(client_fd);
 			}
-			else if (event & EVFILT_WRITE)
+			else if (this->evList[i].filter == EVFILT_READ)
 			{
-				std::cout << "write event\n";
-				// write_to_client(clientFd); // for test TODO: in which case we need to write to client
-				// pass
+				std::cout << "Read event----------------\n";
+
+				if (connections.clients.find(socketFd) == connections.clients.end()
+					|| connections.clients[socketFd] == NULL)
+					connections.addConnection(socketFd);
+				connections.clients[socketFd]->request.feed();
+				if (connections.clients[socketFd]->request.state == REQUEST_FINISH)
+					connections.clients[socketFd]->respond();
+				// read_from_client(socketFd);
+				// clients[socketFd].request.feed();
 			}
-			else if (event & EV_ERROR)
-				throw std::runtime_error(
-					"kevent failed: " + std::string(strerror(errno))); // to handel error remove later
+
+			// else if (this->evList[i].filter == EVFILT_WRITE)
+			// {
+			// 	// write(socketFd, "hello\n", 6);
+			// 	std::cout << "write event\n";
+			// }
 		}
 	}
 }

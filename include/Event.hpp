@@ -26,7 +26,7 @@ class Event
 	void												insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd);
 	void												InsertDefaultServer(VirtualServer *server, int socketFd);
 	struct kevent										*eventChangeList;
-	struct kevent										*eventList;
+	struct kevent										*evList;
 	int													kqueueFd;
 	void												CreateChangeList();
 	int													numOfSocket;

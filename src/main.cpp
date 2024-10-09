@@ -138,38 +138,38 @@ ServerContext *LoadConfig(const char *path)
 	return (http);
 }
 
-int main()
-{
-	HttpRequest k(1);
-	k.feed();
-}
 // int main()
-// { 
-// 	// atexit(atexist);
-
-// 	Event *event = NULL;
-// 	ServerContext *ctx = NULL;
-
-// 	ctx = LoadConfig("config/nginx.conf");
-// 	// move this to a function
-// 	if (!ctx) return 1;
-// 	try
-// 	{
-// 		event = new Event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE);
-// 		event->init(ctx->getVirtualServers());
-// 		event->Listen();
-// 		event->initIOmutltiplexing();
-// 		event->eventLoop();
-// 	}
-// 	catch (const std::runtime_error &e)
-// 	{
-// 		std::cerr << e.what() << "\n";
-// 	}
-// 	catch (const std::bad_alloc &e)
-// 	{
-// 		std::cerr << e.what() << "\n";
-// 	}
-
-// 	delete event;
-// 	delete ctx;
+// {
+// 	HttpRequest k(2);
+// 	k.feed();
 // }
+int main()
+{ 
+	// atexit(atexist);
+
+	Event *event = NULL;
+	ServerContext *ctx = NULL;
+
+	ctx = LoadConfig("config/nginx.conf");
+	// move this to a function
+	if (!ctx) return 1;
+	try
+	{
+		event = new Event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE);
+		event->init(ctx->getVirtualServers());
+		event->Listen();
+		event->initIOmutltiplexing();
+		event->eventLoop();
+	}
+	catch (const std::runtime_error &e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+	catch (const std::bad_alloc &e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+
+	delete event;
+	delete ctx;
+}

@@ -78,7 +78,6 @@ class HttpRequest
 		const int							fd;
 		enum crlfState						crlfState;
 
-		enum reqMethode						methode;
 		std::string                         path;
 
 		std::map<std::string, std::string>	headers;
@@ -133,7 +132,14 @@ class HttpRequest
 
 		void		setFd(int fd);
 
-		static int isNum(const std::string& str);
+		static int	isNum(const std::string& str);
+		void		clear();
+
+		std::string							getPath() const;
+		std::map<std::string, std::string>	getHeaders() const;
+		std::vector<int>					getBody() const;
+		httpError							getStatus() const;
+		std::string							getStrMethode() const;
 };
 
 #endif
