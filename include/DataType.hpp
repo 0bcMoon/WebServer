@@ -37,8 +37,6 @@ class GlobalConfig
 
 	std::string							root;
 	bool								autoIndex;
-	long								maxBodySize; // in bytes
-	long								maxHeaderSize; // in bytes
 	ErrorPage							errorPages;
 	std::map<std::string, std::string>	cgiMap;
 	std::vector<std::string>			indexes;
@@ -72,11 +70,7 @@ class GlobalConfig
 	void setErrorLog(Tokens &token, Tokens &end);
 	std::string getErrorLog() const;
 
-	void setMaxBodySize(Tokens &token, Tokens &end);
-	long getMaxBodySize() const;
 
-	void setMaxHeaderSize(Tokens &token, Tokens &end);
-	long getMaxHeaderSize() const;
 
 	void setIndexes(Tokens &token, Tokens &end);
 	// TODO Indexes getter may be with caching ??

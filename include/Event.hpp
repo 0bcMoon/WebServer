@@ -1,11 +1,13 @@
 #ifndef Event_H
 #define Event_H
 #include <sys/event.h>
+#include "ServerContext.hpp"
 #include "VirtualServer.hpp"
 
 class Event
 {
   private:
+	ServerContext										*ctx;
 	const int											MAX_CONNECTION_QUEUE ;
 	const int											MAX_EVENTS;
 	typedef std::map<std::string, VirtualServer *>		ServerNameMap_t;
@@ -39,8 +41,8 @@ class Event
 	void												initIOmutltiplexing();
 	Event();
 	~Event();
-	Event(int max_connection, int max_events);
-	void												init(std::vector<VirtualServer> &VirtualServers);
+	Event(int max_connection, int max_events, ServerContext *ctx);
+	void init();
 	bool												Listen();
 	void												eventLoop();
 };
