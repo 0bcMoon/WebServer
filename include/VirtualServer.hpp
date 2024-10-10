@@ -1,5 +1,5 @@
-#ifndef Server_H
-#define Server_H
+#ifndef Server_HPP
+#define Server_HPP
 
 #include <arpa/inet.h>
 #include <sys/socket.h>

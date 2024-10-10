@@ -1,0 +1,17 @@
+HTTP/1.1 200 OK
+Server: YOUR DADDY
+Content-Length: 228
+Connection: keep-alive
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PORNHUB</title>
+</head>
+<body>
+<h1>HELLO WORLD</h1>
+<p>Welcome to the homepage.</p>
+</body>
+</html>

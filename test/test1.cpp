@@ -1,7 +1,8 @@
-
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -73,3 +74,10 @@ int main() {
 
     return 0;
 }
+
+// int main()
+// {
+// 	std::string str("");
+// 	str = "";
+// 	std::cout << str.size() << std::endl;
+// }

@@ -1,5 +1,5 @@
-#ifndef ServerContext_H
-# define ServerContext_H
+#ifndef ServerContext_HPP
+# define ServerContext_HPP
 
 #include "DataType.hpp"
 #include "VirtualServer.hpp"

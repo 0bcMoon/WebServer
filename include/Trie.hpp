@@ -1,6 +1,6 @@
-#ifndef Trie_H
-#define Trie_H
-#include <Location.hpp>
+#ifndef Trie_HPP
+#define Trie_HPP
+#include "Location.hpp"
 #include <string>
 class Trie
 {

@@ -10,6 +10,9 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "../include/Client.hpp"
+#include "Connections.hpp"
+#include "HttpRequest.hpp"
 #include "VirtualServer.hpp"
 
 Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
@@ -20,7 +23,8 @@ Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 	this->numOfSocket = 0;
 }
 
-Event::Event(int max_connection, int max_events, ServerContext *ctx) : MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
+Event::Event(int max_connection, int max_events, ServerContext *ctx)
+	: MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
 	this->ctx = ctx;
 	this->evList = NULL;
@@ -201,8 +205,8 @@ void Event::CreateChangeList()
 	// TODO : monitor read and write
 	for (; it != this->sockAddrInMap.end(); it++)
 	{
-		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-		EV_SET(&this->eventChangeList[i + this->numOfSocket], it->first, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
+		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
+		EV_SET(&this->eventChangeList[i + this->numOfSocket], it->first, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
 		i++;
 	}
 	if (kevent(this->kqueueFd, this->eventChangeList, this->numOfSocket * 2, NULL, 0, NULL) < 0)
@@ -271,10 +275,10 @@ int Event::RegsterClient(int clientFd)
 	// TODO : hendel if there is an error server should never go down
 	struct kevent ev_set;
 
-	EV_SET(&ev_set, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+	EV_SET(&ev_set, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
 	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
 
-	EV_SET(&ev_set, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
+	EV_SET(&ev_set, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
 	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
 	return 0;
 }
@@ -287,6 +291,8 @@ void Event::eventLoop()
 {
 	int client_fd;
 	int socketFd;
+	Connections connections;
+	// HttpRequest *req;
 
 	// this->ctx->getMaxBodySize();
 	while (1)
@@ -298,6 +304,11 @@ void Event::eventLoop()
 		for (int i = 0; i < nev; i++)
 		{
 			socketFd = this->evList[i].ident;
+			if (this->evList->flags & EV_ERROR)
+			{
+				fprintf(stderr, "EV_ERROR: %s\n", strerror(this->evList->data));
+				continue;
+			}
 			if (this->checkNewClient(socketFd))
 			{
 				client_fd = this->newConnection(socketFd);
@@ -305,14 +316,20 @@ void Event::eventLoop()
 			}
 			else if (this->evList[i].filter == EVFILT_READ)
 			{
+				std::cout << "READ Event \n";
+				connections.requestHandler(socketFd);
 
 			}
-
-			// else if (this->evList[i].filter == EVFILT_WRITE)
-			// {
-			// 	// write(socketFd, "hello\n", 6);
-			// 	std::cout << "write event\n";
-			// }
+			else if (this->evList[i].filter == EVFILT_WRITE)
+			{
+				if (connections.clients.count(socketFd))
+				{
+					if (connections.clients[socketFd]->request.state == REQUEST_FINISH)
+						connections.clients[socketFd]->respond();
+				}
+				else
+					std::cerr << "client un exist\n";
+			}
 		}
 	}
 }

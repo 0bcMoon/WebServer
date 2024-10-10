@@ -1,13 +1,38 @@
+// #include <unistd.h>
+// #include <cstdio>
+// #include <cstdlib>
+// #include <iostream>
+// #include <stdexcept>
+// #include <vector>
+// #include "../include/Debug.hpp"
+// #include "../include/Event.hpp"
+// #include "../include/Tokenizer.hpp"
+// #include <libc.h>
+// #include "../include/HttpRequest.hpp"
+// #include "../include/VirtualServer.hpp"
+// #include "../include/Event.hpp"
+// #include "../include/ServerContext.hpp"
+// #ifdef __cplusplus
+// extern "C"
+// #endif
+// 	const char *
+// 	__asan_default_options()
+// {
+// 	return "detect_leaks=0";
+// }
+
+// #define MAX_EVENTS 64
+// #define MAX_CONNECTIONS_QUEUE 128
+
+
 #include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
-#include <vector>
 #include "Debug.hpp"
 #include "Event.hpp"
 #include "Tokenizer.hpp"
-#include "VirtualServer.hpp"
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -57,9 +82,9 @@ ServerContext *LoadConfig(const char *path)
 	return (ctx);
 }
 
+ 
 int main()
 { 
-	// atexit(atexist);
 
 	Event *event = NULL;
 	ServerContext *ctx = NULL;
@@ -87,4 +112,3 @@ int main()
 	delete event;
 	delete ctx;
 }
-

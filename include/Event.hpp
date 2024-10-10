@@ -1,5 +1,5 @@
-#ifndef Event_H
-#define Event_H
+#ifndef Event_HPP
+#define Event_HPP
 #include <sys/event.h>
 #include "ServerContext.hpp"
 #include "VirtualServer.hpp"
