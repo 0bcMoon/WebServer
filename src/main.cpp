@@ -113,29 +113,29 @@ void atexist()
 
 ServerContext *LoadConfig(const char *path)
 {
-	ServerContext *http = NULL;
+	ServerContext *ctx = NULL;
 
 	try // ugly but fix the problem
 	{
 		Tokenizer tokenizer;
 		tokenizer.readConfig(path);
 		tokenizer.CreateTokens();
-		http = new ServerContext();
-		tokenizer.parseConfig(http);
+		ctx = new ServerContext();
+		tokenizer.parseConfig(ctx);
 	}
 	catch (const Debug &e)
 	{
 		std::cout << e.what() << std::endl;
-		delete http;
+		delete ctx;
 		return (NULL);
 	}
 	catch (const std::bad_alloc &e)
 	{
 		std::cout << e.what() << std::endl;
-		delete http;
+		delete ctx;
 		return (NULL);
 	}
-	return (http);
+	return (ctx);
 }
 
 // int main()
@@ -155,8 +155,8 @@ int main()
 	if (!ctx) return 1;
 	try
 	{
-		event = new Event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE);
-		event->init(ctx->getVirtualServers());
+		event = new Event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE, ctx);
+		event->init();
 		event->Listen();
 		event->initIOmutltiplexing();
 		event->eventLoop();

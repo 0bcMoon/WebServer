@@ -14,8 +14,6 @@
 GlobalConfig::GlobalConfig()
 {
 	this->autoIndex = false;
-	this->maxBodySize = 100 * 1024 * 1024;
-	this->maxHeaderSize = 100 * 1024 * 1024;
 		this->methods = GET; // default method is GET only
 }
 
@@ -28,8 +26,6 @@ GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 	errorLog = other.errorLog;
 	root = other.root;
 	autoIndex = other.autoIndex;
-	maxBodySize = other.maxBodySize;
-	maxHeaderSize = other.maxHeaderSize;
 	errorPages = other.errorPages;
 	cgiMap = other.cgiMap;
 	indexes = other.indexes;
@@ -99,61 +95,9 @@ bool GlobalConfig::getAutoIndex() const
 // 	return this->errorLog; // Return the error log path
 // }
 
-static long toBytes(std::string &size)
-{
-	long long sizeValue = 0;
 
-	for (size_t i = 0; i < size.size() - 1; i++)
-	{
-		if (size[i] < '0' || size[i] > '9')
-			throw ParserException("Invalid size");
-		sizeValue = sizeValue * 10 + size[i] - '0';
-		if (sizeValue > (1 << 16))
-			throw ParserException("Size too large");
-	}
-	switch (size[size.size() - 1])
-	{
-		case 'k':
-		case 'K': sizeValue *= 1024; break;
-		case 'M':
-		case 'm': sizeValue *= 1024 * 1024; break;
-		default: return (-1);
-	}
-	if (sizeValue > MAX_REQ_SIZE) // max size 30M;
-		return (-1);
-	return (sizeValue);
-}
 
-void GlobalConfig::setMaxBodySize(Tokens &token, Tokens &end)
-{
-	validateOrFaild(token, end);
-	this->maxBodySize = toBytes(*token);
-	if (this->maxBodySize == -1)
-		throw ParserException("Invalid max body size or too large max is 100");
-	token++;
-	CheckIfEnd(token, end);
-}
 
-long GlobalConfig::getMaxBodySize() const
-{
-	return this->maxBodySize; // Return max body size
-}
-
-void GlobalConfig::setMaxHeaderSize(Tokens &token, Tokens &end)
-{
-	validateOrFaild(token, end);
-	this->maxHeaderSize = toBytes(*token);
-
-	if (this->maxHeaderSize == -1)
-		throw ParserException("Invalid max header size or too large max is 100");
-	token++;
-	CheckIfEnd(token, end);
-}
-
-long GlobalConfig::getMaxHeaderSize() const
-{
-	return this->maxHeaderSize; // Return max header size
-}
 
 void GlobalConfig::setIndexes(Tokens &token, Tokens &end)
 {
@@ -225,10 +169,6 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 		this->setAutoIndex(token, end);
 	else if (*token == "index")
 		this->setIndexes(token, end);
-	else if (*token == "max_body_size")
-		this->setMaxBodySize(token, end);
-	else if (*token == "max_header_size")
-		this->setMaxHeaderSize(token, end);
 	else if (*token == "cgi_path")
 		this->setCGI(token, end);
 	else if (*token == "allow")
@@ -263,9 +203,4 @@ void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 
 }
 
-
-void GlobalConfig::loadFile(Tokens &token, Tokens &end, std::string &buffer)
-{
-
-}
 

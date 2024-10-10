@@ -23,8 +23,9 @@ Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 	this->numOfSocket = 0;
 }
 
-Event::Event(int max_connection, int max_events) : MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
+Event::Event(int max_connection, int max_events, ServerContext *ctx) : MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
+	this->ctx = ctx;
 	this->evList = NULL;
 	this->eventChangeList = NULL;
 	this->kqueueFd = -1;
@@ -72,11 +73,13 @@ void Event::insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *s
 	}
 }
 
-void Event::init(std::vector<VirtualServer> &VirtualServers)
+void Event::init()
 {
-	for (size_t i = 0; i < VirtualServers.size(); i++)
+	std::vector<VirtualServer> &virtualServers = ctx->getServers();
+
+	for (size_t i = 0; i < virtualServers.size(); i++)
 	{
-		SocketAddrSet_t &socketAddr = VirtualServers[i].getAddress();
+		SocketAddrSet_t &socketAddr = virtualServers[i].getAddress();
 		SocketAddrSet_t::iterator it = socketAddr.cbegin();
 		for (; it != socketAddr.end(); it++)
 		{
@@ -96,12 +99,12 @@ void Event::init(std::vector<VirtualServer> &VirtualServers)
 				it = this->VirtuaServers.find(socketFd); // take the reference of server map;
 			}
 			ServerNameMap_t &serverNameMap = it->second;
-			this->insertServerNameMap(serverNameMap, &VirtualServers[i], socketFd);
+			this->insertServerNameMap(serverNameMap, &virtualServers[i], socketFd);
 		}
 	}
 }
 
-int set_non_blocking(int sockfd)
+int set_non_blocking(int sockfd) // TODO make it more oop
 {
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1)
@@ -233,6 +236,7 @@ int Event::newConnection(int socketFd)
 	set_non_blocking(socketFd);
 	return newSocketFd;
 }
+
 void read_from_client(int fd)
 {
 	char buffer[2048] = {0};
@@ -289,6 +293,7 @@ void Event::eventLoop()
 	Connections connections;
 	// HttpRequest *req;
 
+	// this->ctx->getMaxBodySize();
 	while (1)
 	{
 		int nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
@@ -306,13 +311,7 @@ void Event::eventLoop()
 			else if (this->evList[i].filter == EVFILT_READ)
 			{
 				std::cout << "Read event----------------\n";
-
-				if (connections.clients.find(socketFd) == connections.clients.end()
-					|| connections.clients[socketFd] == NULL)
-					connections.addConnection(socketFd);
-				connections.clients[socketFd]->request.feed();
-				if (connections.clients[socketFd]->request.state == REQUEST_FINISH)
-					connections.clients[socketFd]->respond();
+				connections.requestHandler(socketFd);
 				// read_from_client(socketFd);
 				// clients[socketFd].request.feed();
 			}

@@ -16,10 +16,24 @@ Connections::~Connections()
 void	Connections::closeConnection(int	fd)
 {
 	delete clients[fd];
-	clients[fd] = NULL;
+	clients.erase(fd);
 }
 
 void	Connections::addConnection(int	fd)
 {
 	clients[fd] = new Client(fd);
+}
+
+void		Connections::connecting(int fd)
+{
+	if (clients.find(fd) == clients.end())
+		addConnection(fd);
+}
+
+void		Connections::requestHandler(int	fd)
+{
+	connecting(fd);
+	clients[fd]->request.feed();
+	if (clients[fd]->request.state == REQUEST_FINISH)
+		clients[fd]->respond();
 }

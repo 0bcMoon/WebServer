@@ -32,6 +32,7 @@ HttpRequest::HttpRequest(int fd) : fd(fd)
 	state = METHODE;
 	reqBufferSize = 0;
 	error.code = 200;
+	reqBufferIndex = 0;
 	error.description = "OK";
 	chunkState = SIZE;
 	totalChunkSize = 0;
@@ -50,7 +51,7 @@ void	HttpRequest::clear()
 	headers.clear();
 	currHeaderName.clear();
 	body.clear();
-	bodySize = 0;
+	bodySize = -1;
 	reqSize = 0;
 	// reqBufferSize = 0;
 	// reqBufferIndex = 0;
@@ -97,31 +98,21 @@ void HttpRequest::readRequest()
 	int size = read(fd, tmp, REQSIZE_MAX + 10);
 	if (size ==  -1)
 		setHttpError(500, "Internal Server Error");
-	else if ((reqSize + size) > REQSIZE_MAX)
-		setHttpError(413, "Content Too Large");
-	else
+	// else if ((reqSize + size) > REQSIZE_MAX)
+	// 	setHttpError(413, "Content Too Large");
+	if (size == 0)
+		return ;
+	else if (size != 0)
 	{
-		reqBuffer = tmp;
-		reqSize += reqBuffer.size();
+		tmp[size] = 0;
+		std::string str(tmp);
+		reqBuffer += str;
 	}
-}
-
-int response(int fd)
-{
-	std::string buffer;
-	char tmp[10000];
-
-	int resFd = open("request.req", O_RDWR, 0777);
-	read(resFd, tmp, 10000);
-	buffer = tmp;
-	write (fd, buffer.c_str(), buffer.size());
-	return (1);
 }
 
 void HttpRequest::feed()
 {
 	readRequest();
-	reqBufferIndex = 0;
 	// reqBuffer = "POST /api/data HTTP/1.1\r\nHost: example.com\r\nContent-Type: application/json\r\nContent-Length: 81\r\r\n\r\n{user: johndoe,email: john@example.c om, essage Hello, this is a test.}";
 	// reqBuffer = "POST /api/data HTTP/1.1\r\n"
 	// 			"Host: \r\n"
@@ -159,8 +150,8 @@ void HttpRequest::feed()
 		if (state == ERROR)
 			break;
 	}
-	if (state == DEBUG && response(fd))
-		std::cout << "FUCKING DONE" << std::endl;
+	// if (state == DEBUG && response(fd))
+	// 	std::cout << "FUCKING DONE" << std::endl;
 	std::cout << error.code << ": " << error.description << std::endl; 
 	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
 	for (map_it it = headers.begin(); it != headers.end(); ++it) {
@@ -182,6 +173,9 @@ void HttpRequest::setHttpError(int code, std::string str)
 
 void HttpRequest::parseMethod()
 {
+	while (reqBuffer.size() > reqBufferIndex && reqBuffer[reqBufferIndex] == '\n'
+		&& methodeStr.tmpMethodeStr.size() == 0)
+		reqBufferIndex++;
 	while (reqBuffer.size() > reqBufferIndex)
 	{
 		if (reqBuffer[reqBufferIndex] == ' ' && methodeStr.tmpMethodeStr.size() == 0)

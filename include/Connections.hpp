@@ -15,9 +15,11 @@ class Connections
 
 		Connections();
 		~Connections();
-
-		void	closeConnection(int	fd);
-		void	addConnection(int	fd);
+		
+		void		closeConnection(int	fd);
+		void		addConnection(int	fd);
+		void		connecting(int	fd);
+		void		requestHandler(int	fd);
 };
 
 #endif
