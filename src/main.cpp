@@ -24,71 +24,15 @@
 // #define MAX_EVENTS 64
 // #define MAX_CONNECTIONS_QUEUE 128
 
-// void atexist()
-// {
-
-// 	HttpRequest		req(open("request.req", O_RDWR, 0777));
-// 	req.feed();
-// 		// try // ugly but fix the problem
-// 		// {
-// 		// 	Tokenizer tokenizer;
-// 		// 	tokenizer.readConfig("config/nginx.conf");
-// 		// 	tokenizer.CreateTokens();
-// 		// }
-// 		// catch (const ParserException &e)
-// 		// {
-// 		// 	std::cout << e.what() << std::endl;
-// 		// 	return (1);
-// 		// }
-// 		// catch (const std::bad_alloc &e)
-// 		// {
-// 		// 	std::cout << e.what() << std::endl;
-// 		// 	return (1);
-// 		// }
-// }
-
-// int main()
-// { 
-// 	// atexit(atexist);
-
-// 	Event *event = NULL;
-// 	ServerContext *ctx = NULL;
-
-// 	ctx = LoadConfig("config/nginx.conf");
-// 	// move this to a function
-// 	if (!ctx) return 1;
-// 	try
-// 	{
-// 		event = new Event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE);
-// 		event->init(ctx->getVirtualServers());
-// 		event->Listen();
-// 		event->initIOmutltiplexing();
-// 		event->eventLoop();
-// 	}
-// 	catch (const std::runtime_error &e)
-// 	{
-// 		std::cerr << e.what() << "\n";
-// 	}
-// 	catch (const std::bad_alloc &e)
-// 	{
-// 		std::cerr << e.what() << "\n";
-// 	}
-
-// 	delete event;
-// 	delete ctx;
-// }
 
 #include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
-#include <vector>
 #include "Debug.hpp"
 #include "Event.hpp"
-#include "HttpRequest.hpp"
 #include "Tokenizer.hpp"
-#include "VirtualServer.hpp"
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -138,14 +82,9 @@ ServerContext *LoadConfig(const char *path)
 	return (ctx);
 }
 
-// int main()
-// {
-// 	HttpRequest k(2);
-// 	k.feed();
-// }
+ 
 int main()
 { 
-	// atexit(atexist);
 
 	Event *event = NULL;
 	ServerContext *ctx = NULL;

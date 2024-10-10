@@ -34,6 +34,4 @@ void		Connections::requestHandler(int	fd)
 {
 	connecting(fd);
 	clients[fd]->request.feed();
-	if (clients[fd]->request.state == REQUEST_FINISH)
-		clients[fd]->respond();
 }
