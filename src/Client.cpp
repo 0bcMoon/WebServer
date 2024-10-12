@@ -20,6 +20,11 @@ Client::Client(int	fd) : fd(fd), request(fd), response(fd)
 	state = REQUEST;
 }
 
+
+Client::Client(int	fd, int serverFd) : fd(fd), serverFd(serverFd), request(fd), response(fd)
+{
+	state = REQUEST;
+}
 int tmpResponse(int fd)
 {
 	std::string buffer;

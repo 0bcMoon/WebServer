@@ -1,19 +1,22 @@
 #ifndef ServerContext_HPP
-# define ServerContext_HPP
+#define ServerContext_HPP
 
 #include "DataType.hpp"
 #include "VirtualServer.hpp"
 
+// TODO: validate server count should  > 0
 class ServerContext
 {
-	private:
-	int									keepAliveTimeout;
-	GlobalConfig						globalParam;
-	long								maxBodySize; // in bytes
-	long								maxHeaderSize; // in bytes
+  private:
+	int keepAliveTimeout;
+	GlobalConfig globalParam;
+	long maxBodySize; // in bytes
+	long maxHeaderSize; // in bytes
 
-	std::vector<VirtualServer>			servers;
-	public:
+	std::vector<VirtualServer> servers;
+
+  public:
+
 	ServerContext();
 	~ServerContext();
 	void pushServer(Tokens &token, Tokens &end);

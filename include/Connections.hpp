@@ -9,6 +9,7 @@ typedef std::map<int, Client *>::iterator clients_it; // WARNING
 class Connections 
 {
 	private:
+		//TODO :
 		
 	public:
 		std::map<int, Client *> clients;
@@ -18,6 +19,7 @@ class Connections
 		
 		void		closeConnection(int	fd);
 		void		addConnection(int	fd);
+		void		addConnection(int	fd, int server);
 		void		connecting(int	fd);
 		void		requestHandler(int	fd);
 };

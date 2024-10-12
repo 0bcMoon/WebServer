@@ -35,15 +35,15 @@ Event::Event(int max_connection, int max_events, ServerContext *ctx)
 Event::~Event()
 {
 	delete this->evList;
-	VirtualServerMap_t::iterator it = this->VirtuaServers.begin();
-	for (; it != this->VirtuaServers.end(); it++)
+	VirtualServerMap_t::iterator it = this->virtuaServers.begin();
+	for (; it != this->virtuaServers.end(); it++)
 	{
 		close(it->first);
 	}
 	std::map<int, VirtualServer *>::iterator it2 = this->defaultServer.begin();
 	for (; it2 != this->defaultServer.end(); it2++)
 	{
-		if (this->VirtuaServers.find(it->first) == this->VirtuaServers.end())
+		if (this->virtuaServers.find(it->first) == this->virtuaServers.end())
 			close(it2->first);
 	}
 	if (this->kqueueFd >= 0)
@@ -93,11 +93,11 @@ void Event::init()
 			else
 				socketFd = this->socketMap.at(*it);
 
-			VirtualServerMap_t::iterator it = this->VirtuaServers.find(socketFd);
-			if (it == this->VirtuaServers.end()) // create empty for socket map if not exist
+			VirtualServerMap_t::iterator it = this->virtuaServers.find(socketFd);
+			if (it == this->virtuaServers.end()) // create empty for socket map if not exist
 			{
-				this->VirtuaServers[socketFd] = ServerNameMap_t();
-				it = this->VirtuaServers.find(socketFd); // take the reference of server map;
+				this->virtuaServers[socketFd] = ServerNameMap_t();
+				it = this->virtuaServers.find(socketFd); // take the reference of server map;
 			}
 			ServerNameMap_t &serverNameMap = it->second;
 			this->insertServerNameMap(serverNameMap, &virtualServers[i], socketFd);
@@ -131,7 +131,9 @@ int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 	int socketFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (socketFd < 0)
 		throw std::runtime_error("socket creation failed: " + std::string(strerror(errno)));
-
+	this->setNonBlockingIO(socketFd);
+	int optval = 1;
+	setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	memset(&address2, 0, sizeof(struct sockaddr_in));
 
 	address2.sin_family = AF_INET;
@@ -161,16 +163,13 @@ std::string Event::get_readable_ip(const VirtualServer::SocketAddr address)
 	return ss.str();
 }
 
-void Event::setNonBlockingIO(int socketFd)
+void Event::setNonBlockingIO(int sockfd)
 {
-	int flags = fcntl(socketFd, F_GETFL, 0);
+	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1)
-		perror("fcntl(F_GETFL)");
-	if (fcntl(socketFd, F_SETFL, flags | O_NONBLOCK) == -1)
-		perror("fcntl(F_SETFL)");
-	flags = fcntl(socketFd, F_GETFL, 0);
-	if (flags & O_NONBLOCK)
-		printf("socket is non-blocking\n");
+		perror("fcntl(F_GETFL)"), exit(1);
+	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
+		perror("fcntl(F_SETFL)"), exit(1); // TODO: remove  this
 }
 
 bool Event::Listen(int socketFd)
@@ -205,8 +204,8 @@ void Event::CreateChangeList()
 	// TODO : monitor read and write
 	for (; it != this->sockAddrInMap.end(); it++)
 	{
-		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
-		EV_SET(&this->eventChangeList[i + this->numOfSocket], it->first, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
+		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+		EV_SET(&this->eventChangeList[i + this->numOfSocket], it->first, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
 		i++;
 	}
 	if (kevent(this->kqueueFd, this->eventChangeList, this->numOfSocket * 2, NULL, 0, NULL) < 0)
@@ -224,8 +223,8 @@ void Event::initIOmutltiplexing()
 		throw std::runtime_error("kqueue faild: " + std::string(strerror(errno)));
 	this->CreateChangeList();
 }
-
-int Event::newConnection(int socketFd)
+// TODO:  fix me i may faild ??
+int Event::newConnection(int socketFd, Connections &connections)
 {
 	struct sockaddr_in address = this->sockAddrInMap[socketFd];
 	socklen_t size = sizeof(struct sockaddr);
@@ -233,8 +232,11 @@ int Event::newConnection(int socketFd)
 	int newSocketFd = accept(socketFd, (struct sockaddr *)&address, &size);
 	if (newSocketFd < 0)
 		return -1;
+
 	std::cout << "connnection accept\n";
-	set_non_blocking(socketFd);
+	this->setNonBlockingIO(newSocketFd);
+	this->RegsterClient(newSocketFd); // TODO: user udata feild to store server id;
+	connections.addConnection(newSocketFd, socketFd);
 	return newSocketFd;
 }
 
@@ -275,10 +277,10 @@ int Event::RegsterClient(int clientFd)
 	// TODO : hendel if there is an error server should never go down
 	struct kevent ev_set;
 
-	EV_SET(&ev_set, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
+	EV_SET(&ev_set, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
 
-	EV_SET(&ev_set, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
+	EV_SET(&ev_set, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
 	return 0;
 }
@@ -287,53 +289,118 @@ int Event::RegsterClient(int clientFd)
 #define BUFFER_SIZE 1024
 #define MAX_EVENTS 10
 
+void response(int fd)
+{
+	const char *http_200_response =
+		"HTTP/1.1 200 OK\r\n"
+		"Content-Type: text/html; charset=UTF-8\r\n"
+		"Connection: keep-alive\r\n"
+		"Content-Length: 130\r\n"
+		"\r\n"
+		"<!DOCTYPE html>\n"
+		"<html>\n"
+		"<head><title>200 OK</title></head>\n"
+		"<body>\n"
+		"<h1>200 OK</h1>\n"
+		"<p>The request has succeeded.</p>\n"
+		"</body>\n"
+		"</html>";
+
+	const char *http_404_response =
+		"HTTP/1.1 404 Not Found\r\n"
+		"Content-Type: text/html; charset=UTF-8\r\n"
+		"Connection: keep-alive\r\n"
+		"Content-Length: 175\r\n"
+		"\r\n"
+		"<!DOCTYPE html>\n"
+		"<html>\n"
+		"<head><title>404 Not Found</title></head>\n"
+		"<body>\n"
+		"<h1>404 Not Found</h1>\n"
+		"<p>The requested resource could not be found on this server.</p>\n"
+		"</body>\n"
+		"</html>";
+	// write(fd, http_404_response, strlen(http_404_response));
+	write(fd, http_200_response, strlen(http_200_response));
+}
 void Event::eventLoop()
 {
-	int client_fd;
-	int socketFd;
+	// int client_fd;
+	// int socketFd;
 	Connections connections;
+	// Event >>>>>> Connections
 	// HttpRequest *req;
 
 	// this->ctx->getMaxBodySize();
 	while (1)
 	{
+		std::cout << "waiting for event\n";
 		int nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev == -1)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
-
 		for (int i = 0; i < nev; i++)
 		{
-			socketFd = this->evList[i].ident;
-			if (this->evList->flags & EV_ERROR)
+			const struct kevent *ev = &this->evList[i];
+			if (this->checkNewClient(ev->ident))
+				this->newConnection(ev->ident, connections);
+			else if (ev->filter == EVFILT_READ)
 			{
-				fprintf(stderr, "EV_ERROR: %s\n", strerror(this->evList->data));
-				continue;
+				std::cout << "READ event\n"; // Handel half close
+				connections.requestHandler(ev->ident);
 			}
-			if (this->checkNewClient(socketFd))
+			else if (ev->filter == EVFILT_WRITE)
 			{
-				client_fd = this->newConnection(socketFd);
-				this->RegsterClient(client_fd);
-			}
-			else if (this->evList[i].filter == EVFILT_READ)
-			{
-				std::cout << "READ Event \n";
-				connections.requestHandler(socketFd);
-
-			}
-			else if (this->evList[i].filter == EVFILT_WRITE)
-			{
-				if (connections.clients.count(socketFd))
+				std::cout << "write event\n";
+				if (ev->flags & EV_EOF)
 				{
-					if (connections.clients[socketFd]->request.state == REQUEST_FINISH)
-						connections.clients[socketFd]->respond();
+					std::cout << "client disconnected\n";
+					connections.closeConnection(ev->ident);
+					this->RemoveClient(ev->ident);
 				}
 				else
-					std::cerr << "client un exist\n";
+				{
+					if (connections.clients.count(ev->ident))
+					{
+						if (connections.clients[ev->ident]->request.state == REQUEST_FINISH)
+						{
+							response(ev->ident);
+							std::cout << "response sent\n";
+						}
+						else
+							std::cout << "request not finished yet\n";
+					}
+					else
+						std::cerr << "client un exist\n";
+				}
+				std::cout << "write ended\n";
 			}
 		}
+		std::cout << "all  event has been process: " << nev << '\n';
 	}
 }
 bool Event::checkNewClient(int socketFd)
 {
 	return (this->sockAddrInMap.find(socketFd) != this->sockAddrInMap.end());
+}
+
+Location *Event::getLocation(const Event::LocationConf &locationConf)
+{
+	int serverfd = locationConf.serverFd;
+	std::string &path = locationConf.path;
+	std::string &host = locationConf.host;
+
+	// serverFd should always exist
+	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second;
+	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
+	if (_Vserver == serverNameMap.end())
+		throw std::runtime_error("server does not exist"); // remove later
+
+	VirtualServer *Vserver = _Vserver->second;
+	Location *location = Vserver->getRoute(path);
+	return (location);
+}
+
+Event::LocationConf::LocationConf(std::string &path, std::string &host, int serverFd)
+	: path(path), host(host), serverFd(serverFd)
+{
 }

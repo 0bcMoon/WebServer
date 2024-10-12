@@ -1,6 +1,13 @@
-HTTP/1.1 404 Not Found
-Server: YOUR DADDY
-Content-Length: 228
+Read: GET / HTTP/1.1
+Host: localhost:8002
+User-Agent: curl/7.64.1
+Accept: */*
+
+
+response sent
+HTTP/1.1 200 OK
+Server: hand
+Content-Length: 237
 Connection: keep-alive
 
 <!DOCTYPE html>
@@ -8,10 +15,11 @@ Connection: keep-alive
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PORNHUB</title>
+<title>TEST</title>
 </head>
 <body>
 <h1>HELLO WORLD</h1>
 <p>Welcome to the homepage.</p>
 </body>
 </html>
+

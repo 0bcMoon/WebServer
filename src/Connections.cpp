@@ -1,4 +1,6 @@
 #include "Connections.hpp"
+#include <iostream>
+#include <stdexcept>
 #include "Client.hpp"
 
 
@@ -24,6 +26,12 @@ void	Connections::addConnection(int	fd)
 	clients[fd] = new Client(fd);
 }
 
+void	Connections::addConnection(int	fd, int server)
+{
+	std::cout << "add Connections\n";
+	this->clients[fd] = new Client(fd, server);
+}
+
 void		Connections::connecting(int fd)
 {
 	if (clients.find(fd) == clients.end())
@@ -32,6 +40,7 @@ void		Connections::connecting(int fd)
 
 void		Connections::requestHandler(int	fd)
 {
-	connecting(fd);
+	if (this->clients.find(fd) == this->clients.end())
+		return ;
 	clients[fd]->request.feed();
 }

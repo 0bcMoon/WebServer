@@ -14,11 +14,13 @@ class Client
 {
 	private:
 		int fd;	
+		int serverFd;
 	public:
 		enum clientState	state;
 
 		Client();
 		Client(int	fd);
+		Client(int	fd, int server);
 
 		HttpRequest		request;
 		HttpResponse	response;
