@@ -2,7 +2,7 @@
 #include "Client.hpp"
 
 
-Connections::Connections()
+Connections::Connections(ServerContext *ctx) : ctx(ctx)
 {
 }
 

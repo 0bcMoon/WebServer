@@ -4,3 +4,4 @@
 - make some global file table save memory
 --- FIX BODY_SIZE
 --- APPEND DUPLICATE HEADER VALUE
+--- LIMIT READ AND WRIE SIZE WITH KEVENT

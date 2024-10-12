@@ -83,7 +83,7 @@ class HttpRequest
 		std::map<std::string, std::string>	headers;
 		std::string							currHeaderName;
 
-		std::vector<int>							body; // TODO : body  may be binary (include '\0') fix this;
+		std::vector<unsigned char>							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;
 
 		int                                 reqSize;
@@ -137,7 +137,7 @@ class HttpRequest
 
 		std::string							getPath() const;
 		std::map<std::string, std::string>	getHeaders() const;
-		std::vector<int>					getBody() const;
+		std::vector<unsigned char>					getBody() const;
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;
 };

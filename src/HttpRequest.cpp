@@ -73,7 +73,7 @@ std::map<std::string, std::string>	HttpRequest::getHeaders() const
 	return (headers);
 }
 
-std::vector<int>					HttpRequest::getBody() const
+std::vector<unsigned char>					HttpRequest::getBody() const
 {
 	return (body);
 }
@@ -95,18 +95,20 @@ void HttpRequest::readRequest()
 {
 	char tmp[REQSIZE_MAX + 10];
 
-	int size = read(fd, tmp, REQSIZE_MAX + 10);
+	int size = read(fd, tmp, REQSIZE_MAX + 1);
 	if (size ==  -1)
 		setHttpError(500, "Internal Server Error");
-	// else if ((reqSize + size) > REQSIZE_MAX)
-	// 	setHttpError(413, "Content Too Large");
+	else if ((reqSize + size) > REQSIZE_MAX)
+		setHttpError(413, "Content Too Large");
 	if (size == 0)
 		return ;
-	else if (size != 0)
+	else if (size > 0)
 	{
 		tmp[size] = 0;
 		std::string str(tmp);
 		reqBuffer += str;
+		reqBuffer = reqBuffer.substr(reqBufferIndex);
+		reqBufferIndex = 0;
 	}
 }
 
@@ -152,15 +154,15 @@ void HttpRequest::feed()
 	}
 	// // if (state == DEBUG && response(fd))
 	// // 	std::cout << "FUCKING DONE" << std::endl;
-	// std::cout << error.code << ": " << error.description << std::endl; 
-	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
-	// for (map_it it = headers.begin(); it != headers.end(); ++it) {
- //        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
- //    }
-	// for (auto& it : body)
-	// {
-	// 	std::cout << (char)it;
-	// }
+	std::cout << error.code << ": " << error.description << std::endl; 
+	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	for (map_it it = headers.begin(); it != headers.end(); ++it) {
+        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+    }
+	for (auto& it : body)
+	{
+		std::cout << (char)it;
+	}
 }
 
 void HttpRequest::setHttpError(int code, std::string str)

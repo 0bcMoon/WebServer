@@ -10,7 +10,7 @@ class HttpResponse
 		std::string							strMethod;
 		std::string                         path;
 		std::map<std::string, std::string>	headers;
-		std::vector<int>							body; // TODO : body  may be binary (include '\0') fix this;
+		std::vector<unsigned char>							body; // TODO : body  may be binary (include '\0') fix this;
 		httpError							status;
 	public:
 		HttpResponse(int fd);

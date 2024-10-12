@@ -2,6 +2,7 @@
 #define CONNECTIONS_HPP
 
 #include "Client.hpp"
+#include "ServerContext.hpp"
 #include <map>
 
 typedef std::map<int, Client *>::iterator clients_it; // WARNING 
@@ -9,11 +10,11 @@ typedef std::map<int, Client *>::iterator clients_it; // WARNING
 class Connections 
 {
 	private:
-		
+		ServerContext	*ctx;
 	public:
 		std::map<int, Client *> clients;
 
-		Connections();
+		Connections(ServerContext *ctx);
 		~Connections();
 		
 		void		closeConnection(int	fd);

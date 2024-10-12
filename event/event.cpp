@@ -291,7 +291,7 @@ void Event::eventLoop()
 {
 	int client_fd;
 	int socketFd;
-	Connections connections;
+	Connections connections(ctx);
 	// HttpRequest *req;
 
 	// this->ctx->getMaxBodySize();
@@ -318,17 +318,15 @@ void Event::eventLoop()
 			{
 				std::cout << "READ Event \n";
 				connections.requestHandler(socketFd);
-
+				connections.clients[socketFd]->respond();
 			}
 			else if (this->evList[i].filter == EVFILT_WRITE)
 			{
-				if (connections.clients.count(socketFd))
-				{
-					if (connections.clients[socketFd]->request.state == REQUEST_FINISH)
-						connections.clients[socketFd]->respond();
-				}
-				else
-					std::cerr << "client un exist\n";
+				// if (connections.clients.count(socketFd))
+				// {
+				// }
+				// else
+				// 	std::cerr << "client un exist\n";
 			}
 		}
 	}
