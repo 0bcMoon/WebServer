@@ -1,31 +1,7 @@
-// #include <unistd.h>
-// #include <cstdio>
-// #include <cstdlib>
-// #include <iostream>
-// #include <stdexcept>
-// #include <vector>
-// #include "../include/Debug.hpp"
-// #include "../include/Event.hpp"
-// #include "../include/Tokenizer.hpp"
-// #include <libc.h>
-// #include "../include/HttpRequest.hpp"
-// #include "../include/VirtualServer.hpp"
-// #include "../include/Event.hpp"
-// #include "../include/ServerContext.hpp"
-// #ifdef __cplusplus
-// extern "C"
-// #endif
-// 	const char *
-// 	__asan_default_options()
-// {
-// 	return "detect_leaks=0";
-// }
-
-// #define MAX_EVENTS 64
-// #define MAX_CONNECTIONS_QUEUE 128
 
 
 #include <unistd.h>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -82,16 +58,28 @@ ServerContext *LoadConfig(const char *path)
 	return (ctx);
 }
 
- 
+void sigpipe_handler(int signum)
+{
+	printf("Caught SIGPIPE. Ignoring.\n");
+}
 int main()
-{ 
-
+{
 	Event *event = NULL;
 	ServerContext *ctx = NULL;
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = sigpipe_handler;
+	sigemptyset(&sa.sa_mask);
 
+	if (sigaction(SIGPIPE, &sa, NULL) == -1)
+	{
+		printf("Failed to set SIGPIPE handler: %s\n", strerror(errno));
+		return 1;
+	}
 	ctx = LoadConfig("config/nginx.conf");
 	// move this to a function
-	if (!ctx) return 1;
+	if (!ctx)
+		return 1;
 	try
 	{
 		event = new Event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE, ctx);

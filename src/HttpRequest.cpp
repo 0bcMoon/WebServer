@@ -102,7 +102,7 @@ void HttpRequest::readRequest()
 	// 	setHttpError(413, "Content Too Large");
 	if (size == 0)
 		return ;
-	else if (size != 0)
+	else if (size > 0)
 	{
 		tmp[size] = 0;
 		std::string str(tmp);

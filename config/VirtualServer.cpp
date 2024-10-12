@@ -152,3 +152,8 @@ std::set<std::string> &VirtualServer::getServerNames()
 	return (this->serverNames);
 }
 
+
+Location *VirtualServer::getRoute(const std::string &path)
+{
+	return (this->routes.findPath(path));
+}
