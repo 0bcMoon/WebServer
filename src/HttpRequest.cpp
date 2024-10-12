@@ -7,6 +7,7 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <sys/fcntl.h>
 #include <unistd.h>
@@ -97,7 +98,7 @@ void HttpRequest::readRequest()
 
 	int size = read(fd, tmp, REQSIZE_MAX + 10);
 	if (size ==  -1)
-		setHttpError(500, "Internal Server Error");
+		return ;
 	// else if ((reqSize + size) > REQSIZE_MAX)
 	// 	setHttpError(413, "Content Too Large");
 	if (size == 0)
@@ -107,6 +108,8 @@ void HttpRequest::readRequest()
 		tmp[size] = 0;
 		std::string str(tmp);
 		reqBuffer += str;
+		// reqBuffer = reqBuffer.substr(reqBufferIndex);
+		// reqBufferIndex  = 0;
 	}
 }
 

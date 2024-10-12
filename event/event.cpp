@@ -232,6 +232,7 @@ int Event::newConnection(int socketFd, Connections &connections)
 	int newSocketFd = accept(socketFd, (struct sockaddr *)&address, &size);
 	if (newSocketFd < 0)
 		return -1;
+
 	std::cout << "connnection accept\n";
 	this->setNonBlockingIO(newSocketFd);
 	this->RegsterClient(newSocketFd); // TODO: user udata feild to store server id;
@@ -327,6 +328,7 @@ void Event::eventLoop()
 	// int client_fd;
 	// int socketFd;
 	Connections connections;
+	// Event >>>>>> Connections
 	// HttpRequest *req;
 
 	// this->ctx->getMaxBodySize();
@@ -343,8 +345,6 @@ void Event::eventLoop()
 				this->newConnection(ev->ident, connections);
 			else if (ev->filter == EVFILT_READ)
 			{
-				if (ev->flags & EV_EOF)
-					std::cout << "check if sockect is half close";
 				std::cout << "READ event\n"; // Handel half close
 				connections.requestHandler(ev->ident);
 			}
@@ -354,20 +354,20 @@ void Event::eventLoop()
 				if (ev->flags & EV_EOF)
 				{
 					std::cout << "client disconnected\n";
-					this->RemoveClient(ev->ident);
 					connections.closeConnection(ev->ident);
+					this->RemoveClient(ev->ident);
 				}
 				else
 				{
 					if (connections.clients.count(ev->ident))
 					{
-						// if (connections.clients[ev->ident]->request.state == REQUEST_FINISH)
-						// {
-						response(ev->ident);
-						std::cout << "response sent\n";
-						// }
-						// else
-						// 	std::cout << "request not finished yet\n";
+						if (connections.clients[ev->ident]->request.state == REQUEST_FINISH)
+						{
+							response(ev->ident);
+							std::cout << "response sent\n";
+						}
+						else
+							std::cout << "request not finished yet\n";
 					}
 					else
 						std::cerr << "client un exist\n";
@@ -400,8 +400,7 @@ Location *Event::getLocation(const Event::LocationConf &locationConf)
 	return (location);
 }
 
-Event::LocationConf::LocationConf(std::string &path, std::string &host, int serverFd): path(path), host(host),  serverFd(serverFd)
+Event::LocationConf::LocationConf(std::string &path, std::string &host, int serverFd)
+	: path(path), host(host), serverFd(serverFd)
 {
-
 }
-
