@@ -367,10 +367,10 @@ void Event::eventLoop() {
 					// 		else
 					// 			std::cerr << "client un exist\n";
 				}
-				// std::cout << "write ended\n";
+				std::cout << "write ended\n";
 			}
 		}
-		// std::cout << "all  event has been process: " << nev << '\n';
+		std::cout << "all  event has been process: " << nev << '\n';
 	}
 }
 bool Event::checkNewClient(int socketFd) {

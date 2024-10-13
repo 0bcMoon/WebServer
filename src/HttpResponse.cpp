@@ -44,7 +44,8 @@ bool	HttpResponse::isPathFounded() const
 {
 	//TODO:----------;
 	if (location == NULL)
-		return (HttpRequest::setHttpError(404, "NOT FOUND"), 0);
+		return (HttpRequest::setHttpError(404, "NOT FOUND"), false);
+
 	return (true);
 }
 

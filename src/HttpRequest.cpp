@@ -171,9 +171,9 @@ void HttpRequest::feed()
 
 void HttpRequest::setHttpError(int code, std::string str)
 {
-	state = REQ_ERROR;
-	error.code = code;
-	error.description = str;
+	// state = REQ_ERROR; //TODO
+	// error.code = code;
+	// error.description = str;
 }
 
 
