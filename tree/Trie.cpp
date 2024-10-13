@@ -6,7 +6,7 @@
 /*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/29 16:45:56 by hicham            #+#    #+#             */
-/*   Updated: 2024/09/29 19:34:01 by hicham           ###   ########.fr       */
+/*   Updated: 2024/10/12 20:59:43 by zkotbi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,7 +74,7 @@ bool Trie::insert(Location &location)
 	return (true);
 }
 
-Location *Trie::findPath(std::string &route)
+Location *Trie::findPath(const std::string &route)
 {
 	TrieNode *currNode = root;
 	Location *location = NULL;

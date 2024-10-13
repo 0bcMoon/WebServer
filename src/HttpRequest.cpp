@@ -7,6 +7,7 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <sys/fcntl.h>
 #include <unistd.h>
@@ -97,9 +98,9 @@ void HttpRequest::readRequest()
 
 	int size = read(fd, tmp, REQSIZE_MAX + 1);
 	if (size ==  -1)
-		setHttpError(500, "Internal Server Error");
-	else if ((reqSize + size) > REQSIZE_MAX)
-		setHttpError(413, "Content Too Large");
+		return ;
+	// else if ((reqSize + size) > REQSIZE_MAX)
+	// 	setHttpError(413, "Content Too Large");
 	if (size == 0)
 		return ;
 	else if (size > 0)
@@ -127,7 +128,7 @@ void HttpRequest::feed()
 	// 			"1C\r\n"
 	// 			"0123456789012345678901234567\r\n"
 	// 			"0\r\n\n" ;
- 	while (reqBufferIndex < reqBuffer.size() && state != ERROR && state != DEBUG)
+ 	while (reqBufferIndex < reqBuffer.size() && state != REQ_ERROR && state != DEBUG)
 	{
 		if (state == METHODE)
 			parseMethod();
@@ -149,25 +150,28 @@ void HttpRequest::feed()
 			state = REQUEST_FINISH;
 		// if (state == REQUEST_FINISH)
 		// 	state = METHODE;
-		if (state == ERROR)
+		if (state == REQ_ERROR)
 			break;
 	}
 	// // if (state == DEBUG && response(fd))
 	// // 	std::cout << "FUCKING DONE" << std::endl;
-	std::cout << error.code << ": " << error.description << std::endl; 
-	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
-	for (map_it it = headers.begin(); it != headers.end(); ++it) {
-        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
-    }
-	for (auto& it : body)
-	{
-		std::cout << (char)it;
-	}
+	
+	// INFO: print request information;
+
+	// std::cout << error.code << ": " << error.description << std::endl; 
+	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	// for (map_it it = headers.begin(); it != headers.end(); ++it) {
+ //        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+ //    }
+	// for (auto& it : body)
+	// {
+	// 	std::cout << (char)it;
+	// }
 }
 
 void HttpRequest::setHttpError(int code, std::string str)
 {
-	state = ERROR;
+	state = REQ_ERROR;
 	error.code = code;
 	error.description = str;
 }
@@ -343,7 +347,7 @@ void HttpRequest::parseHttpVersion()
 	const std::string	tmp("HTTP/");
 	int					_state = 0;
 
-	while (reqBufferIndex < reqBuffer.size() - 1 && state != ERROR)
+	while (reqBufferIndex < reqBuffer.size() - 1 && state != REQ_ERROR)
 	{
 		if (httpVersion.size() == 0 && reqBuffer[reqBufferIndex] == ' ')
 		{

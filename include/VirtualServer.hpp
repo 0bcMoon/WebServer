@@ -49,6 +49,7 @@ class VirtualServer
 	void pushLocation(Tokens &tokens, Tokens &end);
 	void parseTokens(Tokens &tokens, Tokens &end);
 	void insertRoute(Location &location);
+	Location *getRoute(const std::string &path);
 };
 
 #endif

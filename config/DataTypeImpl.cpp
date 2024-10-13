@@ -19,7 +19,7 @@ GlobalConfig::GlobalConfig()
 
 GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 {
-	if (this != &other)
+	if (this == &other)
 		return *this;
 	
 	accessLog = other.accessLog;

@@ -42,14 +42,19 @@ class GlobalConfig
 	std::vector<std::string>			indexes;
 
   public:
-	void loadFile(Tokens &token, Tokens &end, std::string &buffer);
-	bool isValidStatusCode(std::string &str);
+	void loadFile(Tokens &token, Tokens &end, std::string &buffer); // WARNING:t5arbi9
+	bool isValidStatusCode(std::string &str); // WARNING:t5arbi9
 	void setMethods(Tokens &token, Tokens &end);
-	bool isMethodAllowed(const std::string &method) const;
 	void validateOrFaild(Tokens &token, Tokens &end);
 	void CheckIfEnd(Tokens &token, Tokens &end);
 	std::string &consume(Tokens &token, Tokens &end);
 	GlobalConfig &operator=(const GlobalConfig &globalParam);
+
+	//INFO:
+	bool isMethodAllowed(const std::string &method) const;
+	std::string getRoot() const;
+	bool	getAutoIndex() const;
+	
 	GlobalConfig();
 	~GlobalConfig();
 
@@ -59,10 +64,8 @@ class GlobalConfig
 
 	void setRoot(Tokens &token, Tokens &end);
 
-	std::string getRoot() const;
 
 	void setAutoIndex(Tokens &token, Tokens &end);
-	bool getAutoIndex() const;
 
 	void setAccessLog(Tokens &token, Tokens &end);
 	std::string getAccessLog() const;

@@ -33,7 +33,7 @@ enum reqState
 	BODY,
 	BODY_FINISH,
 	REQUEST_FINISH,
-	ERROR,
+	REQ_ERROR,
 	DEBUG
 };
 
@@ -127,7 +127,7 @@ class HttpRequest
 		HttpRequest(int fd);
 		~HttpRequest();
 
-		void		setHttpError(int code, std::string str);
+		static void		setHttpError(int code, std::string str);
 		void		feed();
 
 		void		setFd(int fd);

@@ -15,7 +15,6 @@ class Location
 		};
 		Redirection					redirect;
 		std::string					path; // todo as redix tree
-		GlobalConfig				globalConfig;
 	public:
 		Location();
 		Location &operator=(const Location &location);
@@ -24,5 +23,7 @@ class Location
 		void setRedirect(Tokens &token, Tokens &end);
 		void parseTokens(Tokens &token, Tokens &end);
 		static bool isValidStatusCode(std::string &str);
+
+		GlobalConfig				globalConfig;
 };
 #endif

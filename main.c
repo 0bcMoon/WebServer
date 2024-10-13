@@ -17,10 +17,10 @@ int main() {
     char buffer[BUFFER_SIZE];
     const char *host = "localhost";
     const char *request = 
-        "GET / HTTP/1.1\r\n"
+        "POST /hhhh HTTP/1.1\r\n"
         "Host: ana\r\n"
         "jLK: ana\r\n"
-        "Connection: close\r\n"
+        "Connection: \r\n"
 		// "Content-Length: 1000000000000000000000000000000000000000000000000000000\r\n"
 		"Transfer-Encoding: chunked\r\n"
 		"\r\n"

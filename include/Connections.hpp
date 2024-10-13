@@ -19,6 +19,7 @@ class Connections
 		
 		void		closeConnection(int	fd);
 		void		addConnection(int	fd);
+		void		addConnection(int	fd, int server);
 		void		connecting(int	fd);
 		void		requestHandler(int	fd);
 };

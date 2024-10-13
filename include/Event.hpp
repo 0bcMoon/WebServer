@@ -1,12 +1,21 @@
 #ifndef Event_HPP
 #define Event_HPP
 #include <sys/event.h>
+#include "Connections.hpp"
 #include "ServerContext.hpp"
 #include "VirtualServer.hpp"
 
 class Event
 {
   private:
+	struct LocationConf
+	{
+		LocationConf(std::string &host, std::string &path, int serverFd);
+		std::string &path;
+		std::string &host;
+		int serverFd;
+	};
+
 	ServerContext										*ctx;
 	const int											MAX_CONNECTION_QUEUE ;
 	const int											MAX_EVENTS;
@@ -16,7 +25,7 @@ class Event
 	typedef std::map<int, struct sockaddr_in>			SockAddr_in;
 	typedef std::set<VirtualServer::SocketAddr>			SocketAddrSet_t;
 
-	VirtualServerMap_t									VirtuaServers;
+	VirtualServerMap_t									virtuaServers;
 	SocketMap_t											socketMap;
 	std::map<int, VirtualServer *>						defaultServer;
 	SockAddr_in											sockAddrInMap;
@@ -33,9 +42,11 @@ class Event
 	void												CreateChangeList();
 	int													numOfSocket;
 	int													newConnection(int socketFd);
+	int													newConnection(int socketFd, Connections &connections);
 	bool												checkNewClient(int socketFd);
 	int													RemoveClient(int clientFd);
 	int													RegsterClient(int clientFd);
+	Location											*getLocation(const LocationConf &locationConf);
 
   public:
 	void												initIOmutltiplexing();

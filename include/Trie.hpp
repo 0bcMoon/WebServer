@@ -23,7 +23,7 @@ class Trie
 	void deleteNode();
 	void _deleteNode(TrieNode *node);
 	bool insert(Location &location);
-	Location *findPath(std::string &route);
+	Location *findPath(const std::string &route);
 };
 
 #endif

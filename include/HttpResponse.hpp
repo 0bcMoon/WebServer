@@ -2,19 +2,43 @@
 #define HTTPRESPONSE_HPP
 
 #include "HttpRequest.hpp"
+#include "Location.hpp"
+
+
+enum responseState 
+{
+	START,
+	ERROR
+};
+
 class HttpResponse
 {
 	private:
 		int									fd;
 		enum reqMethode						methode;
+		std::vector<unsigned char>							body;
 		std::string							strMethod;
+		httpError							status;	
+		bool								isCgiBool;
+	public:
+		Location							*location;
+		enum responseState					state;
 		std::string                         path;
 		std::map<std::string, std::string>	headers;
-		std::vector<unsigned char>							body; // TODO : body  may be binary (include '\0') fix this;
-		httpError							status;
-	public:
+
 		HttpResponse(int fd);
-		HttpResponse operator=(const HttpRequest& req);
+		HttpResponse	operator=(const HttpRequest& req);
+
+		void							responseCooking();
+		bool							isCgi();
+		void							cgiCooking();
+
+		int								getStatusCode() const;
+		std::string						getStatusDescr() const;
+
+		bool							isPathFounded() const;
+		bool							isMethodAllowed() const;
+		// Location *location;
 };
 
 #endif
