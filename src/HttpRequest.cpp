@@ -64,9 +64,9 @@ void	HttpRequest::clear()
 	httpVersion.clear();
 }
 
-std::string							HttpRequest::getPath() const
+const std::string	&HttpRequest::getPath() const
 {
-	return (path);
+	return (this->path);
 }
 
 std::map<std::string, std::string>	HttpRequest::getHeaders() const
@@ -171,9 +171,9 @@ void HttpRequest::feed()
 
 void HttpRequest::setHttpError(int code, std::string str)
 {
-	state = REQ_ERROR;
-	error.code = code;
-	error.description = str;
+	// state = REQ_ERROR;
+	// error.code = code;
+	// error.description = str;
 }
 
 
@@ -697,6 +697,11 @@ void HttpRequest::parseBody()
 		contentLengthBodyParsing();
 	if (headers.find("Transfer-Encoding ") != headers.end())
 		chunkedBodyParsing();
+}
+
+const std::string &HttpRequest::getHost() const
+{
+	return (headers.find("Host ")->second);
 }
 
 // void HttpRequest::parseMethod()

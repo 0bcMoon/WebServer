@@ -8,14 +8,6 @@
 class Event
 {
   private:
-	struct LocationConf
-	{
-		LocationConf(std::string &host, std::string &path, int serverFd);
-		std::string &path;
-		std::string &host;
-		int serverFd;
-	};
-
 	ServerContext										*ctx;
 	const int											MAX_CONNECTION_QUEUE ;
 	const int											MAX_EVENTS;
@@ -46,7 +38,7 @@ class Event
 	bool												checkNewClient(int socketFd);
 	int													RemoveClient(int clientFd);
 	int													RegsterClient(int clientFd);
-	Location											*getLocation(const LocationConf &locationConf);
+	Location											*getLocation(const Client *client);
 
   public:
 	void												initIOmutltiplexing();

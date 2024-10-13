@@ -29,8 +29,9 @@ class Client
 
 		int				getFd() const;
 
-		std::string	getHost() const;	
-		std::string	getPath() const;
+		const std::string	&getHost() const;	
+		const std::string	&getPath() const;
+		int					getServerFd() const;
 
 		void			respond();
 };

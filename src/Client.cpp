@@ -1,11 +1,12 @@
 #include "Client.hpp"
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
+#include <sys/fcntl.h>
+#include <unistd.h>
+#include <cassert>
 #include <iostream>
 #include <iterator>
 #include <string>
-#include <sys/fcntl.h>
-#include <unistd.h>
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 
 int Client::getFd() const
 {
@@ -18,13 +19,12 @@ Client::Client() : response(-1)
 	state = REQUEST;
 }
 
-Client::Client(int	fd) : fd(fd), request(fd), response(fd)
+Client::Client(int fd) : fd(fd), request(fd), response(fd)
 {
 	state = REQUEST;
 }
 
-
-Client::Client(int	fd, int serverFd) : fd(fd), serverFd(serverFd), request(fd), response(fd)
+Client::Client(int fd, int serverFd) : fd(fd), serverFd(serverFd), request(fd), response(fd)
 {
 	state = REQUEST;
 }
@@ -42,7 +42,7 @@ Client::Client(int	fd, int serverFd) : fd(fd), serverFd(serverFd), request(fd), 
 // 	return (1);
 // }
 
-void		Client::respond()
+void Client::respond()
 {
 	if (request.state == REQUEST_FINISH)
 	{
@@ -50,18 +50,23 @@ void		Client::respond()
 		request.clear();
 		response.responseCooking();
 	}
-	if (response.state == ERROR)
+	else if (response.state == ERROR)
 	{
-		//TODO: handling ERROR
+		// TODO: handling ERROR
 	}
 }
 
-std::string	Client::getHost() const	
+const std::string &Client::getHost() const
 {
-	return (this->response.headers.find("Host ")->second);
+	return (this->request.getHost()); 
 }
 
-std::string	Client::getPath() const
+const std::string &Client::getPath() const
 {
-	return (this->response.path);
+	return (this->request.getPath());
+}
+
+int Client::getServerFd() const
+{
+	return (this->serverFd);
 }
