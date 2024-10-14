@@ -100,8 +100,7 @@ bool	HttpResponse::isPathFounded()
 
 bool	HttpResponse::isMethodAllowed() const
 {
-	//TODO:----------;
-	return (true);
+	return (this->location->globalConfig.isMethodAllowed(this->methode)); // true of false TODO:
 }
 
 void			HttpResponse::cgiCooking()

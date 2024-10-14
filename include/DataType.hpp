@@ -38,20 +38,21 @@ class GlobalConfig
 	std::string							root;
 	bool								autoIndex;
 	ErrorPage							errorPages;
-	std::map<std::string, std::string>	cgiMap;
+	std::string							upload_file_path;
 	std::vector<std::string>			indexes;
 
   public:
 	// void	loadFile(Tokens &token, Tokens &end, std::string &buffer); // WARNING:t5arbi9
 	bool	isValidStatusCode(std::string &str); // WARNING:t5arbi9
-	void 	etMethods(Tokens &token, Tokens &end);
+	void 	setMethods(Tokens &token, Tokens &end);
+	void	setUploadPath(Tokens &token, Tokens &end);
 	void	validateOrFaild(Tokens &token, Tokens &end);
 	void	CheckIfEnd(Tokens &token, Tokens &end);
 	std::string &consume(Tokens &token, Tokens &end);
 	GlobalConfig &operator=(const GlobalConfig &globalParam);
 
 	//INFO:
-	bool isMethodAllowed(const std::string &method) const;
+	bool isMethodAllowed(int method) const;
 	std::string getRoot() const;
 	bool		getAutoIndex() const;
 	
@@ -76,10 +77,8 @@ class GlobalConfig
 
 	const std::vector<std::string> &getIndexes();
 	void setIndexes(Tokens &token, Tokens &end);
-	void setMethods(Tokens &token, Tokens &end);
 	// TODO Indexes getter may be with caching ??
 
-	void setCGI(Tokens &token, Tokens &end);
 	// TODO CGI getter may be with caching ??
 	void setErrorPages(Tokens &token, Tokens &end);
 };

@@ -1,5 +1,5 @@
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/unistd.h>
 #include <unistd.h>
 #include <cstddef>
@@ -13,21 +13,21 @@
 
 GlobalConfig::GlobalConfig()
 {
+	this->upload_file_path = "/tmp";
 	this->autoIndex = false;
-		this->methods = GET; // default method is GET only
+	this->methods = GET; // default method is GET only can be overwritten
 }
 
 GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 {
 	if (this == &other)
 		return *this;
-	
+
 	accessLog = other.accessLog;
 	errorLog = other.errorLog;
 	root = other.root;
 	autoIndex = other.autoIndex;
 	errorPages = other.errorPages;
-	cgiMap = other.cgiMap;
 	indexes = other.indexes;
 	return *this; // Return *this to allow chained assignments
 }
@@ -95,34 +95,12 @@ bool GlobalConfig::getAutoIndex() const
 // 	return this->errorLog; // Return the error log path
 // }
 
-
-
-
-
 void GlobalConfig::setIndexes(Tokens &token, Tokens &end)
 {
 	validateOrFaild(token, end);
 	while (token != end && *token != ";")
 		this->indexes.push_back(consume(token, end));
 	CheckIfEnd(token, end);
-}
-
-void GlobalConfig::setCGI(Tokens &token, Tokens &end)
-{
-	std::string cgi_path;
-	std::string cgi_ext;
-
-	validateOrFaild(token, end);
-	cgi_ext = consume(token, end);
-	cgi_path = consume(token, end);
-	CheckIfEnd(token, end);
-	if (cgi_ext[0] != '.')
-		throw ParserException("Invalid CGI extension" + cgi_ext);
-	if (this->cgiMap.find(cgi_ext) != this->cgiMap.end())
-		throw ParserException("Duplicate CGI extension" + cgi_ext);
-	if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
-		throw ParserException("Invalid CGI path" + cgi_path);
-	this->cgiMap[cgi_ext] = cgi_path;
 }
 
 // void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
@@ -139,7 +117,7 @@ void GlobalConfig::validateOrFaild(Tokens &token, Tokens &end)
 {
 	token++;
 	if (token == end || IsId(*token))
-		throw ParserException("Unexpected end of file");
+		throw ParserException("Unexpected token: " + (token == end ? "end of file" : *token));
 }
 
 void GlobalConfig::CheckIfEnd(Tokens &token, Tokens &end)
@@ -169,12 +147,12 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 		this->setAutoIndex(token, end);
 	else if (*token == "index")
 		this->setIndexes(token, end);
-	else if (*token == "cgi_path")
-		this->setCGI(token, end);
 	else if (*token == "allow")
 		this->setMethods(token, end);
 	else if (*token == "error_pages")
 		this->setErrorPages(token, end);
+	else if (*token == "client_upload_path")
+		this->setUploadPath(token, end);
 	else
 		throw ParserException("Invalid token: " + *token);
 	return (true);
@@ -183,6 +161,7 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 void GlobalConfig::setMethods(Tokens &token, Tokens &end)
 {
 	this->validateOrFaild(token, end);
+	this->methods = 0;
 	while (token != end && *token != ";")
 	{
 		if (*token == "GET")
@@ -195,17 +174,38 @@ void GlobalConfig::setMethods(Tokens &token, Tokens &end)
 			throw ParserException("Invalid or un support method: " + *token);
 		token++;
 	}
+	if (this->methods == 0)
+		throw ParserException("empty  method list");
 	this->CheckIfEnd(token, end);
 }
 
 void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 {
 	throw ParserException("TODO: with better implementation");
-
 }
-
 
 const std::vector<std::string> &GlobalConfig::getIndexes()
 {
 	return (this->indexes);
+}
+
+void GlobalConfig::setUploadPath(Tokens &token, Tokens &end)
+{
+	struct stat buf;
+
+	this->validateOrFaild(token, end);
+	this->upload_file_path = this->consume(token, end);
+	this->CheckIfEnd(token, end);
+	if (stat(this->upload_file_path.data(), &buf) != 0)
+		throw ParserException("Upload path does directory does not exist");
+	if (S_ISDIR(buf.st_mode) == 0)
+		throw ParserException("Upload Path is not a directory");
+	if (access(this->upload_file_path.data(), W_OK) != 0)
+		throw ParserException("invalid Upload path directory");
+}
+
+bool GlobalConfig::isMethodAllowed(int method) const
+{
+	if (this->methods & method) return (true);
+	return (false);
 }

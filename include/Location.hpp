@@ -14,17 +14,22 @@ class Location
 			std::string url; // will  file path if status != 3xx 
 		};
 		Redirection					redirect;
-		std::string					path; // todo as redix tree
+		std::string					path;
+		std::string					cgi_path;
+		std::string					cgi_ext;
+		std::string					upload_file_path;
+
 	public:
 		Location();
 		Location					&operator=(const Location &location);
 		void						setPath(std::string &path);
-		std::string					&getPath();
-
+		const std::string					&getPath();
+		const std::string					&geCGItPath();
+		const std::string					&geCGIext();
 		void						setRedirect(Tokens &token, Tokens &end);
 		void						parseTokens(Tokens &token, Tokens &end);
 		static bool					isValidStatusCode(std::string &str);
-
 		GlobalConfig				globalConfig;
+		void setCGI(Tokens &token, Tokens &end);
 };
 #endif

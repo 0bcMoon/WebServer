@@ -55,8 +55,12 @@ Event::~Event()
 
 void Event::InsertDefaultServer(VirtualServer *server, int socketFd)
 {
-	if (this->defaultServer.find(socketFd) != this->defaultServer.end())
-		throw std::runtime_error("default server already exist on this port");
+	std::map<int, VirtualServer *>::iterator dvserver = this->defaultServer.find(socketFd);
+	if (dvserver != this->defaultServer.end())
+	{
+		if (dvserver->second->getServerNames().size() == 0 && server->getServerNames().size() == 0)
+			throw std::runtime_error("conflict default server (uname server) already exist on same port");
+	}
 	this->defaultServer[socketFd] = server;
 }
 
@@ -64,8 +68,7 @@ void Event::insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *s
 {
 	std::set<std::string> &serverNames = server->getServerNames();
 	if (serverNames.size() == 0) // if there is no server name  uname will be the
-								 // default server in that port
-		this->InsertDefaultServer(server, socketFd);
+		this->InsertDefaultServer(server, socketFd); // default server in that port
 	else
 	{
 		std::set<std::string>::iterator it = serverNames.begin();
@@ -76,6 +79,8 @@ void Event::insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *s
 			serverNameMap[*it] = server;
 		}
 	}
+	if (this->defaultServer.find(socketFd) == this->defaultServer.end())
+		this->InsertDefaultServer(server, socketFd);
 }
 
 void Event::init()
@@ -107,25 +112,6 @@ void Event::init()
 			this->insertServerNameMap(serverNameMap, &virtualServers[i], socketFd);
 		}
 	}
-}
-
-int set_non_blocking(int sockfd) // TODO make it more oop
-{
-	int flags = fcntl(sockfd, F_GETFL, 0);
-	if (flags == -1)
-	{
-		perror("fcntl(F_GETFL)");
-		return -1;
-	}
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
-	{
-		perror("fcntl(F_SETFL)");
-		return -1;
-	}
-	flags = fcntl(sockfd, F_GETFL, 0);
-	if (flags & O_NONBLOCK)
-		printf("socket is non-blocking\n");
-	return 0;
 }
 
 int Event::CreateSocket(SocketAddrSet_t::iterator &address)
@@ -294,18 +280,18 @@ void response(int fd, const std::string &p)
 	const char *http_200_response =
 		"HTTP/1.1 200 OK\r\n"
 		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Connection: Close\r\n"
+		"Connection: Keep-Alive\r\n"
 		"Server: YOUR DADDY\r\n"
-		"Content-Length: 0\r\n"
-		"\r\n";
-		// "<!DOCTYPE html>\n"
-		// "<html>\n"
-		// "<head><title>200 OK</title></head>\n"
-		// "<body>\n"
-		// "<h1>200 OK</h1>\n"
-		// "<p>The request has succeeded.</p>\n"
-		// "</body>\n"
-		// "</html>";
+		"Content-Length: 100\r\n"
+		"\r\n"
+		"<!DOCTYPE html>\n"
+		"<html>\n"
+		"<head><title>200 OK</title></head>\n"
+		"<body>\n"
+		"<h1>200 OK</h1>\n"
+		"<p>The request has succeeded.</p>\n"
+		"</body>\n"
+		"</html>";
 
 	const char *http_404_response =
 		"HTTP/1.1 404 Not Found\r\n"
@@ -322,7 +308,7 @@ void response(int fd, const std::string &p)
 		"</body>\n"
 		"</html>\r\n\r\n";
 	// if (p != "/")
-		write(fd, http_200_response, strlen(http_200_response));
+	write(fd, http_200_response, strlen(http_200_response));
 	// else
 	// 	write(fd, http_200_response, strlen(http_200_response));
 }
@@ -365,24 +351,23 @@ void Event::eventLoop()
 				}
 				else
 				{
-					if (ev->data > 0)
-						std::cout << "write data " << ev->data <<"\n";
 					clients_it kv = connections.clients.find(ev->ident);
 					if (kv == connections.clients.end())
 						continue;
 					Client *client = kv->second;
-					if (client->request.state != REQUEST_FINISH
-						&& client->request.state != REQ_ERROR)
+					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
 						continue;
 					/*************************************************************/
 					client->response.location = this->getLocation(client);
 					std::cout << "response\n";
 					client->respond();
-					if (client->response.state != ERROR) {// WARNING: temporer
-						response(ev->ident, client->getPath());}
+					if (client->response.state != ERROR)
+					{ // WARNING: temporer
+						response(ev->ident, client->getPath());
+					}
 					if (!(client->response.keepAlive))
 						connections.closeConnection(ev->ident);
-					else 
+					else
 						client->response = HttpResponse(ev->ident);
 					/*************************************************************/
 				}
@@ -399,17 +384,17 @@ bool Event::checkNewClient(int socketFd)
 
 Location *Event::getLocation(const Client *client)
 {
+	VirtualServer *Vserver;
 	int serverfd = client->getServerFd();
+
 	const std::string &path = client->getPath();
 	const std::string &host = client->getHost();
-	std::cout << "host: " << host << " path: " << path << '\n';
-
 	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second; // always exist
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())
-		return (NULL);
-		// throw std::runtime_error("server name not found");
-	VirtualServer *Vserver = _Vserver->second;
+		Vserver = this->defaultServer.find(client->getServerFd())->second; // plz dont fail all my hope on you
+	else
+		Vserver = _Vserver->second;
 	Location *location = Vserver->getRoute(path);
 	return (location);
 }

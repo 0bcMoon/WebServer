@@ -23,6 +23,14 @@ enum pathType
 class HttpResponse
 {
 	private:
+
+		enum reqMethode
+		{
+			GET  = 0b1,
+			POST = 0b10,
+			DELETE = 0b100,
+			NONE = 0
+		};
 		struct errorResponse 
 		{
 			std::string		statusLine;
@@ -45,7 +53,7 @@ class HttpResponse
 		errorResponse						errorRes;
 		std::string							fullPath;
 	public:
-		int									keepAlive;
+		int									keepAlive; // bool? // bool?
 		Location							*location;
 		enum responseState					state;
 		std::string                         path;
@@ -67,8 +75,8 @@ class HttpResponse
 		void							setHttpResError(int code, std::string str);
 
 		std::string						getErrorRes();
-		std::string						getContentLenght();
-		int							directoryHandler();
+		std::string						getContentLenght(); // TYPO
+		int								directoryHandler();
 };
 
 #endif

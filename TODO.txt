@@ -1,10 +1,13 @@
 
-- add logging support
-- may add include other file (if there time)
-- make some global file table save memory
+--- handel if at least one Vserver exist and each server has one location define
+--- 
+--- add logging support
+--- may add include other file (if there time)
+--- make some global file table save memory
 --- FIX BODY_SIZE
 --- APPEND DUPLICATE HEADER VALUE
 --- LIMIT READ AND WRIE SIZE WITH KEVENT
 --- 
 --- transfort file
+--- upload file
 --- handle error

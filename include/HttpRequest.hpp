@@ -15,10 +15,10 @@ typedef std::map<std::string, std::string>::iterator map_it; // WARNING
 
 enum reqMethode
 {
-	GET,
-	POST,
-	DELETE,
-	NONE
+	GET  = 0b1,
+	POST = 0b10,
+	DELETE = 0b100,
+	NONE = 0
 };
 
 enum reqState

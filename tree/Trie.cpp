@@ -6,7 +6,7 @@
 /*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/29 16:45:56 by hicham            #+#    #+#             */
-/*   Updated: 2024/10/12 20:59:43 by zkotbi           ###   ########.fr       */
+/*   Updated: 2024/10/14 19:04:36 by hibenouk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,7 +55,7 @@ Trie::~Trie()
 
 bool Trie::insert(Location &location)
 {
-	std::string &path = location.getPath();
+	const std::string &path = location.getPath();
 	TrieNode *currNode = root;
 	int idx;
 	for (size_t i = 0; i < path.size(); i++)
@@ -90,5 +90,5 @@ Location *Trie::findPath(const std::string &route)
 			location = &currNode->children[idx]->location;
 		currNode = currNode->children[idx];
 	}
-	return location; // todo may return tieNode cuz is pointer
+	return (location);
 }
