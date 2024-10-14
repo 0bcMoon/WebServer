@@ -64,9 +64,9 @@ void	HttpRequest::clear()
 	httpVersion.clear();
 }
 
-std::string							HttpRequest::getPath() const
+const std::string	&HttpRequest::getPath() const
 {
-	return (path);
+	return (this->path);
 }
 
 std::map<std::string, std::string>	HttpRequest::getHeaders() const
@@ -169,11 +169,11 @@ void HttpRequest::feed()
 	// }
 }
 
-void HttpRequest::setHttpError(int code, std::string str)
+void HttpRequest::setHttpReqError(int code, std::string str)
 {
-	// state = REQ_ERROR; //TODO
-	// error.code = code;
-	// error.description = str;
+	state = REQ_ERROR;
+	error.code = code;
+	error.description = str;
 }
 
 
@@ -186,7 +186,7 @@ void HttpRequest::parseMethod()
 	{
 		if (reqBuffer[reqBufferIndex] == ' ' && methodeStr.tmpMethodeStr.size() == 0)
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		if (reqBuffer[reqBufferIndex] == ' ')
@@ -196,7 +196,7 @@ void HttpRequest::parseMethod()
 		}
 		if (reqBuffer[reqBufferIndex] < 'A' || reqBuffer[reqBufferIndex] > 'Z')
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		methodeStr.tmpMethodeStr.push_back(reqBuffer[reqBufferIndex]);
@@ -228,14 +228,14 @@ void HttpRequest::parsePath()
 		}
 		if (!verifyUriChar(reqBuffer[reqBufferIndex]) || (path.size() == 0 && reqBuffer[reqBufferIndex] != '/'))
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		path.push_back(reqBuffer[reqBufferIndex]);
 		reqBufferIndex++;
 		if (path.size() > URI_MAX)
 		{
-			setHttpError(414, "URI Too Long");
+			setHttpReqError(414, "URI Too Long");
 			return ;
 		}
 	}
@@ -287,13 +287,13 @@ void HttpRequest::checkHttpVersion(int *state)
 			&& (httpVersion[httpVersion.size() - 1] < '1' 
 			|| httpVersion[httpVersion.size() - 1] > '9'))
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		else if (httpVersion.size() == 6 
 			&& (httpVersion[httpVersion.size() -1] != '1'))
 		{
-			setHttpError(505, "HTTP Version Not Supported");
+			setHttpReqError(505, "HTTP Version Not Supported");
 			return;
 		}
 		else if (httpVersion.size() > 6 && httpVersion[httpVersion.size() -1] == '.')
@@ -305,14 +305,14 @@ void HttpRequest::checkHttpVersion(int *state)
 			&& (httpVersion[httpVersion.size() - 1] < '0'
 			|| httpVersion[httpVersion.size() - 1] > '9'))
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return;
 		}
 		else if (httpVersion.size() > 6
 			&& (httpVersion[httpVersion.size() - 1] >= '0'
 			&& httpVersion[httpVersion.size() - 1] <= '9'))
 		{
-			setHttpError(505, "HTTP Version Not Supported");
+			setHttpReqError(505, "HTTP Version Not Supported");
 			return;
 		}
 	}
@@ -325,19 +325,19 @@ void HttpRequest::checkHttpVersion(int *state)
 			if (httpVersion[httpVersion.size() - 1] < '0'
 				|| httpVersion[httpVersion.size() - 1] > '9')
 			{
-				setHttpError(400, "Bad Request");
+				setHttpReqError(400, "Bad Request");
 				return;
 			}
 			else
 			{
-				setHttpError(505, "HTTP Version Not Supported");
+				setHttpReqError(505, "HTTP Version Not Supported");
 				return;
 			}
 		}
 	}
 	else if (*state == 2)
 	{
-		setHttpError(400, "Bad Request");
+		setHttpReqError(400, "Bad Request");
 		return;
 	}
 }
@@ -366,7 +366,7 @@ void HttpRequest::parseHttpVersion()
 		if (tmp.size() >= httpVersion.size()
 			&& httpVersion[httpVersion.size() - 1] != tmp[httpVersion.size() - 1])
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		checkHttpVersion(&_state);
@@ -417,7 +417,7 @@ void		HttpRequest::crlfGetting()
 		}
 		else if (crlfState != NLINE)
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		reqBufferIndex++;
@@ -495,12 +495,12 @@ void	HttpRequest::parseHeaderName()
 		if ((currHeaderName.size() == 0 && !isAlpha(reqBuffer[reqBufferIndex]))
 			|| !isValidHeaderChar(reqBuffer[reqBufferIndex]))
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		if (reqBuffer[reqBufferIndex] == ':' && currHeaderName.size() == 0)
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		if (reqBuffer[reqBufferIndex] == ':')
@@ -543,16 +543,16 @@ int HttpRequest::isNum(const std::string& str)
 int		HttpRequest::firstHeadersCheck()
 {
 	if (headers.find("Host ") == headers.end())
-		return (setHttpError(400, "Bad Request"), 1);
+		return (setHttpReqError(400, "Bad Request"), 1);
 	if (headers.find("Content-Length ") != headers.end()
 		&& !isNum(headers["Content-Length "]))
-		return (setHttpError(400, "Bad Request"), 1);
+		return (setHttpReqError(400, "Bad Request"), 1);
 	if (headers.find("Transfer-Encoding ") != headers.end()
 		&& headers["Transfer-Encoding "] != "chunked")
-		return (setHttpError(501, "Not Implemented"), 1);
+		return (setHttpReqError(501, "Not Implemented"), 1);
 	if (headers.find("Content-Length ") != headers.end()
 		&& headers.find("Transfer-Encoding ") != headers.end())
-		return (setHttpError(400, "Bad Request"), 1);
+		return (setHttpReqError(400, "Bad Request"), 1);
 	if (headers.find("Content-Length ") == headers.end()
 		&& headers.find("Transfer-Encoding ") == headers.end())
 		return (state = BODY_FINISH, 1);
@@ -566,12 +566,12 @@ void		HttpRequest::contentLengthBodyParsing()
 		std::stringstream ss(headers["Content-Length "]);
 		if (!(ss >> bodySize) || !(ss.eof()))
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		if (body.size() + bodySize > BODY_MAX)
 		{
-			setHttpError(413, "Payload Too Large");
+			setHttpReqError(413, "Payload Too Large");
 			return ;
 		}
 	}
@@ -589,9 +589,9 @@ int		HttpRequest::convertChunkSize()
 	char *end;
 	long tmp = std::strtol(sizeStr.c_str(), &end, 16);
 	if (*end != 0 || tmp > INT_MAX || sizeStr.size() == 0)
-		return (setHttpError(400, "Bad Request"), 1);
+		return (setHttpReqError(400, "Bad Request"), 1);
 	if (tmp + body.size() > BODY_MAX)
-		return (setHttpError(413, "Payload Too Large"), 1);
+		return (setHttpReqError(413, "Payload Too Large"), 1);
 	chunkSize = tmp;
 	sizeStr = "";
 	chunkIndex = 0;
@@ -612,7 +612,7 @@ void			HttpRequest::chunkEnd()
 		if ((reqBuffer[reqBufferIndex] != '\r' && chunkIndex == 0)
 			|| chunkIndex != 0)
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		chunkIndex++;
@@ -628,7 +628,7 @@ void		HttpRequest::chunkedBodyParsing()
 		{
 			if (sizeStr[sizeStr.size() - 1] == '\r' && reqBuffer[reqBufferIndex] != '\n')
 			{
-				setHttpError(400, "Bad Request");
+				setHttpReqError(400, "Bad Request");
 				return ;
 			}
 			if (reqBuffer[reqBufferIndex] == '\n')
@@ -643,7 +643,7 @@ void		HttpRequest::chunkedBodyParsing()
 				&& ( reqBuffer[reqBufferIndex] < 'A' || reqBuffer[reqBufferIndex] > 'F')
 				&& ( reqBuffer[reqBufferIndex] < 'a' || reqBuffer[reqBufferIndex] > 'f'))
 			{
-				setHttpError(400, "Bad Request");
+				setHttpReqError(400, "Bad Request");
 				return ;
 			}
 			sizeStr.push_back(reqBuffer[reqBufferIndex]);
@@ -681,7 +681,7 @@ void		HttpRequest::chunkedBodyParsing()
 		else if ((chunkIndex == 0 && reqBuffer[reqBufferIndex] != '\r')
 				|| chunkIndex == 1)
 		{
-			setHttpError(400, "Bad Request");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		chunkIndex++;
@@ -697,6 +697,11 @@ void HttpRequest::parseBody()
 		contentLengthBodyParsing();
 	if (headers.find("Transfer-Encoding ") != headers.end())
 		chunkedBodyParsing();
+}
+
+const std::string &HttpRequest::getHost() const
+{
+	return (headers.find("Host ")->second);
 }
 
 // void HttpRequest::parseMethod()

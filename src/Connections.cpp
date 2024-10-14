@@ -28,7 +28,6 @@ void	Connections::addConnection(int	fd)
 
 void	Connections::addConnection(int	fd, int server)
 {
-	std::cout << "add Connections\n";
 	this->clients[fd] = new Client(fd, server);
 }
 
@@ -40,7 +39,7 @@ void		Connections::connecting(int fd)
 
 void		Connections::requestHandler(int	fd)
 {
-	if (this->clients.find(fd) == this->clients.end())
+	if (this->clients.find(fd) == this->clients.end()) // TODO : fix
 		return ;
 	clients[fd]->request.feed();
 }

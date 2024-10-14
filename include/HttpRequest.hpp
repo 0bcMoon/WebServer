@@ -69,7 +69,8 @@ typedef struct methodeStr
 class HttpRequest 
 {
 	private:
-		enum chunkState						chunkState;
+		typedef std::map<std::string, std::string> Headers;
+		 chunkState							chunkState;
 		size_t								totalChunkSize;
 		size_t								chunkSize;
 		size_t								chunkIndex;
@@ -127,7 +128,7 @@ class HttpRequest
 		HttpRequest(int fd);
 		~HttpRequest();
 
-		static void		setHttpError(int code, std::string str);
+		void		setHttpReqError(int code, std::string str);
 		void		feed();
 
 		void		setFd(int fd);
@@ -135,11 +136,12 @@ class HttpRequest
 		static int	isNum(const std::string& str);
 		void		clear();
 
-		std::string							getPath() const;
 		std::map<std::string, std::string>	getHeaders() const;
 		std::vector<unsigned char>					getBody() const;
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;
+		const std::string &getHost() const;
+		const std::string &getPath() const;
 };
 
 #endif

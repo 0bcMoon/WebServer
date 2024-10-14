@@ -27,10 +27,10 @@ class Client
 		HttpRequest		request;
 		HttpResponse	response;
 
-		int				getFd() const;
-
-		std::string	getHost() const;	
-		std::string	getPath() const;
+		int					getFd() const;
+		int					getServerFd() const;
+		const std::string	&getHost() const;	
+		const std::string	&getPath() const;
 
 		void			respond();
 };

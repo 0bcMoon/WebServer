@@ -1,11 +1,12 @@
 #include "Client.hpp"
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
+#include <sys/fcntl.h>
+#include <unistd.h>
+#include <cassert>
 #include <iostream>
 #include <iterator>
 #include <string>
-#include <sys/fcntl.h>
-#include <unistd.h>
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 
 int Client::getFd() const
 {
@@ -18,50 +19,46 @@ Client::Client() : response(-1)
 	state = REQUEST;
 }
 
-Client::Client(int	fd) : fd(fd), request(fd), response(fd)
+Client::Client(int fd) : fd(fd), request(fd), response(fd)
 {
 	state = REQUEST;
 }
 
-
-Client::Client(int	fd, int serverFd) : fd(fd), serverFd(serverFd), request(fd), response(fd)
+Client::Client(int fd, int serverFd) : fd(fd), serverFd(serverFd), request(fd), response(fd)
 {
 	state = REQUEST;
 }
-// int tmpResponse(int fd, std::string fileName)
-// {
-// 	std::string buffer;
-// 	char tmp[10000];
 
-// 	int resFd = open(fileName.c_str(), O_RDWR, 0777);
-// 	if (resFd < 0)
-// 		std::cout << "FUCK" << std::endl;
-// 	read(resFd, tmp, 10000);
-// 	buffer = tmp;
-// 	write (fd, buffer.c_str(), buffer.size());
-// 	return (1);
-// }
-
-void		Client::respond()
+void Client::respond()
 {
+	if (request.state != REQUEST_FINISH && request.state != REQ_ERROR)
+		return ;
+	response = request;
+	if ((response.headers.find("Connection ") != response.headers.end()
+		&& response.headers["Connection "] == "Close") 
+		|| request.state == REQ_ERROR)
+		response.keepAlive = 0;
 	if (request.state == REQUEST_FINISH)
-	{
-		response = request;
-		request.clear();
 		response.responseCooking();
-	}
 	if (response.state == ERROR)
 	{
-		//TODO: handling ERROR
+		write(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
+	request.clear();
 }
 
-std::string	Client::getHost() const	
+const std::string &Client::getHost() const
 {
-	return (this->response.headers.find("Host ")->second);
+	return (this->request.getHost()); 
 }
 
-std::string	Client::getPath() const
+const std::string &Client::getPath() const
 {
-	return (this->response.path);
+	return (this->request.getPath());
 }
+
+int Client::getServerFd() const
+{
+	return (this->serverFd);
+}
+

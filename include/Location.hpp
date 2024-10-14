@@ -17,12 +17,13 @@ class Location
 		std::string					path; // todo as redix tree
 	public:
 		Location();
-		Location &operator=(const Location &location);
-		void setPath(std::string &path);
-		std::string &getPath();
-		void setRedirect(Tokens &token, Tokens &end);
-		void parseTokens(Tokens &token, Tokens &end);
-		static bool isValidStatusCode(std::string &str);
+		Location					&operator=(const Location &location);
+		void						setPath(std::string &path);
+		std::string					&getPath();
+
+		void						setRedirect(Tokens &token, Tokens &end);
+		void						parseTokens(Tokens &token, Tokens &end);
+		static bool					isValidStatusCode(std::string &str);
 
 		GlobalConfig				globalConfig;
 };

@@ -9,6 +9,7 @@ def main():
     try:
         # Send GET request
         response = requests.get(url)
+        print("GET Request")
         
         # Check if the request was successful
         response.raise_for_status()
@@ -18,7 +19,7 @@ def main():
 
         # Print the response content
         print("Response Content:")
-        print(response.json())
+        print(response.text)
 
     except requests.RequestException as e:
         print(f"An error occurred: {e}")

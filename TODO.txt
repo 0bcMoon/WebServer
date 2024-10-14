@@ -5,4 +5,6 @@
 --- FIX BODY_SIZE
 --- APPEND DUPLICATE HEADER VALUE
 --- LIMIT READ AND WRIE SIZE WITH KEVENT
-
+--- 
+--- transfort file
+--- handle error

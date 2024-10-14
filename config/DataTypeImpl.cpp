@@ -179,6 +179,7 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 		throw ParserException("Invalid token: " + *token);
 	return (true);
 }
+
 void GlobalConfig::setMethods(Tokens &token, Tokens &end)
 {
 	this->validateOrFaild(token, end);
@@ -204,3 +205,7 @@ void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 }
 
 
+const std::vector<std::string> &GlobalConfig::getIndexes()
+{
+	return (this->indexes);
+}

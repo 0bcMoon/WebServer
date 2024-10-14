@@ -42,18 +42,18 @@ class GlobalConfig
 	std::vector<std::string>			indexes;
 
   public:
-	void loadFile(Tokens &token, Tokens &end, std::string &buffer); // WARNING:t5arbi9
-	bool isValidStatusCode(std::string &str); // WARNING:t5arbi9
-	void setMethods(Tokens &token, Tokens &end);
-	void validateOrFaild(Tokens &token, Tokens &end);
-	void CheckIfEnd(Tokens &token, Tokens &end);
+	// void	loadFile(Tokens &token, Tokens &end, std::string &buffer); // WARNING:t5arbi9
+	bool	isValidStatusCode(std::string &str); // WARNING:t5arbi9
+	void 	etMethods(Tokens &token, Tokens &end);
+	void	validateOrFaild(Tokens &token, Tokens &end);
+	void	CheckIfEnd(Tokens &token, Tokens &end);
 	std::string &consume(Tokens &token, Tokens &end);
 	GlobalConfig &operator=(const GlobalConfig &globalParam);
 
 	//INFO:
 	bool isMethodAllowed(const std::string &method) const;
 	std::string getRoot() const;
-	bool	getAutoIndex() const;
+	bool		getAutoIndex() const;
 	
 	GlobalConfig();
 	~GlobalConfig();
@@ -74,8 +74,9 @@ class GlobalConfig
 	std::string getErrorLog() const;
 
 
-
+	const std::vector<std::string> &getIndexes();
 	void setIndexes(Tokens &token, Tokens &end);
+	void setMethods(Tokens &token, Tokens &end);
 	// TODO Indexes getter may be with caching ??
 
 	void setCGI(Tokens &token, Tokens &end);
