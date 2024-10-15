@@ -12,6 +12,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include "Client.hpp"
 #include "Connections.hpp"
 #include "HttpRequest.hpp"
@@ -275,23 +276,24 @@ int Event::RegsterClient(int clientFd)
 #define BUFFER_SIZE 1024
 #define MAX_EVENTS 10
 
-void response(int fd, const std::string &p)
+void response(int fd, const std::string &p, std::vector<std::vector<unsigned char> >& vec)
 {
 	const char *http_200_response =
 		"HTTP/1.1 200 OK\r\n"
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Connection: Keep-Alive\r\n"
 		"Server: YOUR DADDY\r\n"
-		"Content-Length: 100\r\n"
-		"\r\n"
-		"<!DOCTYPE html>\n"
-		"<html>\n"
-		"<head><title>200 OK</title></head>\n"
-		"<body>\n"
-		"<h1>200 OK</h1>\n"
-		"<p>The request has succeeded.</p>\n"
-		"</body>\n"
-		"</html>";
+		// "Content-Length: 100\r\n"
+		"Transfer-Encoding: chunked\r\n"
+		"\r\n";
+		// "<!DOCTYPE html>\n"
+		// "<html>\n"
+		// "<head><title>200 OK</title></head>\n"
+		// "<body>\n"
+		// "<h1>200 OK</h1>\n"
+		// "<p>The request has succeeded.</p>\n"
+		// "</body>\n"
+		// "</html>";
 
 	const char *http_404_response =
 		"HTTP/1.1 404 Not Found\r\n"
@@ -309,6 +311,18 @@ void response(int fd, const std::string &p)
 		"</html>\r\n\r\n";
 	// if (p != "/")
 	write(fd, http_200_response, strlen(http_200_response));
+	for (size_t i = 0; i < vec.size();i++)
+	{
+		std::string sizeStr = decimalToHex(vec[i].size());
+		write(fd, sizeStr.c_str(), sizeStr.size());
+		write(fd, "\r\n", 2);
+		for (size_t j = 0; j < vec[i].size(); j++)
+		{
+			write(fd, &vec[i][j], 1);
+		}
+		write(fd, "\r\n", 2);
+	}
+	write(fd, "0\r\n\r\n", 5);
 	// else
 	// 	write(fd, http_200_response, strlen(http_200_response));
 }
@@ -363,7 +377,7 @@ void Event::eventLoop()
 					client->respond();
 					if (client->response.state != ERROR)
 					{ // WARNING: temporer
-						response(ev->ident, client->getPath());
+						response(ev->ident, client->getPath(), client->response.responseBody);
 					}
 					if (!(client->response.keepAlive))
 						connections.closeConnection(ev->ident);

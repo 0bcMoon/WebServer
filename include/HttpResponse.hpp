@@ -52,12 +52,14 @@ class HttpResponse
 		bool								isCgiBool;
 		errorResponse						errorRes;
 		std::string							fullPath;
+		static const int					fileReadingBuffer = 10240;
 	public:
-		int									keepAlive; // bool? // bool?
-		Location							*location;
-		enum responseState					state;
-		std::string                         path;
-		std::map<std::string, std::string>	headers;
+		std::vector<std::vector<unsigned char> >			responseBody;
+		int													keepAlive; // bool? // bool?
+		Location											*location;
+		enum responseState									state;
+		std::string											path;
+		std::map<std::string, std::string>					headers;
 
 		HttpResponse(int fd);
 		HttpResponse	operator=(const HttpRequest& req);
@@ -70,13 +72,15 @@ class HttpResponse
 		std::string						getStatusDescr() const;
 
 		bool							isPathFounded();
-		bool							isMethodAllowed() const;
+		bool							isMethodAllowed();
 		int								pathChecking();
 		void							setHttpResError(int code, std::string str);
 
 		std::string						getErrorRes();
 		std::string						getContentLenght(); // TYPO
 		int								directoryHandler();
+		int								loadFile(const std::string& pathName);
 };
 
+std::string decimalToHex(int decimal);
 #endif

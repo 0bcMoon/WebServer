@@ -1,4 +1,5 @@
 #include "HttpResponse.hpp"
+#include <fstream>
 #include <iostream>
 #include <ostream>
 #include <sstream>
@@ -6,6 +7,8 @@
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <vector>
 
 HttpResponse::HttpResponse(int fd) : fd(fd)
 {
@@ -98,9 +101,11 @@ bool	HttpResponse::isPathFounded()
 	return (true);
 }
 
-bool	HttpResponse::isMethodAllowed() const
+bool	HttpResponse::isMethodAllowed()
 {
-	return (this->location->globalConfig.isMethodAllowed(this->methode)); // true of false TODO:
+	// return (setHttpResError(405, "Method Not Allowed"),
+	// 	this->location->globalConfig.isMethodAllowed(this->methode));
+	return (true);
 }
 
 void			HttpResponse::cgiCooking()
@@ -110,46 +115,103 @@ void			HttpResponse::cgiCooking()
 
 int				HttpResponse::directoryHandler()
 {
-	// const std::vector<std::string> &indexes = this->location->globalConfig.getIndexes();
-	// 
-	// for (size_t i = 0; i < indexes.size(); i++)
-	// {
-	// 	if (access((fullPath + ), F_OK) != -1)
-	// 	{
-	// 		
-	// 	}
-	// }
+	const std::vector<std::string> &indexes = this->location->globalConfig.getIndexes();
+	if (this->fullPath[fullPath.size() -1] != '/')
+		fullPath += "/";
+	for (size_t i = 0; i < indexes.size(); i++)
+	{
+		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
+			return (loadFile(fullPath + indexes[i]));
+	}
+	return (setHttpResError(404, "Not Found"), 0);
 }
+
+int HttpResponse::loadFile(const std::string& pathName)
+{
+	struct stat sstat;
+	int fd;
+	char buffer[fileReadingBuffer];
+	int j = 0;
+
+	fd = open(pathName.c_str(), O_RDONLY);
+	if (fd < 0)
+		return (setHttpResError(500, "Internal Server Error"), 0);
+	while (1)
+	{
+		int r = read(fd, buffer, fileReadingBuffer);
+		if (r < 0)
+			return (close(fd), setHttpResError(500, "Internal Server Error"), 0);
+		if (r == 0)
+			break;
+		responseBody.push_back(std::vector<unsigned char >());
+		for (int i = 0; i < r;i++)
+		{
+			responseBody[j].push_back(buffer[i]);
+		}
+		j++;
+	}
+	return (close(fd), 1);
+}
+
+// std::ifstream file(pathName.c_str());
+// unsigned char  tmp;
+// if (!file.is_open())
+// 	return (setHttpResError(500, "Internal Server Error"), 0);
+// while (!(file >> tmp).eof())
+// 	responseBody.push_back(tmp);
 
 int		HttpResponse::pathChecking()
 {
-	// struct stat sStat;
-	// if (location->globalConfig.getRoot()[location->globalConfig.getRoot().size() -1] == '/')
-	// 	fullPath = location->globalConfig.getRoot() + location->getPath();
-	// else
-	// 	fullPath = location->globalConfig.getRoot() + "/" + location->getPath();
-	// stat(fullPath.c_str(), &sStat);
-	// if (S_ISDIR(sStat.st_mode))
-	// 	return (directoryHandler());
-	// if (access(fullPath.c_str(), F_OK) != -1)
-	// 	fullPatiiiiiiiih;
-	// else
-	// 	return (state = ERROR,  setHttpResError(404, "Not Found"), 0);
-	// return (1);
+	this->fullPath = location->globalConfig.getRoot() + this->path;
+
+	struct stat sStat;
+	stat(fullPath.c_str(), &sStat);
+	if (S_ISDIR(sStat.st_mode))
+		return (directoryHandler());
+	if (access(fullPath.c_str(), F_OK) != -1)
+		return (loadFile(fullPath));
+	else
+		return (state = ERROR,  setHttpResError(404, "Not Found"), 0);
+	return (1);
 }
 
 void			HttpResponse::responseCooking()
 {
-	// std::set<std::string> set = this->location->globalConfig.ge
-	// root/path
 	if (!isPathFounded())
 		return ;
 	if (isCgi())
 		cgiCooking();
 	else
 	{
-		if (!isMethodAllowed())
+		if (!isMethodAllowed() || !pathChecking())
 			return ;
-		// pathChecking();
 	}
+}
+
+std::string decimalToHex(int decimal) 
+{
+    if (decimal == 0) {
+        return "0";
+    }
+
+    const char hexDigits[] = "0123456789ABCDEF";
+    std::string hexResult;
+    bool isNegative = false;
+
+    if (decimal < 0) {
+        isNegative = true;
+        decimal = -decimal;
+    }
+
+    while (decimal > 0) {
+        hexResult += hexDigits[decimal % 16];
+        decimal /= 16;
+    }
+
+    if (isNegative) {
+        hexResult += '-';
+    }
+
+    std::reverse(hexResult.begin(), hexResult.end());
+    return hexResult;
 }
