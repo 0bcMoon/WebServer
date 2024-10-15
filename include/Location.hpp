@@ -4,13 +4,15 @@
 #include <string>
 #include <vector>
 #include "DataType.hpp"
+#include <set>
 
 class Location
 {
 	private:
 		struct Redirection // if  there 4xx or 5xx error it return error page else 3xx it redirect to url
 		{
-			std::string status;
+			std::set<std::string> status;
+			std::string redirectStatus;
 			std::string url; // will  file path if status != 3xx 
 		};
 		Redirection					redirect;

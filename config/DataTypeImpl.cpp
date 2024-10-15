@@ -2,8 +2,11 @@
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include <unistd.h>
+#include <algorithm>
 #include <cstddef>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include "DataType.hpp"
@@ -23,8 +26,6 @@ GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 	if (this == &other)
 		return *this;
 
-	accessLog = other.accessLog;
-	errorLog = other.errorLog;
 	root = other.root;
 	autoIndex = other.autoIndex;
 	errorPages = other.errorPages;
@@ -62,7 +63,6 @@ void GlobalConfig::setAutoIndex(Tokens &token, Tokens &end)
 	else
 		throw ParserException("Invalid value for autoindex");
 	token++;
-
 	CheckIfEnd(token, end);
 }
 
@@ -71,30 +71,6 @@ bool GlobalConfig::getAutoIndex() const
 	return this->autoIndex; // Return autoIndex
 }
 
-// void GlobalConfig::setAccessLog(Tokens &token, Tokens &end)
-// {
-// 	throw ParserException("TODO");
-// 	// Empty implementation
-// }
-
-// std::string GlobalConfig::getAccessLog() const
-// {
-// 	throw ParserException("TODO");
-// 	return this->accessLog; // Return the access log path
-// }
-
-// void GlobalConfig::setErrorLog(Tokens &token, Tokens &end)
-// {
-// 	throw ParserException("TODO");
-// 	// Empty implementation
-// }
-
-// std::string GlobalConfig::getErrorLog() const
-// {
-// 	throw ParserException("TODO");
-// 	return this->errorLog; // Return the error log path
-// }
-
 void GlobalConfig::setIndexes(Tokens &token, Tokens &end)
 {
 	validateOrFaild(token, end);
@@ -102,11 +78,6 @@ void GlobalConfig::setIndexes(Tokens &token, Tokens &end)
 		this->indexes.push_back(consume(token, end));
 	CheckIfEnd(token, end);
 }
-
-// void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
-// {
-// 	// Empty implementation
-// }
 
 bool GlobalConfig::IsId(std::string &token)
 {
@@ -149,7 +120,7 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 		this->setIndexes(token, end);
 	else if (*token == "allow")
 		this->setMethods(token, end);
-	else if (*token == "error_pages")
+	else if (*token == "error_page")
 		this->setErrorPages(token, end);
 	else if (*token == "client_upload_path")
 		this->setUploadPath(token, end);
@@ -181,7 +152,24 @@ void GlobalConfig::setMethods(Tokens &token, Tokens &end)
 
 void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 {
-	throw ParserException("TODO: with better implementation");
+	std::vector<std::string> vec;
+	std::string content;
+
+	std::string str;
+	this->validateOrFaild(token, end);
+	while (token != end && *token != ";")
+		vec.push_back(this->consume(token, end));
+	if (vec.size() <= 1)
+		throw ParserException("Invalid error page define");
+	this->CheckIfEnd(token, end);
+	if (access(vec.back().data(), F_OK | R_OK) == -1)
+		throw ParserException("file does not exist" + vec.back());
+	for (size_t i = 0; i < vec.size() - 1; i++)
+	{
+		if (!this->isValidStatusCode(vec[i]))
+			throw ParserException("Invalid status Code " + vec[i]);
+		this->errorPages[vec[i]] = vec.back().data();
+	}
 }
 
 const std::vector<std::string> &GlobalConfig::getIndexes()
@@ -206,6 +194,20 @@ void GlobalConfig::setUploadPath(Tokens &token, Tokens &end)
 
 bool GlobalConfig::isMethodAllowed(int method) const
 {
-	if (this->methods & method) return (true);
-	return (false);
+	return ((this->methods & method) != 0); // TODO: TEST
+}
+
+std::string GlobalConfig::loadFile(const char *filename)
+{
+	std::stringstream buf;
+	std::ifstream input(filename, std::ios::binary);
+	if (!input)
+		throw ParserException("could not open file for reading: " + std::string(filename));
+	buf << input.rdbuf();
+	return buf.str();
+}
+
+const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
+{
+	return (this->errorPages.find(StatusCode)->second); // plz don't fail;
 }

@@ -8,18 +8,22 @@
 class ServerContext
 {
   private:
+	typedef std::map<std::string, std::string> ErrorPage;
+	typedef std::map<std::string, std::string> Type;
 	int keepAliveTimeout;
 	GlobalConfig globalParam;
 	long maxBodySize; // in bytes
 	long maxHeaderSize; // in bytes
 
 	std::vector<VirtualServer> servers;
+	ErrorPage				errorPages;
+	Type	types;
 
   public:
-
 	ServerContext();
 	~ServerContext();
 	void pushServer(Tokens &token, Tokens &end);
+	void pushTypes(Tokens &token, Tokens &end);
 	std::vector<VirtualServer> &getServers();
 	void parseTokens(Tokens &token, Tokens &end);
 	std::vector<VirtualServer> &getVirtualServers();

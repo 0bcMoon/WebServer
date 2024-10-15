@@ -88,6 +88,8 @@ void Tokenizer::parseConfig(ServerContext *context)
 	{
 		if (*token == "server")
 			context->pushServer(token, end);
+		else if (*token == "types")
+			context->pushTypes(token, end);
 		else
 			context->parseTokens(token, end); // TODO;
 	}

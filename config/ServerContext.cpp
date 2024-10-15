@@ -119,3 +119,8 @@ long ServerContext::getMaxHeaderSize() const
 
 
 
+void ServerContext::pushTypes(Tokens &token, Tokens &end)
+{
+	throw ParserException("TODO: impl types");
+}
+

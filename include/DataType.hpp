@@ -7,19 +7,7 @@
 
 typedef std::vector<std::string>::iterator Tokens;
 
-struct ErrorPage
-{
-  private:
-	struct Page
-	{
-		std::string		content;
-		bool			IsRedirection;
-	};
 
-  public:
-	std::map<int, Page> errorPages;
-	ErrorPage() {}
-};
 
 class GlobalConfig
 {
@@ -32,16 +20,15 @@ class GlobalConfig
 		DELETE = 0b100,
 	};
 	http_method_t						methods;
-	std::string							accessLog;
-	std::string							errorLog;
-
+	std::map<std::string, std::string>  errorPages;
 	std::string							root;
 	bool								autoIndex;
-	ErrorPage							errorPages;
 	std::string							upload_file_path;
 	std::vector<std::string>			indexes;
 
   public:
+
+	std::string loadFile(const char *filename);
 	// void	loadFile(Tokens &token, Tokens &end, std::string &buffer); // WARNING:t5arbi9
 	bool	isValidStatusCode(std::string &str); // WARNING:t5arbi9
 	void 	setMethods(Tokens &token, Tokens &end);
@@ -79,8 +66,9 @@ class GlobalConfig
 	void setIndexes(Tokens &token, Tokens &end);
 	// TODO Indexes getter may be with caching ??
 
-	// TODO CGI getter may be with caching ??
 	void setErrorPages(Tokens &token, Tokens &end);
+	const std::string&getErrorPage(std::string &StatusCode);
+		
 };
 
 #endif

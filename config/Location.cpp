@@ -45,15 +45,16 @@ bool GlobalConfig::isValidStatusCode(std::string &str)
 }
 void Location::setRedirect(Tokens &token, Tokens &end)
 {
-	this->globalConfig.validateOrFaild(token, end);
-	if (!this->globalConfig.isValidStatusCode(*token))
-		throw ParserException("Invalid status code: " + *token);
-	this->redirect.status = this->globalConfig.consume(token, end);
-	if (token == end)
-		throw ParserException("Unexpected end of file");
-	if (*token != ";")
-		this->redirect.url = *token++;
-	this->globalConfig.CheckIfEnd(token, end);
+	throw ParserException("TODO: Redirection");
+	// this->globalConfig.validateOrFaild(token, end);
+	// if (!this->globalConfig.isValidStatusCode(*token))
+	// 	throw ParserException("Invalid status code: " + *token);
+	// this->redirect.status = this->globalConfig.consume(token, end);
+	// if (token == end)
+	// 	throw ParserException("Unexpected end of file");
+	// if (*token != ";")
+	// 	this->redirect.url = *token++;
+	// this->globalConfig.CheckIfEnd(token, end);
 }
 
 const std::string &Location::getPath()
@@ -82,6 +83,7 @@ void Location::setCGI(Tokens &token, Tokens &end)
 	if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
 		throw ParserException("Invalid CGI path" + cgi_path + ": " + std::string(strerror(errno)));
 }
+
 const std::string &Location::geCGItPath()
 {
 	return (this->cgi_path);
