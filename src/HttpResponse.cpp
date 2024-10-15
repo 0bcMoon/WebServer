@@ -117,7 +117,7 @@ int				HttpResponse::directoryHandler()
 {
 	const std::vector<std::string> &indexes = this->location->globalConfig.getIndexes();
 	if (this->fullPath[fullPath.size() -1] != '/')
-		fullPath += "/";
+		fullPath.push_back('/');
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
