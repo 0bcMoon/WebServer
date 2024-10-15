@@ -15,6 +15,7 @@ HttpResponse::HttpResponse(int fd) : fd(fd)
 	keepAlive = 1;
 	location = NULL;
 	isCgiBool = false;
+	resType = NO_TYPE;
 	errorRes.headers =  "Content-Type: text/html; charset=UTF-8\r\n"
 						"Server: XXXXXXXX\r\n";//TODO:name the server;
 	errorRes.contentLen = "Content-Length: 0\r\n";
@@ -118,6 +119,7 @@ int				HttpResponse::directoryHandler()
 	const std::vector<std::string> &indexes = this->location->globalConfig.getIndexes();
 	if (this->fullPath[fullPath.size() -1] != '/')
 		fullPath += "/";
+	std::cout << "full path: " << fullPath << std::endl;
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
@@ -128,7 +130,6 @@ int				HttpResponse::directoryHandler()
 
 int HttpResponse::loadFile(const std::string& pathName)
 {
-	struct stat sstat;
 	int fd;
 	char buffer[fileReadingBuffer];
 	int j = 0;

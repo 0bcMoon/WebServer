@@ -23,7 +23,11 @@ enum pathType
 class HttpResponse
 {
 	private:
-
+		enum responseType 
+		{
+			LOAD_FILE,	
+			NO_TYPE
+		};
 		enum reqMethode
 		{
 			GET  = 0b1,
@@ -44,6 +48,7 @@ class HttpResponse
 			std::string		htmlErrorId;
 			std::string		bodyfoot;
 		};
+		enum responseType					resType;
 		int									fd;
 		enum reqMethode						methode;
 		std::vector<unsigned char>							body;
@@ -51,6 +56,7 @@ class HttpResponse
 		httpError							status;	
 		bool								isCgiBool;
 		errorResponse						errorRes;
+
 		std::string							fullPath;
 		static const int					fileReadingBuffer = 10240;
 	public:
@@ -60,6 +66,7 @@ class HttpResponse
 		enum responseState									state;
 		std::string											path;
 		std::map<std::string, std::string>					headers;
+		std::map<std::string, std::string>					resHeaders;
 
 		HttpResponse(int fd);
 		HttpResponse	operator=(const HttpRequest& req);

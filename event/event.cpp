@@ -333,7 +333,7 @@ void Event::eventLoop()
 
 	while (1)
 	{
-		std::cout << "waiting for event\n";
+		// std::cout << "waiting for event\n";
 		int nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev == -1)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
@@ -356,7 +356,6 @@ void Event::eventLoop()
 			}
 			else if (ev->filter == EVFILT_WRITE)
 			{
-				std::cout << "write event " << ev->ident << "\n";
 				if ((ev->flags & EV_EOF))
 				{
 					std::cout << "client disconnected\n";
@@ -372,8 +371,10 @@ void Event::eventLoop()
 					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
 						continue;
 					/*************************************************************/
+				std::cout << "write event " << ev->ident << "\n";
 					client->response.location = this->getLocation(client);
-					std::cout << "response\n";
+					assert(client->response.location != NULL);
+					std::cout << client->getPath() << "\n";
 					client->respond();
 					if (client->response.state != ERROR)
 					{ // WARNING: temporer
@@ -388,7 +389,7 @@ void Event::eventLoop()
 				std::cout << "write ended\n";
 			}
 		}
-		std::cout << "all  event has been process: " << nev << '\n';
+		// std::cout << "all  event has been process: " << nev << '\n';
 	}
 }
 bool Event::checkNewClient(int socketFd)
