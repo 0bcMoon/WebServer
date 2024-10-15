@@ -19,7 +19,7 @@ int main()
 	char buffer[BUFFER_SIZE];
 	const char *host = "localhost";
 	const char *request =
-		"GET / HTTP/1.1\r\n"
+		"ooooGIIIET / HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
 		"Content-Length: 00\r\n"
 		"Connection: 555kk\r\n\r\n"
