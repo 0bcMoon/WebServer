@@ -1,12 +1,39 @@
 
 #include "ServerContext.hpp"
+#include <vector>
 #include "DataType.hpp"
 #include "ParserException.hpp"
 #include "VirtualServer.hpp"
-#include <vector>
 
 ServerContext::ServerContext()
 {
+	std::string types[] = {
+		"test/plain",
+		"text/html",
+		"text/html",
+		"text/html",
+		"text/css",
+		"text/xml",
+		"image/gif",
+		"image/jpeg",
+		"image/jpeg",
+		"application/javascr",
+	};
+
+	std::string ext[] = {
+		"txt",
+		"html",
+		"shtml",
+		"htm",
+		"css",
+		"xml",
+		"gif",
+		"jpeg",
+		"jpg",
+		"js",
+	};
+	for (int i = 0; i < 9; i++)
+		this->types[ext[i]] = types[i];
 	this->maxBodySize = 100 * 1024 * 1024;
 	this->maxHeaderSize = 100 * 1024 * 1024;
 }
@@ -29,7 +56,7 @@ void ServerContext::parseTokens(Tokens &token, Tokens &end)
 	else if (*token == "max_header_size")
 		this->setMaxHeaderSize(token, end);
 	else
-	this->globalParam.parseTokens(token, end);
+		this->globalParam.parseTokens(token, end);
 }
 void ServerContext::pushServer(Tokens &token, Tokens &end)
 {
@@ -40,8 +67,8 @@ void ServerContext::pushServer(Tokens &token, Tokens &end)
 		throw ParserException("Unexpact token: " + *token);
 	token++;
 
-	this->servers.push_back(VirtualServer());  // push empty VirtualServer to keep 
-											   // the reference in http object in case of exception to cause memory leak
+	this->servers.push_back(VirtualServer()); // push empty VirtualServer to keep
+											  // the reference in http object in case of exception to cause memory leak
 
 	VirtualServer &server = this->servers.back(); // grants access to the last element
 
@@ -117,14 +144,12 @@ long ServerContext::getMaxHeaderSize() const
 	return this->maxHeaderSize; // Return max header size
 }
 
-
 void ServerContext::addTypes(Tokens &token, Tokens &end)
 {
 	std::string type = this->globalParam.consume(token, end);
 	std::string ext = this->globalParam.consume(token, end);
 	this->globalParam.CheckIfEnd(token, end);
 	this->types[ext] = type;
-
 }
 
 void ServerContext::pushTypes(Tokens &token, Tokens &end)
@@ -139,4 +164,11 @@ void ServerContext::pushTypes(Tokens &token, Tokens &end)
 		throw ParserException("Unexpected end of file");
 	token++;
 }
+const std::string &ServerContext::getType(std::string &ext)
+{
+	std::map<std::string, std::string>::iterator kv = this->types.find(ext);
 
+	if (kv == this->types.end())
+		return (this->types.find("txt")->second);
+	return (kv->second);
+}

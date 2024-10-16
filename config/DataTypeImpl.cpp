@@ -18,15 +18,19 @@ GlobalConfig::GlobalConfig()
 {
 	this->upload_file_path = "/tmp";
 	this->autoIndex = false;
-	this->methods = GET; // default method is GET only can be overwritten
 }
 
+GlobalConfig::GlobalConfig(const GlobalConfig &other)
+{
+	*this = other;
+}
 GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 {
 	if (this == &other)
 		return *this;
 
-	root = other.root;
+	if (root.empty())
+		root = other.root;
 	autoIndex = other.autoIndex;
 	errorPages = other.errorPages;
 	indexes = other.indexes;
@@ -118,8 +122,6 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 		this->setAutoIndex(token, end);
 	else if (*token == "index")
 		this->setIndexes(token, end);
-	else if (*token == "allow")
-		this->setMethods(token, end);
 	else if (*token == "error_page")
 		this->setErrorPages(token, end);
 	else if (*token == "client_upload_path")
@@ -129,26 +131,6 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 	return (true);
 }
 
-void GlobalConfig::setMethods(Tokens &token, Tokens &end)
-{
-	this->validateOrFaild(token, end);
-	this->methods = 0;
-	while (token != end && *token != ";")
-	{
-		if (*token == "GET")
-			this->methods |= GET;
-		else if (*token == "POST")
-			this->methods |= POST;
-		else if (*token == "DELETE")
-			this->methods |= DELETE;
-		else
-			throw ParserException("Invalid or un support method: " + *token);
-		token++;
-	}
-	if (this->methods == 0)
-		throw ParserException("empty  method list");
-	this->CheckIfEnd(token, end);
-}
 
 void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 {
@@ -192,10 +174,6 @@ void GlobalConfig::setUploadPath(Tokens &token, Tokens &end)
 		throw ParserException("invalid Upload path directory");
 }
 
-bool GlobalConfig::isMethodAllowed(int method) const
-{
-	return ((this->methods & method) != 0); // TODO: TEST
-}
 
 std::string GlobalConfig::loadFile(const char *filename)
 {

@@ -12,14 +12,6 @@ typedef std::vector<std::string>::iterator Tokens;
 class GlobalConfig
 {
   private:
-	typedef int http_method_t;
-	enum methods_e
-	{
-		GET = 0b1,
-		POST = 0b10,
-		DELETE = 0b100,
-	};
-	http_method_t						methods;
 	std::map<std::string, std::string>  errorPages;
 	std::string							root;
 	bool								autoIndex;
@@ -45,6 +37,7 @@ class GlobalConfig
 	
 	GlobalConfig();
 	~GlobalConfig();
+	GlobalConfig(const GlobalConfig &other);
 
 	bool parseTokens(Tokens &token, Tokens &end);
 

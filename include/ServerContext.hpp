@@ -15,7 +15,7 @@ class ServerContext
 	long maxHeaderSize; // in bytes
 
 	std::vector<VirtualServer> servers;
-	Type	types;
+	Type types;
 	void addTypes(Tokens &token, Tokens &end);
 
   public:
@@ -32,6 +32,7 @@ class ServerContext
 
 	void setMaxHeaderSize(Tokens &token, Tokens &end);
 	long getMaxHeaderSize() const;
+	const std::string &getType(std::string &ext);
 };
 
 #endif

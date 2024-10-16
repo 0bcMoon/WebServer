@@ -13,6 +13,7 @@
 Location::Location() 
 {
 	this->isRedirection = false;
+	this->methods = GET; // default method is GET only can be overwritten
 }
 
 Location &Location::operator=(const Location &location)
@@ -20,9 +21,8 @@ Location &Location::operator=(const Location &location)
 	this->path = location.path;
 	this->redirect = location.redirect;
 	this->globalConfig = location.globalConfig;
-	this->cgi_path = location.cgi_path;
-	this->cgi_ext = location.cgi_ext;
 	this->isRedirection = location.isRedirection;
+	this->cgiMap = location.cgiMap;
 	return *this;
 }
 void Location::setPath(std::string &path)
@@ -72,10 +72,6 @@ void Location::setRedirect(Tokens &token, Tokens &end)
 		redirect.url.clear();
 	this->isRedirection = true;}
 
-const std::string &Location::getPath()
-{
-	return (this->path);
-}
 
 void Location::parseTokens(Tokens &token, Tokens &end)
 {
@@ -83,30 +79,36 @@ void Location::parseTokens(Tokens &token, Tokens &end)
 		this->setRedirect(token, end);
 	else if (*token == "cgi_path")
 		this->setCGI(token, end);
+	else if (*token == "allow")
+		this->setMethods(token, end);
 	else
 		this->globalConfig.parseTokens(token, end);
 }
 
 void Location::setCGI(Tokens &token, Tokens &end)
 {
+
+	std::string							cgi_path;
+	std::string							cgi_ext;
 	this->globalConfig.validateOrFaild(token, end);
-	this->cgi_ext = this->globalConfig.consume(token, end);
-	this->cgi_path = this->globalConfig.consume(token, end);
+	cgi_ext = this->globalConfig.consume(token, end);
+	cgi_path = this->globalConfig.consume(token, end);
 	this->globalConfig.CheckIfEnd(token, end);
-	if (cgi_ext[0] != '.')
+	if (cgi_ext[0] != '.' || cgi_ext.size() <= 1)
 		throw ParserException("Invalid CGI extension" + cgi_ext);
 	if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
 		throw ParserException("Invalid CGI path" + cgi_path + ": " + std::string(strerror(errno)));
+	this->cgiMap[cgi_ext] = cgi_path;
 }
 
-const std::string &Location::geCGItPath()
+const std::string &Location::geCGItPath(std::string &ext)
 {
-	return (this->cgi_path);
-}
-
-const std::string &Location::geCGIext()
-{
-	return (this->cgi_ext);
+	
+	std::map<std::string, std::string>::iterator	kv;
+	kv = this->cgiMap.find(ext);
+	if (kv == this->cgiMap.end())
+		return (this->cgiMap.find(".")->second);
+	return (kv->second);
 }
 
 bool Location::HasRedirection() const 
@@ -116,4 +118,34 @@ bool Location::HasRedirection() const
 const Location::Redirection &Location::getRedirection() const 
 {
 	return (this->redirect);
+}
+
+bool Location::isMethodAllowed(int method) const 
+{
+	return ((this->methods & method) != 0); // TODO: TEST
+}
+
+void Location::setMethods(Tokens &token, Tokens &end)
+{
+	this->globalConfig.validateOrFaild(token, end);
+	this->methods = 0;
+	while (token != end && *token != ";")
+	{
+		if (*token == "GET")
+			this->methods |= GET;
+		else if (*token == "POST")
+			this->methods |= POST;
+		else if (*token == "DELETE")
+			this->methods |= DELETE;
+		else
+			throw ParserException("Invalid or un support method: " + *token);
+		token++;
+	}
+	this->globalConfig.CheckIfEnd(token, end);
+	if (this->methods == 0)
+		throw ParserException("empty  method list");
+}
+const std::string &Location::getPath()
+{
+	return (this->path);
 }
