@@ -14,7 +14,7 @@ enum responseState
 
 enum pathType
 {
-	DIR,
+	_DIR,
 	INDEX,
 	DEF_INDEX
 };
@@ -23,10 +23,11 @@ enum pathType
 class HttpResponse
 {
 	private:
-		enum responseType 
+		enum responseBodyType 
 		{
 			LOAD_FILE,	
-			NO_TYPE
+			NO_TYPE,
+			AUTO_INDEX
 		};
 		enum reqMethode
 		{
@@ -48,7 +49,6 @@ class HttpResponse
 			std::string		htmlErrorId;
 			std::string		bodyfoot;
 		};
-		enum responseType					resType;
 		int									fd;
 		enum reqMethode						methode;
 		std::vector<unsigned char>							body;
@@ -56,9 +56,11 @@ class HttpResponse
 		httpError							status;	
 		bool								isCgiBool;
 		errorResponse						errorRes;
+		enum responseBodyType				bodyType;
 
 		std::string							fullPath;
 		static const int					fileReadingBuffer = 10240;
+		std::string							autoIndexBody;
 	public:
 		std::vector<std::vector<unsigned char> >			responseBody;
 		int													keepAlive; // bool? // bool?
@@ -87,7 +89,19 @@ class HttpResponse
 		std::string						getContentLenght(); // TYPO
 		int								directoryHandler();
 		int								loadFile(const std::string& pathName);
+
+		void							writeResponse();
+
+		std::string						getStatusLine();
+		std::string						getConnectionState();
+		std::string						getContentType();
+		std::string						getDate();
+		int								sendBody(int _fd, enum responseBodyType type);
+		std::string						getContentLenght(enum responseBodyType type); // TYPO
+
+		int								autoIndexCooking();
 };
 
-std::string decimalToHex(int decimal);
+std::string			decimalToHex(int	decimal);
+
 #endif

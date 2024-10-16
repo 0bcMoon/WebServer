@@ -4,32 +4,38 @@
 #include <string>
 #include <vector>
 #include "DataType.hpp"
+#include <set>
 
 class Location
 {
 	private:
-		struct Redirection // if  there 4xx or 5xx error it return error page else 3xx it redirect to url
+		struct Redirection
 		{
 			std::string status;
-			std::string url; // will  file path if status != 3xx 
+			std::string url;
+			std::string body;// INFO: body file name;
 		};
-		Redirection					redirect;
-		std::string					path;
-		std::string					cgi_path;
-		std::string					cgi_ext;
-		std::string					upload_file_path;
+
+		Redirection							redirect;
+		bool								isRedirection;
+		std::string							path;
+		std::string							cgi_path;
+		std::string							cgi_ext;
+		std::string							upload_file_path;
 
 	public:
 		Location();
-		Location					&operator=(const Location &location);
-		void						setPath(std::string &path);
+		Location							&operator=(const Location &location);
+		void								setPath(std::string &path);
 		const std::string					&getPath();
 		const std::string					&geCGItPath();
 		const std::string					&geCGIext();
-		void						setRedirect(Tokens &token, Tokens &end);
-		void						parseTokens(Tokens &token, Tokens &end);
-		static bool					isValidStatusCode(std::string &str);
-		GlobalConfig				globalConfig;
-		void setCGI(Tokens &token, Tokens &end);
+		void								setRedirect(Tokens &token, Tokens &end);
+		void								parseTokens(Tokens &token, Tokens &end);
+		static bool							isValidStatusCode(std::string &str);
+		GlobalConfig						globalConfig;
+		bool								HasRedirection() const ;
+		const Redirection					&getRedirection() const;
+		void								setCGI(Tokens &token, Tokens &end);
 };
 #endif

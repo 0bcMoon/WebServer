@@ -19,11 +19,10 @@ int main()
 	char buffer[BUFFER_SIZE];
 	const char *host = "localhost";
 	const char *request =
-		"ooooGIIIET / HTTP/1.1\r\n"
+		"GET / HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
-		"Content-Length: 00\r\n"
-		"Connection: 555kk\r\n\r\n"
-		"Hello from client!!!";
+		"Content-Length: 0\r\n"
+		"Connection: close\r\n\r\n";
 	// Resolve the hostname
 	server = gethostbyname(host);
 	if (server == NULL)

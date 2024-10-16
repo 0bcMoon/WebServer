@@ -1,21 +1,28 @@
 #include "HttpResponse.hpp"
+#include "HttpRequest.hpp"
+#include <cstddef>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <sys/dirent.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
+#include <system_error>
 #include <unistd.h>
 #include <fcntl.h>
 #include <vector>
+#include <stdio.h>
+#include <dirent.h>
 
 HttpResponse::HttpResponse(int fd) : fd(fd)
 {
 	keepAlive = 1;
 	location = NULL;
 	isCgiBool = false;
-	resType = NO_TYPE;
+	bodyType = NO_TYPE;
 	errorRes.headers =  "Content-Type: text/html; charset=UTF-8\r\n"
 						"Server: XXXXXXXX\r\n";//TODO:name the server;
 	errorRes.contentLen = "Content-Length: 0\r\n";
@@ -114,44 +121,76 @@ void			HttpResponse::cgiCooking()
 	//TODO:implenting the fucking cgi;
 }
 
+int				HttpResponse::autoIndexCooking()
+{
+	std::vector<std::string> dirContent;
+	DIR *dirStream = opendir(fullPath.c_str());
+	if (dirStream == NULL)
+		return (setHttpResError(500, "Internal Server Error"), 0);
+	struct dirent *_dir ;
+	while ((_dir = readdir(dirStream)) != NULL) {
+		dirContent.push_back(_dir->d_name);
+	}
+	if (path[path.size() - 1] != '/')
+		path += '/';
+	autoIndexBody = "<!DOCTYPE html>\n"
+					"<html lang=\"en\">\n"
+					"	<head>\n"
+					"		<title>YOUR DADDY</title>\n"
+					"		<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+					"	</head>\n"
+					"	<body>\n";
+	autoIndexBody += "<h1>liste of files<h1>\n";
+	for (size_t i = 0; i < dirContent.size();i++)
+	{
+		autoIndexBody += "<a href=\""; 
+		autoIndexBody += path  + dirContent[i] + "\">" + dirContent[i] + "</a><br>";
+	}
+	autoIndexBody += "	</body>\n"
+					"</html>\n";
+	// if (path[path.size() - 1] != '/')
+	// 	path -= '/';
+	return (closedir(dirStream), 1);
+}
+
 int				HttpResponse::directoryHandler()
 {
 	const std::vector<std::string> &indexes = this->location->globalConfig.getIndexes();
 	if (this->fullPath[fullPath.size() -1] != '/')
-		fullPath += "/";
-	std::cout << "full path: " << fullPath << std::endl;
+		fullPath.push_back('/');
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
-			return (loadFile(fullPath + indexes[i]));
+			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), loadFile(fullPath));
 	}
+	if (location->globalConfig.getAutoIndex())
+		return (bodyType = AUTO_INDEX, autoIndexCooking());
 	return (setHttpResError(404, "Not Found"), 0);
 }
 
 int HttpResponse::loadFile(const std::string& pathName)
 {
-	int fd;
+	int _fd;
 	char buffer[fileReadingBuffer];
 	int j = 0;
 
-	fd = open(pathName.c_str(), O_RDONLY);
-	if (fd < 0)
+	_fd = open(pathName.c_str(), O_RDONLY);
+	if (_fd < 0)
 		return (setHttpResError(500, "Internal Server Error"), 0);
 	while (1)
 	{
-		int r = read(fd, buffer, fileReadingBuffer);
+		int r = read(_fd, buffer, fileReadingBuffer);
 		if (r < 0)
-			return (close(fd), setHttpResError(500, "Internal Server Error"), 0);
+			return (close(_fd), setHttpResError(500, "Internal Server Error"), 0);
 		if (r == 0)
 			break;
-		responseBody.push_back(std::vector<unsigned char >());
-		for (int i = 0; i < r;i++)
-		{
-			responseBody[j].push_back(buffer[i]);
+		responseBody.push_back(std::vector<unsigned char >(r));
+		for (int i = 0; i < r;i++) {
+			responseBody[j][i] = buffer[i];
 		}
 		j++;
 	}
-	return (close(fd), 1);
+	return (close(_fd), 1);
 }
 
 // std::ifstream file(pathName.c_str());
@@ -170,10 +209,100 @@ int		HttpResponse::pathChecking()
 	if (S_ISDIR(sStat.st_mode))
 		return (directoryHandler());
 	if (access(fullPath.c_str(), F_OK) != -1)
-		return (loadFile(fullPath));
+		return (bodyType = LOAD_FILE, loadFile(fullPath));
 	else
 		return (state = ERROR,  setHttpResError(404, "Not Found"), 0);
 	return (1);
+}
+
+void			HttpResponse::writeResponse()
+{
+	write(this->fd, getStatusLine().c_str(), getStatusLine().size());
+	write(this->fd, getConnectionState().c_str(), getConnectionState().size());
+	// write(this->fd, getContentType().c_str(), getContentType().size());
+	write(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
+	write(fd, getDate().c_str(), getDate().size());
+	write(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
+	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
+	{
+		write(this->fd, it->first.c_str(), it->first.size());
+		write(this->fd, ": ", 2);
+		write(this->fd, it->second.c_str(), it->second.size());
+		write(fd, "\r\n", 2);
+	}
+	write(this->fd, "\r\n", 2);
+	sendBody(-1, bodyType);
+}
+
+std::string						HttpResponse::getStatusLine()
+{
+	std::ostringstream oss;
+	oss << status.code;
+
+	return ("HTTP/1.1 " + oss.str() + " " + status.description + "\r\n");
+}
+
+std::string						HttpResponse::getConnectionState()
+{
+	if (keepAlive)
+		return ("Connection: Keep-Alive\r\n");
+	return ("Connection: Close\r\n");
+}
+
+std::string						HttpResponse::getContentType()
+{//TODO:MIME_TYPE
+	if (bodyType == AUTO_INDEX)
+		return ("Content-Type: text/html\r\n");
+	return ("Content-Type: text/plain\r\n");
+}
+
+std::string						HttpResponse::getDate()
+{//TODO:date;
+	return ("");
+}
+
+int					HttpResponse::sendBody(int _fd, enum responseBodyType type)
+{
+	if (type == LOAD_FILE)
+	{
+		for (size_t i = 0; i < responseBody.size(); i++)
+		{
+			for (size_t j = 0; j < responseBody[i].size(); j++)
+			{
+				write(this->fd, &responseBody[i][j], 1);
+			}
+		}
+	}
+	else if (type == AUTO_INDEX) {
+		write(this->fd, autoIndexBody.c_str(), autoIndexBody.size());
+	}
+	return (1);
+}
+
+std::string						HttpResponse::getContentLenght(enum responseBodyType type)
+{
+	if (type == LOAD_FILE)
+	{
+		// struct stat sstat;
+		std::ostringstream oss;
+
+		// stat(fullPath.c_str(), &sstat);
+		// oss << sstat.st_size;
+		size_t size = 0;
+		for (size_t i = 0; i < responseBody.size(); i++)
+		{
+			size += responseBody[i].size();
+		}
+		oss << size;
+		return ("Content-Length: " + oss.str() + "\r\n");
+	}
+	if (type == AUTO_INDEX)
+	{
+		std::ostringstream oss;
+		oss << autoIndexBody.size();
+		return ("Content-Length: " + oss.str() + "\r\n");
+	}
+	return ("");
 }
 
 void			HttpResponse::responseCooking()
@@ -186,6 +315,7 @@ void			HttpResponse::responseCooking()
 	{
 		if (!isMethodAllowed() || !pathChecking())
 			return ;
+		writeResponse();
 	}
 }
 

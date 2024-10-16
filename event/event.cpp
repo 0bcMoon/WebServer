@@ -376,10 +376,10 @@ void Event::eventLoop()
 					assert(client->response.location != NULL);
 					std::cout << client->getPath() << "\n";
 					client->respond();
-					if (client->response.state != ERROR)
-					{ // WARNING: temporer
-						response(ev->ident, client->getPath(), client->response.responseBody);
-					}
+					// if (client->response.state != ERROR)
+					// { // WARNING: temporer
+					// 	response(ev->ident, client->getPath(), client->response.responseBody);
+					// }
 					if (!(client->response.keepAlive))
 						connections.closeConnection(ev->ident);
 					else

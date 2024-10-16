@@ -6,10 +6,13 @@
 #include <unistd.h>
 #include <cerrno>
 #include <cstddef>
+#include <cstring>
+#include <string>
 #include "DataType.hpp"
 #include "ParserException.hpp"
 Location::Location() 
 {
+	this->isRedirection = false;
 }
 
 Location &Location::operator=(const Location &location)
@@ -19,6 +22,7 @@ Location &Location::operator=(const Location &location)
 	this->globalConfig = location.globalConfig;
 	this->cgi_path = location.cgi_path;
 	this->cgi_ext = location.cgi_ext;
+	this->isRedirection = location.isRedirection;
 	return *this;
 }
 void Location::setPath(std::string &path)
@@ -45,16 +49,28 @@ bool GlobalConfig::isValidStatusCode(std::string &str)
 }
 void Location::setRedirect(Tokens &token, Tokens &end)
 {
+	std::vector<std::string> vec;
 	this->globalConfig.validateOrFaild(token, end);
-	if (!this->globalConfig.isValidStatusCode(*token))
-		throw ParserException("Invalid status code: " + *token);
-	this->redirect.status = this->globalConfig.consume(token, end);
-	if (token == end)
-		throw ParserException("Unexpected end of file");
-	if (*token != ";")
-		this->redirect.url = *token++;
+	while (token != end && *token != ";")
+		vec.push_back(this->globalConfig.consume(token, end));
 	this->globalConfig.CheckIfEnd(token, end);
-}
+	if (vec.size() != 3)
+		throw ParserException("invalid redirects argument: usage return status url|None Body|None");
+	redirect.body = vec[2];
+	redirect.url = vec[1];
+	redirect.status = vec[0];
+	if (redirect.body == "None" && redirect.url == "None")
+		throw ParserException("Body or redirection url most be define in redirection");
+	if (redirect.body != "None" && access(redirect.body.data(), F_OK | R_OK) != 0)
+		throw ParserException("invalid file in Redirection: " + redirect.body + " " + std::string(strerror(errno)));
+	if (!this->globalConfig.isValidStatusCode(redirect.status) || redirect.status[0] != '3')
+		throw ParserException("Invalid Redirection Status Code: " + *token);
+
+	if (redirect.body == "None")
+		redirect.body.clear();
+	else if (redirect.url == "None")
+		redirect.url.clear();
+	this->isRedirection = true;}
 
 const std::string &Location::getPath()
 {
@@ -82,6 +98,7 @@ void Location::setCGI(Tokens &token, Tokens &end)
 	if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
 		throw ParserException("Invalid CGI path" + cgi_path + ": " + std::string(strerror(errno)));
 }
+
 const std::string &Location::geCGItPath()
 {
 	return (this->cgi_path);
@@ -91,4 +108,12 @@ const std::string &Location::geCGIext()
 {
 	return (this->cgi_ext);
 }
-// bool Location
+
+bool Location::HasRedirection() const 
+{
+	return (this->isRedirection);
+}
+const Location::Redirection &Location::getRedirection() const 
+{
+	return (this->redirect);
+}

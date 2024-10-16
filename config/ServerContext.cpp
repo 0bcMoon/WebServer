@@ -118,4 +118,25 @@ long ServerContext::getMaxHeaderSize() const
 }
 
 
+void ServerContext::addTypes(Tokens &token, Tokens &end)
+{
+	std::string type = this->globalParam.consume(token, end);
+	std::string ext = this->globalParam.consume(token, end);
+	this->globalParam.CheckIfEnd(token, end);
+	this->types[ext] = type;
+
+}
+
+void ServerContext::pushTypes(Tokens &token, Tokens &end)
+{
+	token++;
+	if (token == end || *token != "{")
+		throw ParserException("Unexpected  " + ((token == end) ? "end of file" : "token " + *token));
+	token++;
+	while (token != end && *token != "}")
+		this->addTypes(token, end);
+	if (token == end)
+		throw ParserException("Unexpected end of file");
+	token++;
+}
 
