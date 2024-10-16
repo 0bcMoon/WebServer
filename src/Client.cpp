@@ -34,9 +34,9 @@ void Client::respond()
 	if (request.state != REQUEST_FINISH && request.state != REQ_ERROR)
 		return ;
 	response = request;
-	if ((response.headers.find("Connection ") != response.headers.end()
-		&& (response.headers["Connection "].find("close") != std::string::npos
-			|| response.headers["Connection "].find("Close") != std::string::npos))
+	if ((response.headers.find("Connection") != response.headers.end()
+		&& (response.headers["Connection"].find("close") != std::string::npos
+			|| response.headers["Connection"].find("Close") != std::string::npos))
 		|| request.state == REQ_ERROR)
 		response.keepAlive = 0;
 	if (request.state == REQUEST_FINISH)

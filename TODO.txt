@@ -5,9 +5,10 @@
 --- may add include other file (if there time)
 --- make some global file table save memory
 --- FIX BODY_SIZE
---- APPEND DUPLICATE HEADER VALUE //Done!!
 --- LIMIT READ AND WRITE SIZE WITH KEVENT
---- 
+--- HANDLING EXCEPTION
 --- transfort file
 --- upload file
 --- handleType
+
+--- APPEND DUPLICATE HEADER VALUE //Done!!

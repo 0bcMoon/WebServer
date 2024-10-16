@@ -105,11 +105,18 @@ void HttpRequest::readRequest()
 		return ;
 	else if (size > 0)
 	{
-		tmp[size] = 0;
-		std::string str(tmp);
-		reqBuffer += str;
-		reqBuffer = reqBuffer.substr(reqBufferIndex);
-		reqBufferIndex = 0;
+		reqBuffer.resize(reqBuffer.size() + size);
+		size_t j = 0;
+		for (size_t i = reqBuffer.size() - size ; i < reqBuffer.size(); i++)
+		{
+			reqBuffer[i] = tmp[j];
+			j++;
+		}
+		// tmp[size] = 0;
+		// std::string str(tmp);
+		// reqBuffer += str;
+		// reqBuffer = reqBuffer.substr(reqBufferIndex);
+		// reqBufferIndex = 0;
 	}
 }
 
@@ -196,7 +203,8 @@ void HttpRequest::parseMethod()
 		}
 		if (reqBuffer[reqBufferIndex] < 'A' || reqBuffer[reqBufferIndex] > 'Z')
 		{
-			setHttpReqError(400, "Bad Request");
+			std::cout << "-----------> " <<  (int)reqBuffer[reqBufferIndex] << "\n";
+			setHttpReqError(400, "Bad Request2");
 			return ;
 		}
 		methodeStr.tmpMethodeStr.push_back(reqBuffer[reqBufferIndex]);
@@ -507,6 +515,9 @@ void	HttpRequest::parseHeaderName()
 		{
 			state = HEADER_VALUE;
 			reqBufferIndex++;
+			if (reqBuffer[reqBufferIndex] == ' ')
+				reqBufferIndex++;
+			return;
 			// headers[currHeaderName];
 		}
 		currHeaderName.push_back(reqBuffer[reqBufferIndex]);
@@ -547,19 +558,19 @@ int HttpRequest::isNum(const std::string& str)
 
 int		HttpRequest::firstHeadersCheck()
 {
-	if (headers.find("Host ") == headers.end())
+	if (headers.find("Host") == headers.end())
 		return (setHttpReqError(400, "Bad Request"), 1);
-	if (headers.find("Content-Length ") != headers.end()
-		&& !isNum(headers["Content-Length "]))
+	if (headers.find("Content-Length") != headers.end()
+		&& !isNum(headers["Content-Length"]))
 		return (setHttpReqError(400, "Bad Request"), 1);
-	if (headers.find("Transfer-Encoding ") != headers.end()
-		&& headers["Transfer-Encoding "] != "chunked")
+	if (headers.find("Transfer-Encoding") != headers.end()
+		&& headers["Transfer-Encoding"] != "chunked")
 		return (setHttpReqError(501, "Not Implemented"), 1);
-	if (headers.find("Content-Length ") != headers.end()
-		&& headers.find("Transfer-Encoding ") != headers.end())
+	if (headers.find("Content-Length") != headers.end()
+		&& headers.find("Transfer-Encoding") != headers.end())
 		return (setHttpReqError(400, "Bad Request"), 1);
-	if (headers.find("Content-Length ") == headers.end()
-		&& headers.find("Transfer-Encoding ") == headers.end())
+	if (headers.find("Content-Length") == headers.end()
+		&& headers.find("Transfer-Encoding") == headers.end())
 		return (state = BODY_FINISH, 1);
 	return (0);
 }
@@ -568,7 +579,7 @@ void		HttpRequest::contentLengthBodyParsing()
 {
 	if (bodySize == -1)
 	{
-		std::stringstream ss(headers["Content-Length "]);
+		std::stringstream ss(headers["Content-Length"]);
 		if (!(ss >> bodySize) || !(ss.eof()))
 		{
 			setHttpReqError(400, "Bad Request");
@@ -698,15 +709,15 @@ void HttpRequest::parseBody()
 {
 	if (firstHeadersCheck())
 		return ;
-	if (headers.find("Content-Length ") != headers.end())
+	if (headers.find("Content-Length") != headers.end())
 		contentLengthBodyParsing();
-	if (headers.find("Transfer-Encoding ") != headers.end())
+	if (headers.find("Transfer-Encoding") != headers.end())
 		chunkedBodyParsing();
 }
 
 const std::string &HttpRequest::getHost() const
 {
-	return (headers.find("Host ")->second);
+	return (headers.find("Host")->second);
 }
 
 // void HttpRequest::parseMethod()

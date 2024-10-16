@@ -91,7 +91,8 @@ class HttpRequest
 		int                                 reqSize;
 		size_t								reqBufferSize;
 		size_t								reqBufferIndex;
-		std::string							reqBuffer; // buffer  may be binary (include '\0') fix this;
+		// std::string							reqBuffer; // buffer  may be binary (include '\0') fix this;
+		std::vector<char>							reqBuffer; // buffer  may be binary (include '\0') fix this;
 
 		httpError							error;
 
