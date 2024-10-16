@@ -5,20 +5,9 @@
 --- may add include other file (if there time)
 --- make some global file table save memory
 --- FIX BODY_SIZE
---- APPEND DUPLICATE HEADER VALUE
---- LIMIT READ AND WRIE SIZE WITH KEVENT
+--- APPEND DUPLICATE HEADER VALUE //Done!!
+--- LIMIT READ AND WRITE SIZE WITH KEVENT
 --- 
 --- transfort file
 --- upload file
 --- handleType
-
-HTTP/1.1 200 OK
-Connection: Keep-Alive
-Content-Encoding: gzip
-Content-Type: text/html; charset=utf-8
-Date: Thu, 11 Aug 2016 15:23:13 GMT
-Keep-Alive: timeout=5, max=1000
-Last-Modified: Mon, 25 Jul 2016 04:32:39 GMT
-Server: Apache
-
-(body)

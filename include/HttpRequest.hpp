@@ -83,6 +83,7 @@ class HttpRequest
 
 		std::map<std::string, std::string>	headers;
 		std::string							currHeaderName;
+		std::string							currHeaderVal;
 
 		std::vector<unsigned char>							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;

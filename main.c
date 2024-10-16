@@ -22,6 +22,7 @@ int main()
 		"GET / HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
 		"Content-Length: 0\r\n"
+		"Connection: Keep-Alive\r\r\n"
 		"Connection: close\r\n\r\n";
 	// Resolve the hostname
 	server = gethostbyname(host);

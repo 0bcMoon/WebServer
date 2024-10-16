@@ -100,6 +100,7 @@ class HttpResponse
 		std::string						getContentLenght(enum responseBodyType type); // TYPO
 
 		int								autoIndexCooking();
+
 };
 
 std::string			decimalToHex(int	decimal);
