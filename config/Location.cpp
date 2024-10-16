@@ -12,6 +12,7 @@
 #include "ParserException.hpp"
 Location::Location() 
 {
+	this->cgiMap["."] = "";	
 	this->isRedirection = false;
 	this->methods = GET; // default method is GET only can be overwritten
 }

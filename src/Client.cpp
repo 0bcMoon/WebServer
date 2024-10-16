@@ -7,24 +7,25 @@
 #include <string>
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include "ServerContext.hpp"
 
 int Client::getFd() const
 {
 	return (fd);
 }
 
-Client::Client() : response(-1)
+Client::Client() : response(-1, NULL)
 {
 	fd = -1;
 	state = REQUEST;
 }
 
-Client::Client(int fd) : fd(fd), request(fd), response(fd)
+Client::Client(int fd) : fd(fd), request(fd), response(fd, NULL)
 {
 	state = REQUEST;
 }
 
-Client::Client(int fd, int serverFd) : fd(fd), serverFd(serverFd), request(fd), response(fd)
+Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), request(fd), response(fd, ctx)
 {
 	state = REQUEST;
 }

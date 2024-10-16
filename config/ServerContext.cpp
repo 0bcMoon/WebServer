@@ -8,7 +8,7 @@
 ServerContext::ServerContext()
 {
 	std::string types[] = {
-		"test/plain",
+		"text/plain",
 		"text/html",
 		"text/html",
 		"text/html",
@@ -164,7 +164,7 @@ void ServerContext::pushTypes(Tokens &token, Tokens &end)
 		throw ParserException("Unexpected end of file");
 	token++;
 }
-const std::string &ServerContext::getType(std::string &ext)
+const std::string &ServerContext::getType(const std::string &ext)
 {
 	std::map<std::string, std::string>::iterator kv = this->types.find(ext);
 

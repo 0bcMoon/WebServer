@@ -3,6 +3,7 @@
 
 #include "HttpRequest.hpp"
 #include "Location.hpp"
+#include "ServerContext.hpp"
 #include <string>
 
 
@@ -61,6 +62,7 @@ class HttpResponse
 		std::string							fullPath;
 		static const int					fileReadingBuffer = 10240;
 		std::string							autoIndexBody;
+		ServerContext						*ctx;
 	public:
 		std::vector<std::vector<unsigned char> >			responseBody;
 		int													keepAlive; // bool? // bool?
@@ -70,7 +72,7 @@ class HttpResponse
 		std::map<std::string, std::string>					headers;
 		std::map<std::string, std::string>					resHeaders;
 
-		HttpResponse(int fd);
+		HttpResponse(int fd, ServerContext *ctx);
 		HttpResponse	operator=(const HttpRequest& req);
 
 		void							responseCooking();

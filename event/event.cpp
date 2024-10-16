@@ -383,7 +383,7 @@ void Event::eventLoop()
 					if (!(client->response.keepAlive))
 						connections.closeConnection(ev->ident);
 					else
-						client->response = HttpResponse(ev->ident);
+						client->response = HttpResponse(ev->ident, this->ctx);
 					/*************************************************************/
 				}
 				std::cout << "write ended\n";
