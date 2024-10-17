@@ -28,7 +28,7 @@ void	Connections::addConnection(int	fd)
 
 void	Connections::addConnection(int	fd, int server)
 {
-	this->clients[fd] = new Client(fd, server);
+	this->clients[fd] = new Client(fd, server, ctx);
 }
 
 void		Connections::connecting(int fd)

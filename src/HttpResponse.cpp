@@ -1,5 +1,6 @@
 #include "HttpResponse.hpp"
 #include "HttpRequest.hpp"
+#include "ServerContext.hpp"
 #include <cstddef>
 #include <cstring>
 #include <fstream>
@@ -17,7 +18,7 @@
 #include <stdio.h>
 #include <dirent.h>
 
-HttpResponse::HttpResponse(int fd) : fd(fd)
+HttpResponse::HttpResponse(int fd, ServerContext *ctx) : fd(fd) , ctx(ctx)
 {
 	keepAlive = 1;
 	location = NULL;
@@ -219,7 +220,7 @@ void			HttpResponse::writeResponse()
 {
 	write(this->fd, getStatusLine().c_str(), getStatusLine().size());
 	write(this->fd, getConnectionState().c_str(), getConnectionState().size());
-	// write(this->fd, getContentType().c_str(), getContentType().size());
+	write(this->fd, getContentType().c_str(), getContentType().size());
 	write(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
 	write(fd, getDate().c_str(), getDate().size());
 	write(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
@@ -245,15 +246,31 @@ std::string						HttpResponse::getStatusLine()
 std::string						HttpResponse::getConnectionState()
 {
 	if (keepAlive)
-		return ("Connection: Keep-Alive\r\n");
+		return ("Connection: keep-alive\r\n");
 	return ("Connection: Close\r\n");
+}
+std::string getExtension(std::string str)
+{
+	std::string ext;
+	int i = str.size() - 1;
+	while (i >= 0)
+	{
+		if (str[i] == '.')
+			return (str.substr(i + 1));
+		i--;
+	}
+	return ("");
 }
 
 std::string						HttpResponse::getContentType()
 {//TODO:MIME_TYPE
 	if (bodyType == AUTO_INDEX)
 		return ("Content-Type: text/html\r\n");
-	return ("Content-Type: text/plain\r\n");
+	// std::cout << "full path: " << fullPath << std::endl;
+	// std::cout << "extension: " << getExtension(fullPath) << std::endl;
+	// std::cout << "type: " << ctx->getType(getExtension(fullPath)) << std::endl;
+
+	return ("Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
 }
 
 std::string						HttpResponse::getDate()

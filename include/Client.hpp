@@ -4,6 +4,7 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include "Location.hpp"
+#include "ServerContext.hpp"
 
 enum clientState
 {
@@ -22,7 +23,7 @@ class Client
 
 		Client();
 		Client(int	fd);
-		Client(int	fd, int server);
+		Client(int	fd, int server, ServerContext *ctx);
 
 		HttpRequest		request;
 		HttpResponse	response;

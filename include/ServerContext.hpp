@@ -34,7 +34,7 @@ class ServerContext
 
 	void setMaxHeaderSize(Tokens &token, Tokens &end);
 	long getMaxHeaderSize() const;
-	const std::string &getType(std::string &ext);
+	const std::string &getType(const std::string &ext);
 };
 
 #endif

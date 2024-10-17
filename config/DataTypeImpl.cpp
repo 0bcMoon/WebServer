@@ -15,6 +15,7 @@
 GlobalConfig::GlobalConfig()
 {
 	this->autoIndex = -1;
+	this->errorPages["."] = "";
 }
 
 GlobalConfig::GlobalConfig(int autoIndex, const std::string &upload_file_path)
@@ -202,5 +203,9 @@ std::string GlobalConfig::loadFile(const char *filename)
 
 const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 {
-	return (this->errorPages.find(StatusCode)->second); // plz don't fail;
+	std::map<std::string, std::string>::iterator kv = this->errorPages.find(StatusCode);
+
+	if (kv == this->errorPages.end())
+		return (this->errorPages.find(StatusCode)->second);
+	return (kv->second);
 }

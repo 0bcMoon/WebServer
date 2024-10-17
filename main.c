@@ -22,8 +22,7 @@ int main()
 		"GET / HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
 		"Content-Length:0\r\n"
-		"Connection: Keep-Alive\r\r\n"
-		"Connection: close\r\n\r\n";
+		"Connection: Keep-Alive\r\n\r\n";
 	// Resolve the hostname
 	server = gethostbyname(host);
 	if (server == NULL)
@@ -62,8 +61,9 @@ int main()
 	// Read the response
 	bzero(buffer, BUFFER_SIZE);
 	ssize_t n;
-	while ((n = read(sockfd, buffer, BUFFER_SIZE - 1)) > 0)
+	while ((n = read(sockfd, buffer, BUFFER_SIZE - 1)) >= 0)
 	{
+		printf("size %zu\n", n);
 		printf("%s", buffer);
 		bzero(buffer, BUFFER_SIZE);
 	}
@@ -71,6 +71,7 @@ int main()
 	{
 		error("Error reading from socket");
 	}
+	pause();
 	// Close the socket
 	close(sockfd);
 	return 0;

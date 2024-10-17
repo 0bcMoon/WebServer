@@ -1,4 +1,4 @@
-#!/Users/hibenouk/.brew/bin/python3.11
+#!/Users/zkotbi/.brew/bin/python3.11
 
 import requests
 
