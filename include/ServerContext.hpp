@@ -21,6 +21,8 @@ class ServerContext
   public:
 	ServerContext();
 	~ServerContext();
+
+	void init();
 	void pushServer(Tokens &token, Tokens &end);
 	void pushTypes(Tokens &token, Tokens &end);
 	std::vector<VirtualServer> &getServers();

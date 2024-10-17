@@ -42,6 +42,7 @@ ServerContext *LoadConfig(const char *path)
 		tokenizer.CreateTokens();
 		ctx = new ServerContext();
 		tokenizer.parseConfig(ctx);
+		ctx->init();
 	}
 	catch (const Debug &e)
 	{
@@ -60,8 +61,11 @@ ServerContext *LoadConfig(const char *path)
 
 void sigpipe_handler(int signum)
 {
+	(void)signum;
+
 	printf("Caught SIGPIPE. Ignoring.\n");
 }
+
 int main()
 {
 	Event *event = NULL;

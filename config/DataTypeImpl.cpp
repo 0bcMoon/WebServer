@@ -2,22 +2,25 @@
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include <unistd.h>
-#include <algorithm>
 #include <cstddef>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 #include "DataType.hpp"
-#include "Debug.hpp"
 #include "ParserException.hpp"
-#include "WebServer.hpp"
 
 GlobalConfig::GlobalConfig()
 {
-	this->upload_file_path = "/tmp";
-	this->autoIndex = false;
+	this->autoIndex = -1;
+}
+
+GlobalConfig::GlobalConfig(int autoIndex, const std::string &upload_file_path)
+{
+	this->autoIndex = autoIndex;
+	this->upload_file_path = upload_file_path;
 }
 
 GlobalConfig::GlobalConfig(const GlobalConfig &other)
@@ -26,14 +29,28 @@ GlobalConfig::GlobalConfig(const GlobalConfig &other)
 }
 GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 {
+	std::map<std::string, std::string>::const_iterator kv = other.errorPages.begin();
 	if (this == &other)
 		return *this;
 
 	if (root.empty())
 		root = other.root;
-	autoIndex = other.autoIndex;
-	errorPages = other.errorPages;
-	indexes = other.indexes;
+	if (upload_file_path.empty())
+		upload_file_path = other.upload_file_path;
+	if (autoIndex == -1)
+		autoIndex = other.autoIndex;
+	for (; kv != other.errorPages.end(); kv++)
+	{
+		if (this->errorPages.find(kv->first) == this->errorPages.end())
+			this->errorPages.insert(*kv);
+	}
+	for (size_t i = 0; i < other.indexes.size(); i++)
+	{
+		std::vector<std::string>::const_iterator it =
+			std::find(this->indexes.begin(), this->indexes.end(), other.indexes[i]);
+		if (it == this->indexes.end())
+			this->indexes.push_back(other.indexes[i]);
+	}
 	return *this; // Return *this to allow chained assignments
 }
 GlobalConfig::~GlobalConfig() {}
@@ -131,7 +148,6 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 	return (true);
 }
 
-
 void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 {
 	std::vector<std::string> vec;
@@ -173,7 +189,6 @@ void GlobalConfig::setUploadPath(Tokens &token, Tokens &end)
 	if (access(this->upload_file_path.data(), W_OK) != 0)
 		throw ParserException("invalid Upload path directory");
 }
-
 
 std::string GlobalConfig::loadFile(const char *filename)
 {

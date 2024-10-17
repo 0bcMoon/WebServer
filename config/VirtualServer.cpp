@@ -157,3 +157,8 @@ Location *VirtualServer::getRoute(const std::string &path)
 {
 	return (this->routes.findPath(path));
 }
+
+void VirtualServer::init()
+{
+	this->routes.init(this->globalConfig);
+}

@@ -1,13 +1,15 @@
 
 #include "ServerContext.hpp"
+#include <stdexcept>
 #include <vector>
 #include "DataType.hpp"
 #include "ParserException.hpp"
 #include "VirtualServer.hpp"
 
-ServerContext::ServerContext()
+ServerContext::ServerContext() : globalParam(0, "/tmp")
 {
-	std::string types[] = {
+	const std::string types[] = {
+		"test/plain",
 		"test/plain",
 		"text/html",
 		"text/html",
@@ -17,10 +19,11 @@ ServerContext::ServerContext()
 		"image/gif",
 		"image/jpeg",
 		"image/jpeg",
-		"application/javascr",
+		"application/javascript",
 	};
 
-	std::string ext[] = {
+	const std::string ext[] = {
+		".",
 		"txt",
 		"html",
 		"shtml",
@@ -32,7 +35,7 @@ ServerContext::ServerContext()
 		"jpg",
 		"js",
 	};
-	for (int i = 0; i < 9; i++)
+	for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); i++)
 		this->types[ext[i]] = types[i];
 	this->maxBodySize = 100 * 1024 * 1024;
 	this->maxHeaderSize = 100 * 1024 * 1024;
@@ -169,6 +172,16 @@ const std::string &ServerContext::getType(std::string &ext)
 	std::map<std::string, std::string>::iterator kv = this->types.find(ext);
 
 	if (kv == this->types.end())
-		return (this->types.find("txt")->second);
+		return (this->types.find(".")->second);
 	return (kv->second);
+}
+void ServerContext::init()
+{
+	if (this->servers.size() == 0)
+		throw ParserException("No Virtual Server has been define");
+	for (size_t i = 0; i < this->servers.size(); i++)
+	{
+		this->servers[i].globalConfig = this->globalParam;
+		this->servers[i].init();
+	}
 }

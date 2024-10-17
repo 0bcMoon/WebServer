@@ -371,7 +371,7 @@ void Event::eventLoop()
 					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
 						continue;
 					/*************************************************************/
-				std::cout << "write event " << ev->ident << "\n";
+					std::cout << "write event " << ev->ident << "\n";
 					client->response.location = this->getLocation(client);
 					assert(client->response.location != NULL);
 					std::cout << client->getPath() << "\n";
@@ -386,12 +386,13 @@ void Event::eventLoop()
 						client->response = HttpResponse(ev->ident);
 					/*************************************************************/
 				}
-				std::cout << "write ended\n";
+					std::cout << "write ended\n";
 			}
 		}
 		// std::cout << "all  event has been process: " << nev << '\n';
 	}
 }
+
 bool Event::checkNewClient(int socketFd)
 {
 	return (this->sockAddrInMap.find(socketFd) != this->sockAddrInMap.end());
@@ -400,10 +401,12 @@ bool Event::checkNewClient(int socketFd)
 Location *Event::getLocation(const Client *client)
 {
 	VirtualServer *Vserver;
-	int serverfd = client->getServerFd();
+	int serverfd;
 
+	serverfd = client->getServerFd();
 	const std::string &path = client->getPath();
 	const std::string &host = client->getHost();
+
 	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second; // always exist
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())

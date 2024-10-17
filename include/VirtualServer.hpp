@@ -33,11 +33,11 @@ class VirtualServer
   private:
 	std::vector<int>		sockets;
 	std::set<std::string>	serverNames; // todo as trie
-	GlobalConfig			globalConfig;
 	Trie					routes;
 	std::set<VirtualServer::SocketAddr>	listen;
 
   public:
+	GlobalConfig			globalConfig;
 	void deleteRoutes();
 	~VirtualServer();
 	VirtualServer();
@@ -50,6 +50,7 @@ class VirtualServer
 	void parseTokens(Tokens &tokens, Tokens &end);
 	void insertRoute(Location &location);
 	Location *getRoute(const std::string &path);
+	void init();
 };
 
 #endif
