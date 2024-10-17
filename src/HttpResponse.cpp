@@ -1,4 +1,5 @@
 #include "HttpResponse.hpp"
+#include "CgiHandler.hpp"
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 #include <cstddef>
@@ -92,7 +93,7 @@ std::string	HttpResponse::getStatusDescr() const
 bool			HttpResponse::isCgi()
 {
 	//TODO:-------------;
-	return (isCgiBool);
+	return (location->geCGItPath("." + getExtension(path)).size());
 }
 
 void	HttpResponse::setHttpResError(int code, std::string str)
@@ -119,7 +120,8 @@ bool	HttpResponse::isMethodAllowed()
 
 void			HttpResponse::cgiCooking()
 {
-	//TODO:implenting the fucking cgi;
+	CgiHandler	cgi(*this);
+	cgi.execute();
 }
 
 int				HttpResponse::autoIndexCooking()
@@ -249,7 +251,8 @@ std::string						HttpResponse::getConnectionState()
 		return ("Connection: Keep-Alive\r\n");
 	return ("Connection: Close\r\n");
 }
-std::string getExtension(std::string str)
+
+std::string						HttpResponse::getExtension(std::string str)
 {
 	std::string ext;
 	int i = str.size() - 1;
@@ -263,13 +266,9 @@ std::string getExtension(std::string str)
 }
 
 std::string						HttpResponse::getContentType()
-{//TODO:MIME_TYPE
+{
 	if (bodyType == AUTO_INDEX)
 		return ("Content-Type: text/html\r\n");
-	// std::cout << "full path: " << fullPath << std::endl;
-	// std::cout << "extension: " << getExtension(fullPath) << std::endl;
-	// std::cout << "type: " << ctx->getType(getExtension(fullPath)) << std::endl;
-
 	return ("Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
 }
 
@@ -300,11 +299,8 @@ std::string						HttpResponse::getContentLenght(enum responseBodyType type)
 {
 	if (type == LOAD_FILE)
 	{
-		// struct stat sstat;
 		std::ostringstream oss;
 
-		// stat(fullPath.c_str(), &sstat);
-		// oss << sstat.st_size;
 		size_t size = 0;
 		for (size_t i = 0; i < responseBody.size(); i++)
 		{
