@@ -40,6 +40,7 @@ void Client::respond()
 			|| response.headers["Connection"].find("Close") != std::string::npos))
 		|| request.state == REQ_ERROR)
 		response.keepAlive = 0;
+	std::cout << "keepAlive "<<response.keepAlive << "\n";
 	if (request.state == REQUEST_FINISH)
 		response.responseCooking();
 	if (response.state == ERROR)

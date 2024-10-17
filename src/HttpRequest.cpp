@@ -165,15 +165,15 @@ void HttpRequest::feed()
 	
 	// INFO: print request information;
 
-	std::cout << error.code << ": " << error.description << std::endl; 
-	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
-	for (map_it it = headers.begin(); it != headers.end(); ++it) {
-        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
-    }
-	for (auto& it : body)
-	{
-		std::cout << (char)it;
-	}
+	// std::cout << error.code << ": " << error.description << std::endl; 
+	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	// for (map_it it = headers.begin(); it != headers.end(); ++it) {
+ //        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+    // }
+	// for (auto& it : body)
+	// {
+	// 	std::cout << (char)it;
+	// }
 }
 
 void HttpRequest::setHttpReqError(int code, std::string str)

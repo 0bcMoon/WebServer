@@ -248,7 +248,7 @@ std::string						HttpResponse::getStatusLine()
 std::string						HttpResponse::getConnectionState()
 {
 	if (keepAlive)
-		return ("Connection: Keep-Alive\r\n");
+		return ("Connection: keep-alive\r\n");
 	return ("Connection: Close\r\n");
 }
 

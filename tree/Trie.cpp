@@ -6,22 +6,20 @@
 /*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/29 16:45:56 by hicham            #+#    #+#             */
-/*   Updated: 2024/10/14 19:04:36 by hibenouk         ###   ########.fr       */
+/*   Updated: 2024/10/17 12:44:00 by hibenouk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Trie.hpp"
-#include "ParserException.hpp"
 #include <cstring>
+#include "ParserException.hpp"
 
 Trie::TrieNode::TrieNode() : isEnd(false)
 {
 	memset(children, 0, sizeof(children));
 }
 
-Trie::TrieNode::~TrieNode()
-{
-}
+Trie::TrieNode::~TrieNode() {}
 
 Trie::Trie()
 {
@@ -35,7 +33,6 @@ void Trie::deleteNode()
 
 void Trie::_deleteNode(TrieNode *node)
 {
-
 	if (node == NULL)
 		return;
 	for (size_t i = 0; i < 128; i++)
@@ -49,9 +46,7 @@ void Trie::_deleteNode(TrieNode *node)
 	delete node;
 }
 
-Trie::~Trie()
-{
-}
+Trie::~Trie() {}
 
 bool Trie::insert(Location &location)
 {
@@ -71,6 +66,7 @@ bool Trie::insert(Location &location)
 		throw ParserException("Duplicate location route at: " + path);
 	currNode->isEnd = true;
 	currNode->location = location;
+	this->locations.push_back(&currNode->location);
 	return (true);
 }
 
@@ -91,4 +87,14 @@ Location *Trie::findPath(const std::string &route)
 		currNode = currNode->children[idx];
 	}
 	return (location);
+}
+
+void Trie::init(const GlobalConfig &conf)
+{
+	for (size_t i = 0; i < this->locations.size(); i++)
+	{
+		this->locations[i]->globalConfig = conf;
+		if (this->locations[i]->globalConfig.getRoot().empty())
+			throw ParserException("Root in loaction must not be empty");
+	}
 }

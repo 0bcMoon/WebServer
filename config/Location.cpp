@@ -48,6 +48,7 @@ bool GlobalConfig::isValidStatusCode(std::string &str)
 	}
 	return (status >= 100 && status <= 599);
 }
+
 void Location::setRedirect(Tokens &token, Tokens &end)
 {
 	std::vector<std::string> vec;
@@ -62,16 +63,17 @@ void Location::setRedirect(Tokens &token, Tokens &end)
 	redirect.status = vec[0];
 	if (redirect.body == "None" && redirect.url == "None")
 		throw ParserException("Body or redirection url most be define in redirection");
-	if (redirect.body != "None" && access(redirect.body.data(), F_OK | R_OK) != 0)
+	else if (redirect.body != "None" && access(redirect.body.data(), F_OK | R_OK) != 0)
 		throw ParserException("invalid file in Redirection: " + redirect.body + " " + std::string(strerror(errno)));
-	if (!this->globalConfig.isValidStatusCode(redirect.status) || redirect.status[0] != '3')
+	else if (!this->globalConfig.isValidStatusCode(redirect.status) || redirect.status[0] != '3')
 		throw ParserException("Invalid Redirection Status Code: " + *token);
-
 	if (redirect.body == "None")
 		redirect.body.clear();
-	else if (redirect.url == "None")
+	if (redirect.url == "None")
 		redirect.url.clear();
-	this->isRedirection = true;}
+
+	this->isRedirection = true;
+}
 
 
 void Location::parseTokens(Tokens &token, Tokens &end)
