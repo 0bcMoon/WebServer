@@ -250,60 +250,6 @@ int Event::RegsterClient(int clientFd)
 	return kevent(this->kqueueFd, ev_set, 1, NULL, 0, NULL);
 }
 
-#define PORT 8080
-#define BUFFER_SIZE 1024
-#define MAX_EVENTS 10
-
-// void response(int fd, const std::string &p, std::vector<std::vector<unsigned char>> &vec)
-// {
-// 	const char *http_200_response =
-// 		"HTTP/1.1 200 OK\r\n"
-// 		"Content-Type: text/html; charset=UTF-8\r\n"
-// 		"Connection: Keep-Alive\r\n"
-// 		"Server: YOUR DADDY\r\n"
-// 		// "Content-Length: 100\r\n"
-// 		"Transfer-Encoding: chunked\r\n"
-// 		"\r\n";
-// 	// "<!DOCTYPE html>\n"
-// 	// "<html>\n"
-// 	// "<head><title>200 OK</title></head>\n"
-// 	// "<body>\n"
-// 	// "<h1>200 OK</h1>\n"
-// 	// "<p>The request has succeeded.</p>\n"
-// 	// "</body>\n"
-// 	// "</html>";
-
-// 	const char *http_404_response =
-// 		"HTTP/1.1 404 Not Found\r\n"
-// 		"Content-Type: text/html; charset=UTF-8\r\n"
-// 		"Connection: Keep-Alive\r\n"
-// 		// "Content-Length: 175\r\n"
-// 		"\r\n"
-// 		"<!DOCTYPE html>\n"
-// 		"<html>\n"
-// 		"<head><title>404 Not Found</title></head>\n"
-// 		"<body>\n"
-// 		"<h1>404 Not Found</h1>\n"
-// 		"<p>The requested resource could not be found on this server.</p>\n"
-// 		"</body>\n"
-// 		"</html>\r\n\r\n";
-// 	// if (p != "/")
-// 	write(fd, http_200_response, strlen(http_200_response));
-// 	for (size_t i = 0; i < vec.size(); i++)
-// 	{
-// 		std::string sizeStr = decimalToHex(vec[i].size());
-// 		write(fd, sizeStr.c_str(), sizeStr.size());
-// 		write(fd, "\r\n", 2);
-// 		for (size_t j = 0; j < vec[i].size(); j++)
-// 		{
-// 			write(fd, &vec[i][j], 1);
-// 		}
-// 		write(fd, "\r\n", 2);
-// 	}
-// 	write(fd, "0\r\n\r\n", 5);
-// 	// else
-// 	// 	write(fd, http_200_response, strlen(http_200_response));
-// }
 
 void Event::eventLoop()
 {
@@ -380,10 +326,9 @@ void Event::eventLoop()
 				std::cout << "write ended\n";
 			}
 		}
-		// std::cout << "all  event has been process: " << nev << '\n';
 	}
 }
-void event_loop() {}
+
 bool Event::checkNewClient(int socketFd)
 {
 	return (this->sockAddrInMap.find(socketFd) != this->sockAddrInMap.end());
@@ -391,13 +336,12 @@ bool Event::checkNewClient(int socketFd)
 
 Location *Event::getLocation(const Client *client)
 {
-	VirtualServer *Vserver;
-	int serverfd;
+	VirtualServer	*Vserver;
+	int				serverfd;
 
 	serverfd = client->getServerFd();
 	const std::string &path = client->getPath();
 	const std::string &host = client->getHost();
-
 	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second; // always exist
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())

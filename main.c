@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +24,7 @@ int main()
 		"Host: localhost:8080\r\n"
 		"Content-Length:0\r\n"
 		"Connection: Keep-Alive\r\n\r\n";
-	// Resolve the hostname
+
 	server = gethostbyname(host);
 	if (server == NULL)
 	{
@@ -68,9 +69,7 @@ int main()
 		bzero(buffer, BUFFER_SIZE);
 	}
 	if (n < 0)
-	{
 		error("Error reading from socket");
-	}
 	pause();
 	// Close the socket
 	close(sockfd);
