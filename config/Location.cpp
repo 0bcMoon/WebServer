@@ -104,7 +104,7 @@ void Location::setCGI(Tokens &token, Tokens &end)
 	this->cgiMap[cgi_ext] = cgi_path;
 }
 
-const std::string &Location::geCGItPath(std::string &ext)
+const std::string &Location::geCGItPath(const std::string &ext)
 {
 	
 	std::map<std::string, std::string>::iterator	kv;

@@ -18,7 +18,7 @@ class ServerContext
 	Type types;
 	void addTypes(Tokens &token, Tokens &end);
 
-  public:
+ public:
 	ServerContext();
 	~ServerContext();
 

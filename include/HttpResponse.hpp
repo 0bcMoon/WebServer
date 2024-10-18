@@ -53,7 +53,6 @@ class HttpResponse
 		int									fd;
 		enum reqMethode						methode;
 		std::vector<unsigned char>							body;
-		std::string							strMethod;
 		httpError							status;	
 		bool								isCgiBool;
 		errorResponse						errorRes;
@@ -64,6 +63,7 @@ class HttpResponse
 		std::string							autoIndexBody;
 		ServerContext						*ctx;
 	public:
+		std::string											strMethod;
 		std::vector<std::vector<unsigned char> >			responseBody;
 		int													keepAlive; // bool? // bool?
 		Location											*location;
@@ -102,7 +102,7 @@ class HttpResponse
 		std::string						getContentLenght(enum responseBodyType type); // TYPO
 
 		int								autoIndexCooking();
-
+		static std::string				getExtension(std::string str);
 };
 
 std::string			decimalToHex(int	decimal);

@@ -1,4 +1,3 @@
-
 #include "ServerContext.hpp"
 #include <stdexcept>
 #include <vector>
