@@ -24,6 +24,7 @@ Location &Location::operator=(const Location &location)
 	this->globalConfig = location.globalConfig;
 	this->isRedirection = location.isRedirection;
 	this->cgiMap = location.cgiMap;
+	this->methods = location.methods;
 	return *this;
 }
 void Location::setPath(std::string &path)

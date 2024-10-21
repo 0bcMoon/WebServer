@@ -15,17 +15,19 @@ class CgiHandler {
 		std::string							scriptPath;
 
 		HttpResponse						*response;
-		// std::string							reqPath;
-		// httpError							&status;							
-		// Location							*location;
-		// ServerContext						*ctx;
+
+		char								**envArr;
+		char								**argv;
 	public:
 		// CgiHandler(std::string reqPath, httpError& status, Location *location, ServerContext *ctx);
 
 		CgiHandler(HttpResponse &response);
 
+		~CgiHandler();
+		void				envMapToArr(std::map<std::string, std::string> mapEnv);
 		int					checkCgiFile();
-		void					execute();
+		void					execute(std::string cgiPath);
 		int						initEnv();
+		void					initArgv();
 };
 #endif

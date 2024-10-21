@@ -2,35 +2,14 @@
 --- handel if at least one Vserver exist and each server has one location define
 --- 
 --- add logging support
---- may add include other file (if there time)
---- make some global file table save memory
 --- FIX BODY_SIZE
 --- LIMIT READ AND WRITE SIZE WITH KEVENT
 --- HANDLING EXCEPTION
 --- transfort file
 --- upload file
---- handleType
 --- encoding
+--- REDIRECTIONS
+--- HANDLING TIMEOUT IN CGI
+--- DELETE
 
 --- APPEND DUPLICATE HEADER VALUE //Done!!
-
-
-SERVER_PORT
-SERVER_NAME
-
-REMOTE_HOST
-SERVER_SOFTWARE
-REMOTE_ADDR
-
-
-GATEWAY_INTERFACE
-SERVER_PROTOCOL
-
-REQUEST_METHOD
-PATH_INFO
-PATH_TRANSLATED
-SCRIPT_NAME
-QUERY_STRING
-AUTH_TYPE
-CONTENT_TYPE
-CONTENT_LENGTH
