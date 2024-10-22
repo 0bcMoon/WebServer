@@ -213,6 +213,8 @@ int HttpResponse::loadFile(int _fd)
 	while (1)
 	{
 		int r = read(_fd, buffer, fileReadingBuffer);
+		buffer[r] = 0;
+		std::cout << buffer << "\n";
 		if (r < 0)
 			return (setHttpResError(500, "Internal Server Error"), 0);
 		if (r == 0)
@@ -649,7 +651,7 @@ void			HttpResponse::responseCooking()
 	if (!isPathFounded())
 		return ;
 	if (isCgi())
-		cgiCooking();
+		cgiCooking(/**/);
 	else
 	{
 		if (!isMethodAllowed() || !pathChecking())

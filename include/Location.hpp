@@ -1,16 +1,15 @@
 #ifndef Location_H
-# define Location_H
+#define Location_H
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include "DataType.hpp"
-#include <set>
 
 class Location
 {
-	private:
-
+  private:
 	typedef int http_method_t;
 	enum methods_e
 	{
@@ -18,38 +17,42 @@ class Location
 		POST = 0b10,
 		DELETE = 0b100,
 	};
-		struct Redirection
-		{
-			std::string status;
-			std::string url;
-			std::string body;// INFO: body file name;
-		};
+	struct Redirection
+	{
+		std::string status;
+		std::string url;
+		std::string body; // INFO: body file name;
+	};
+	Redirection redirect;
+	http_method_t methods;
+	bool isRedirection;
+	std::string path;
+	std::map<std::string, std::string> cgiMap;
+	std::string upload_file_path;
+	std::string host;
+	int port;
 
-		Redirection							redirect;
-		http_method_t						methods;
-		bool								isRedirection;
-		std::string							path;
-		std::map<std::string, std::string>	cgiMap;
-		std::string							upload_file_path;
+  public:
+	GlobalConfig globalConfig;
 
-	public:
+	bool isMethodAllowed(int method) const;
+	Location();
+	Location &operator=(const Location &location);
+	void setPath(std::string &path);
+	const std::string &getPath();
+	void setRedirect(Tokens &token, Tokens &end);
+	void parseTokens(Tokens &token, Tokens &end);
+	static bool isValidStatusCode(std::string &str);
+	bool HasRedirection() const;
+	const Redirection &getRedirection() const;
+	void setMethods(Tokens &token, Tokens &end);
 
-		GlobalConfig						globalConfig;
-
-		bool								isMethodAllowed(int method) const;
-		Location();
-		Location							&operator=(const Location &location);
-		void								setPath(std::string &path);
-		const std::string					&getPath();
-		void								setRedirect(Tokens &token, Tokens &end);
-		void								parseTokens(Tokens &token, Tokens &end);
-		static bool							isValidStatusCode(std::string &str);
-		bool								HasRedirection() const ;
-		const Redirection					&getRedirection() const;
-		void setMethods(Tokens &token, Tokens &end);
-
-		const std::string					&geCGItPath(const std::string &ext);
-		const std::string					&geCGIext();
-		void								setCGI(Tokens &token, Tokens &end);
+	const std::string &geCGItPath(const std::string &ext);
+	const std::string &geCGIext();
+	void setCGI(Tokens &token, Tokens &end);
+	void setINFO(const std::string &host, int port);
+	const std::string &getFileUploadPath();
+	int getPort() const;
+	const std::string& getHost() const;
 };
 #endif

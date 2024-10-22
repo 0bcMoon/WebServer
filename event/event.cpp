@@ -1,4 +1,5 @@
 #include "Event.hpp"
+#include <sys/_endian.h>
 #include <sys/event.h>
 #include <sys/fcntl.h>
 #include <sys/socket.h>
@@ -190,15 +191,10 @@ bool Event::Listen()
 
 void Event::CreateChangeList()
 {
-	int i = 0;
 	SockAddr_in::iterator it = this->sockAddrInMap.begin();
 	// TODO : monitor read and write
-	for (; it != this->sockAddrInMap.end(); it++)
-	{
+	for (int i = 0; it != this->sockAddrInMap.end(); it++, i++)
 		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-		// EV_SET(&this->eventChangeList[i], it->first, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
-		i++;
-	}
 	if (kevent(this->kqueueFd, this->eventChangeList, this->numOfSocket, NULL, 0, NULL) < 0)
 		throw std::runtime_error("kevent failed: could not regester server event: " + std::string(strerror(errno)));
 	delete this->eventChangeList;
@@ -208,7 +204,7 @@ void Event::CreateChangeList()
 void Event::initIOmutltiplexing()
 {
 	this->evList = new struct kevent[this->MAX_EVENTS];
-	this->eventChangeList = new struct kevent[this->numOfSocket * 2];
+	this->eventChangeList = new struct kevent[this->numOfSocket];
 	this->kqueueFd = kqueue();
 	if (this->kqueueFd < 0)
 		throw std::runtime_error("kqueue faild: " + std::string(strerror(errno)));
@@ -231,8 +227,8 @@ int Event::newConnection(int socketFd, Connections &connections)
 
 int Event::RemoveClient(int clientFd)
 {
-	// TODO : hendel if there is an error server should never go down
 	struct kevent ev_set[2];
+
 	EV_SET(&ev_set[0], clientFd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 	EV_SET(&ev_set[1], clientFd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
 	kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL);
@@ -242,68 +238,22 @@ int Event::RemoveClient(int clientFd)
 
 int Event::RegsterClient(int clientFd)
 {
-	// TODO : hendel if there is an error server should never go down
+	// TODO: regester may faild
+
 	struct kevent ev_set[2];
 
 	EV_SET(&ev_set[0], clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-	// EV_SET(&ev_set[1], clientFd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
-	return kevent(this->kqueueFd, ev_set, 1, NULL, 0, NULL);
+	EV_SET(&ev_set[1], clientFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
+	return kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL);
 }
 
-#define PORT 8080
-#define BUFFER_SIZE 1024
-#define MAX_EVENTS 10
+int Event::WriteEvent(int fd, uint16_t flags)
+{
+	struct kevent ev;
 
-// void response(int fd, const std::string &p, std::vector<std::vector<unsigned char>> &vec)
-// {
-// 	const char *http_200_response =
-// 		"HTTP/1.1 200 OK\r\n"
-// 		"Content-Type: text/html; charset=UTF-8\r\n"
-// 		"Connection: Keep-Alive\r\n"
-// 		"Server: YOUR DADDY\r\n"
-// 		// "Content-Length: 100\r\n"
-// 		"Transfer-Encoding: chunked\r\n"
-// 		"\r\n";
-// 	// "<!DOCTYPE html>\n"
-// 	// "<html>\n"
-// 	// "<head><title>200 OK</title></head>\n"
-// 	// "<body>\n"
-// 	// "<h1>200 OK</h1>\n"
-// 	// "<p>The request has succeeded.</p>\n"
-// 	// "</body>\n"
-// 	// "</html>";
-
-// 	const char *http_404_response =
-// 		"HTTP/1.1 404 Not Found\r\n"
-// 		"Content-Type: text/html; charset=UTF-8\r\n"
-// 		"Connection: Keep-Alive\r\n"
-// 		// "Content-Length: 175\r\n"
-// 		"\r\n"
-// 		"<!DOCTYPE html>\n"
-// 		"<html>\n"
-// 		"<head><title>404 Not Found</title></head>\n"
-// 		"<body>\n"
-// 		"<h1>404 Not Found</h1>\n"
-// 		"<p>The requested resource could not be found on this server.</p>\n"
-// 		"</body>\n"
-// 		"</html>\r\n\r\n";
-// 	// if (p != "/")
-// 	write(fd, http_200_response, strlen(http_200_response));
-// 	for (size_t i = 0; i < vec.size(); i++)
-// 	{
-// 		std::string sizeStr = decimalToHex(vec[i].size());
-// 		write(fd, sizeStr.c_str(), sizeStr.size());
-// 		write(fd, "\r\n", 2);
-// 		for (size_t j = 0; j < vec[i].size(); j++)
-// 		{
-// 			write(fd, &vec[i][j], 1);
-// 		}
-// 		write(fd, "\r\n", 2);
-// 	}
-// 	write(fd, "0\r\n\r\n", 5);
-// 	// else
-// 	// 	write(fd, http_200_response, strlen(http_200_response));
-// }
+	EV_SET(&ev, fd, EVFILT_WRITE, flags, 0, 0, NULL);
+	return kevent(this->kqueueFd, &ev, 1, NULL, 0, NULL);
+}
 
 void Event::eventLoop()
 {
@@ -313,16 +263,15 @@ void Event::eventLoop()
 	{
 		std::cout << "waiting for event\n";
 		int nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
-		if (nev == -1)
+		if (nev <= -1)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
 		for (int i = 0; i < nev; i++)
 		{
-			struct kevent *ev = &this->evList[i];
+			const struct kevent *const ev = &this->evList[i];
 			if (this->checkNewClient(ev->ident))
 				this->newConnection(ev->ident, connections);
 			else if (ev->filter == EVFILT_READ)
 			{
-				std::cout << "READ event\n"; // Handel half close
 				if (ev->flags & EV_EOF && ev->data <= 0)
 				{
 					std::cout << "client disconnected\n";
@@ -338,10 +287,7 @@ void Event::eventLoop()
 					Client *client = kv->second;
 					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
 						continue;
-					std::cout << "event enables\n";
-					struct kevent ev3;
-					EV_SET(&ev3, client->getFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
-					kevent(this->kqueueFd, &ev3, 1, NULL, 0, NULL);
+					this->WriteEvent(client->getFd(), EV_ENABLE);
 				}
 			}
 			else if (ev->filter == EVFILT_WRITE)
@@ -354,56 +300,66 @@ void Event::eventLoop()
 				}
 				else
 				{
-					std::cout << "write event " << ev->ident << "\n";
 					clients_it kv = connections.clients.find(ev->ident);
 					if (kv == connections.clients.end())
 						continue;
 					Client *client = kv->second;
 					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
 						continue;
-					/*************************************************************/
-					std::cout << "write event " << ev->ident << "\n";
-					client->response.location = this->getLocation(client);
+					this->WriteEvent(client->getFd(), EV_DISABLE); // TODO: if it faild whats to do
+					struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
+					client->response.location = this->getLocation(client, ntohs(addr.sin_port));
+					// INFO: get port and host remote address isn't availbe
+					std::cout << client->response.location->getPort() << "\n";
+					std::cout << client->response.location->getHost() << "\n";
 					std::cout << client->getPath() << "\n";
 					client->respond();
-					std::cout << "event disbale\n";
-					if (!(client->response.keepAlive))
-					{
-						// std::cout << "client disconnected\n";
-						// connections.closeConnection(ev->ident);
-						// this->RemoveClient(ev->ident);
-					}
-					else
-						client->response = HttpResponse(ev->ident, this->ctx);
+					// INFO : keep alive
+
+					// if (!(client->response.keepAlive))
+					// {
+					// 	// std::cout << "client disconnected\n";
+					// 	// connections.closeConnection(ev->ident);
+					// 	// this->RemoveClient(ev->ident);
+					// }
+					// else
+					// 	client->response = HttpResponse(ev->ident, this->ctx);
 					/*************************************************************/
 				}
-				std::cout << "write ended\n";
 			}
 		}
-		// std::cout << "all  event has been process: " << nev << '\n';
 	}
 }
-void event_loop() {}
+
 bool Event::checkNewClient(int socketFd)
 {
 	return (this->sockAddrInMap.find(socketFd) != this->sockAddrInMap.end());
 }
 
-Location *Event::getLocation(const Client *client)
+Location *Event::getLocation(const Client *client, int port)
 {
 	VirtualServer *Vserver;
 	int serverfd;
+	bool IsDefault = true;
 
 	serverfd = client->getServerFd();
 	const std::string &path = client->getPath();
 	const std::string &host = client->getHost();
-
 	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second; // always exist
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())
-		Vserver = this->defaultServer.find(client->getServerFd())->second; // plz dont fail all my hope on you
+		Vserver = this->defaultServer.find(client->getServerFd())->second,
+		IsDefault = false; // plz dont fail all my hope on you
 	else
 		Vserver = _Vserver->second;
+
 	Location *location = Vserver->getRoute(path);
+	if (location)
+	{
+		if (IsDefault)
+			location->setINFO(host, port);
+		else
+			location->setINFO(*Vserver->getServerNames().begin(), port);
+	}
 	return (location);
 }

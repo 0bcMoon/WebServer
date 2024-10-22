@@ -153,3 +153,23 @@ const std::string &Location::getPath()
 {
 	return (this->path);
 }
+void Location::setINFO(const std::string &host, int port)
+{
+	this->host = host;
+	this->port = port;
+}
+
+int Location::getPort() const
+{
+	return (this->port);
+}
+
+const std::string& Location::getHost() const
+{
+	return (this->host);
+}
+
+const std::string &Location::getFileUploadPath()
+{
+	return (this->upload_file_path);
+}

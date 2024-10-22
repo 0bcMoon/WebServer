@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,15 +22,16 @@ int main()
 	const char *request =
 		"GET / HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
-		"Content-Length: 0\r\n"
-		"Connection: Keep-Aliveclose\r\n\r\n";
-	// Resolve the hostname
+		"Content-Length:0\r\n"
+		"Connection: Keep-Alive\r\n\r\n";
+
 	server = gethostbyname(host);
 	if (server == NULL)
 	{
 		fprintf(stderr, "Error: no such host\n");
 		exit(EXIT_FAILURE);
 	}
+
 	// Create a socket
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0)
@@ -50,15 +52,6 @@ int main()
 	{
 		error("Error writing to socket");
 	}
-	// Send the HTTP GET request
-	// if (write(sockfd, request, 30) < 0) {
-	//     error("Error writing to socket");
-	// }
-	// sleep(2);
-	//    if (write(sockfd, request + 31, 26) < 0) {
-	//        error("Error writing to socket");
-	// }
-	// Read the response
 	bzero(buffer, BUFFER_SIZE);
 	ssize_t n;
 	while ((n = read(sockfd, buffer, BUFFER_SIZE - 1)) >= 0)
@@ -68,9 +61,7 @@ int main()
 		bzero(buffer, BUFFER_SIZE);
 	}
 	if (n < 0)
-	{
 		error("Error reading from socket");
-	}
 	pause();
 	// Close the socket
 	close(sockfd);

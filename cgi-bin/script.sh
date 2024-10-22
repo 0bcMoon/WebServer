@@ -11,7 +11,7 @@ echo "<head><title>Simple Bash CGI Script</title></head>"
 echo "<body>"
 
 # Get the query string from the environment (if passed)
-if [ -n "$QUERY_STRING" ]; then
+$ if [ -n "$QUERY_STRING" ]; then
     echo "<h3>Query String: $QUERY_STRING</h3>"
     # Parse and display each query parameter
     echo "<ul>"

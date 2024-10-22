@@ -1,13 +1,13 @@
 
 --- handel if at least one Vserver exist and each server has one location define
 --- 
+--- get ip address and port
 --- add logging support
 --- FIX BODY_SIZE
 --- LIMIT READ AND WRITE SIZE WITH KEVENT
 --- HANDLING EXCEPTION
 --- transfort file
 --- upload file
---- encoding
 --- REDIRECTIONS
 --- HANDLING TIMEOUT IN CGI
 --- DELETE

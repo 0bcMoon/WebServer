@@ -63,7 +63,7 @@ int			CgiHandler::initEnv()
 	env["REQUEST_METHOD"] = response->strMethod;
 	// std::cout << "---------------------> " << response->strMethod << std::endl; 
 	env["SCRIPT_NAME"] = response->path;
-	env["PATH_INFO"] = response->path;
+	env["PATH_INFO"] = response->location->globalConfig.getRoot() + response->path;
 	env["QUERY_STRING"] = response->queryStr;
 	env["CONTENT_TYPE"] = response->headers["Content-type"];
 	if (env["REQUEST_METHOD"] == "POST")
@@ -181,7 +181,7 @@ void		CgiHandler::execute(std::string cgiPath)
 			return ;
 	}
 	int status;
-	waitpid(pid, &status, 0);
+	waitpid(pid, &status, 0); //ERROR
 	if (status)
 		response->setHttpResError(500, "Internal Server Error");
 	close(pipefdIn[0]);
