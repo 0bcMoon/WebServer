@@ -79,6 +79,7 @@ class HttpResponse
 		static const int					fileReadingBuffer = 10240;
 		std::string							autoIndexBody;
 		ServerContext						*ctx;
+		HttpRequest							*request;
 	public:
 		std::string							queryStr;
 		std::string											getCgiContentLenght();
@@ -92,7 +93,7 @@ class HttpResponse
 		std::map<std::string, std::string>					headers;
 		std::map<std::string, std::string>					resHeaders;
 
-		HttpResponse(int fd, ServerContext *ctx);
+		HttpResponse(int fd, ServerContext *ctx, HttpRequest *request);
 		HttpResponse	operator=(const HttpRequest& req);
 
 		void							responseCooking();
@@ -132,7 +133,7 @@ class HttpResponse
 
 		void							decodingUrl();
 		void							splitingQuery();
-
+		int								uploadFile();
 };
 
 std::string			decimalToHex(int	decimal);

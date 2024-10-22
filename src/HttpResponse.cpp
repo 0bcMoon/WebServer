@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <sys/dirent.h>
+#include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include <system_error>
@@ -21,7 +22,7 @@
 #include <stdio.h>
 #include <dirent.h>
 
-HttpResponse::HttpResponse(int fd, ServerContext *ctx) : fd(fd) , ctx(ctx)
+HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : fd(fd) , ctx(ctx), request(request)
 {
 	keepAlive = 1;
 	location = NULL;
@@ -642,6 +643,12 @@ void			HttpResponse::splitingQuery()
 	path = path.substr(0, pos);
 }
 
+// int				HttpResponse::uploadFile()
+// {
+// 	int __fd = open(const char *, int, ...)
+// 	return (1);
+// }
+
 void			HttpResponse::responseCooking()
 {
 	decodingUrl();
@@ -656,6 +663,8 @@ void			HttpResponse::responseCooking()
 	{
 		if (!isMethodAllowed() || !pathChecking())
 			return ;
+		if (strMethod == "POST" && !uploadFile())
+			return;
 		writeResponse();
 	}
 }

@@ -71,6 +71,13 @@ enum reqBodyType {
 	NON
 };
 
+struct multiPart 
+{
+	std::vector<unsigned char>				body;
+	std::map<std::string, std::string>		headers;
+	std::vector<std::string>				strsHeaders;
+};
+
 class HttpRequest 
 {
 	private:
@@ -104,8 +111,10 @@ class HttpRequest
 		methodeStr							methodeStr;
 		std::string							httpVersion;
 
-		reqBodyType							reqBody;
-		std::string							bodyBoundary;
+		reqBodyType									reqBody;
+		std::string									bodyBoundary;
+		std::vector<multiPart>						multiPartBodys;
+
 		int 		convertChunkSize();
 		void			chunkEnd();
 
@@ -131,6 +140,7 @@ class HttpRequest
 		void		nLineHandle();
 		int			checkContentType();
 
+		int			parseMuliPartBody();
 	public:
 		enum reqState state;
 
