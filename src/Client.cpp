@@ -35,7 +35,7 @@ void Client::respond()
 	if (request.state != REQUEST_FINISH && request.state != REQ_ERROR)
 		return ;
 	response = request;
-	if ((response.headers.find("Connection") != response.headers.end()
+	if ((response.headers.find("Connection") != response.headers.end() //TODO: create a function that return bool from search from file //TODO: handle connection with Cgi
 		&& (response.headers["Connection"].find("close") != std::string::npos
 			|| response.headers["Connection"].find("Close") != std::string::npos))
 		|| request.state == REQ_ERROR)

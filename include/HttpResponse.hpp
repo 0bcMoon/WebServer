@@ -28,7 +28,8 @@ class HttpResponse
 		{
 			LOAD_FILE,	
 			NO_TYPE,
-			AUTO_INDEX
+			AUTO_INDEX,
+			CGI
 		};
 		enum reqMethode
 		{
@@ -50,6 +51,22 @@ class HttpResponse
 			std::string		htmlErrorId;
 			std::string		bodyfoot;
 		};
+
+		enum cgiResponeState
+		{
+			HEADERS,
+			BODY,
+			PARSING_DONE
+		};
+		struct cgiRespone 
+		{
+			cgiResponeState	state;
+			size_t			bodyStartIndex;
+			std::string		cgiStatusLine;
+			std::vector<std::vector<unsigned char > > lines;
+		};
+
+		cgiRespone							cgiRes;
 		int									fd;
 		enum reqMethode						methode;
 		std::vector<unsigned char>							body;
@@ -63,6 +80,9 @@ class HttpResponse
 		std::string							autoIndexBody;
 		ServerContext						*ctx;
 	public:
+		std::string							queryStr;
+		std::string											getCgiContentLenght();
+		int												parseCgiHaders(std::string str);
 		std::string											strMethod;
 		std::vector<std::vector<unsigned char> >			responseBody;
 		int													keepAlive; // bool? // bool?
@@ -91,6 +111,7 @@ class HttpResponse
 		std::string						getContentLenght(); // TYPO
 		int								directoryHandler();
 		int								loadFile(const std::string& pathName);
+		int								loadFile(int _fd);//for cgi
 
 		void							writeResponse();
 
@@ -103,6 +124,15 @@ class HttpResponse
 
 		int								autoIndexCooking();
 		static std::string				getExtension(std::string str);
+		std::vector<unsigned char>		getBody() const;
+
+
+		void							parseCgiOutput();
+		void							writeCgiResponse();
+
+		void							decodingUrl();
+		void							splitingQuery();
+
 };
 
 std::string			decimalToHex(int	decimal);

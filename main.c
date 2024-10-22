@@ -31,6 +31,7 @@ int main()
 		fprintf(stderr, "Error: no such host\n");
 		exit(EXIT_FAILURE);
 	}
+
 	// Create a socket
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0)
@@ -51,15 +52,6 @@ int main()
 	{
 		error("Error writing to socket");
 	}
-	// Send the HTTP GET request
-	// if (write(sockfd, request, 30) < 0) {
-	//     error("Error writing to socket");
-	// }
-	// sleep(2);
-	//    if (write(sockfd, request + 31, 26) < 0) {
-	//        error("Error writing to socket");
-	// }
-	// Read the response
 	bzero(buffer, BUFFER_SIZE);
 	ssize_t n;
 	while ((n = read(sockfd, buffer, BUFFER_SIZE - 1)) >= 0)

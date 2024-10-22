@@ -165,15 +165,15 @@ void HttpRequest::feed()
 	
 	// INFO: print request information;
 
-	// std::cout << error.code << ": " << error.description << std::endl; 
-	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
-	// for (map_it it = headers.begin(); it != headers.end(); ++it) {
- //        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
-    // }
-	// for (auto& it : body)
-	// {
-	// 	std::cout << (char)it;
-	// }
+	std::cout << error.code << ": " << error.description << std::endl; 
+	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	for (map_it it = headers.begin(); it != headers.end(); ++it) {
+        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+    }
+	for (auto& it : body)
+	{
+		std::cout << (char)it;
+	}
 }
 
 void HttpRequest::setHttpReqError(int code, std::string str)
@@ -203,8 +203,7 @@ void HttpRequest::parseMethod()
 		}
 		if (reqBuffer[reqBufferIndex] < 'A' || reqBuffer[reqBufferIndex] > 'Z')
 		{
-			std::cout << "-----------> " <<  (int)reqBuffer[reqBufferIndex] << "\n";
-			setHttpReqError(400, "Bad Request2");
+			setHttpReqError(400, "Bad Request");
 			return ;
 		}
 		methodeStr.tmpMethodeStr.push_back(reqBuffer[reqBufferIndex]);
@@ -217,7 +216,7 @@ int HttpRequest::verifyUriChar(char c)
 	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
 	|| c == '-' || c == '.' || c == '_' || c == '~' || c == '!' || c == '$' || c == '&'
 	|| c == '\'' || c == '(' || c == ')' || c == '*' || c == '+' || c == ',' || c == ';'
-	|| c == '=' || c == '@' || c == '/' || c == ':');
+	|| c == '=' || c == '@' || c == '/' || c == ':' || c == '%' || c == '?');
 }
 
 void HttpRequest::parsePath()
