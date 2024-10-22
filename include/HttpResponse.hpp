@@ -80,6 +80,7 @@ class HttpResponse
 		std::string							autoIndexBody;
 		ServerContext						*ctx;
 	public:
+		std::string getRandomName();
 		std::string							queryStr;
 		std::string											getCgiContentLenght();
 		int												parseCgiHaders(std::string str);
