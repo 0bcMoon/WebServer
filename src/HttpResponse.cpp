@@ -10,6 +10,7 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <sys/dirent.h>
 #include <sys/fcntl.h>
@@ -643,11 +644,31 @@ void			HttpResponse::splitingQuery()
 	path = path.substr(0, pos);
 }
 
-// int				HttpResponse::uploadFile()
-// {
-// 	int __fd = open(const char *, int, ...)
-// 	return (1);
-// }
+int				HttpResponse::uploadFile()
+{
+	if (request->reqBody == MULTI_PART)
+	{
+		for (size_t _i = 0; _i < request->multiPartBodys.size();_i++)
+		{
+			int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_RDONLY, 0644);
+			if (__fd < 0)
+				return (setHttpResError(500, "Internal Server Error"), 0);
+			for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
+				write(__fd, &request->multiPartBodys[_i].body[__i], 1);
+			close (__fd);
+		}
+	}
+	if (request->reqBody == TEXT_PLAIN)
+	{
+		int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_RDONLY, 0644);
+		if (__fd < 0)
+			return (setHttpResError(500, "Internal Server Error"), 0);
+		for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
+			write(__fd, &body[__i], 1);
+		close (__fd);
+	}
+	return (1);
+}
 
 void			HttpResponse::responseCooking()
 {

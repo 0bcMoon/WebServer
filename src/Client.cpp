@@ -14,18 +14,18 @@ int Client::getFd() const
 	return (fd);
 }
 
-Client::Client() : response(-1, NULL)
+Client::Client() : response(-1, NULL, NULL)
 {
 	fd = -1;
 	state = REQUEST;
 }
 
-Client::Client(int fd) : fd(fd), request(fd), response(fd, NULL)
+Client::Client(int fd) : fd(fd), request(fd), response(fd, NULL, NULL)
 {
 	state = REQUEST;
 }
 
-Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), request(fd), response(fd, ctx)
+Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), request(fd), response(fd, ctx, &request)
 {
 	state = REQUEST;
 }

@@ -134,6 +134,7 @@ class HttpResponse
 		void							decodingUrl();
 		void							splitingQuery();
 		int								uploadFile();
+		static std::string				getRandomName();
 };
 
 std::string			decimalToHex(int	decimal);

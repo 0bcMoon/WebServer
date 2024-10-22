@@ -111,9 +111,6 @@ class HttpRequest
 		methodeStr							methodeStr;
 		std::string							httpVersion;
 
-		reqBodyType									reqBody;
-		std::string									bodyBoundary;
-		std::vector<multiPart>						multiPartBodys;
 
 		int 		convertChunkSize();
 		void			chunkEnd();
@@ -142,6 +139,9 @@ class HttpRequest
 
 		int			parseMuliPartBody();
 	public:
+		reqBodyType									reqBody;
+		std::string									bodyBoundary;
+		std::vector<multiPart>						multiPartBodys;
 		enum reqState state;
 
 		HttpRequest();
