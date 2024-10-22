@@ -81,6 +81,7 @@ class HttpResponse
 		ServerContext						*ctx;
 		HttpRequest							*request;
 	public:
+		std::string getRandomName();
 		std::string							queryStr;
 		std::string											getCgiContentLenght();
 		int												parseCgiHaders(std::string str);
@@ -134,7 +135,6 @@ class HttpResponse
 		void							decodingUrl();
 		void							splitingQuery();
 		int								uploadFile();
-		static std::string				getRandomName();
 };
 
 std::string			decimalToHex(int	decimal);

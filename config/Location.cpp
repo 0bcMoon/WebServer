@@ -25,6 +25,9 @@ Location &Location::operator=(const Location &location)
 	this->isRedirection = location.isRedirection;
 	this->cgiMap = location.cgiMap;
 	this->methods = location.methods;
+	// this->upload_file_path = location.upload_file_path;
+	this->upload_file_path = "/tmp/"; // WARNING: TODO 
+	
 	return *this;
 }
 void Location::setPath(std::string &path)

@@ -72,7 +72,7 @@ int main()
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sigpipe_handler;
 	sigemptyset(&sa.sa_mask);
-
+	std::srand(std::time(NULL));
 	if (sigaction(SIGPIPE, &sa, NULL) == -1)
 	{
 		printf("Failed to set SIGPIPE handler: %s\n", strerror(errno));
