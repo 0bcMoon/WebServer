@@ -23,6 +23,7 @@ HttpRequest::HttpRequest() : fd(-1)
 	reqBufferSize = 0;
 	error.code = 200;
 	error.description = "OK";
+	reqBody = NON;
 }
 
 HttpRequest::HttpRequest(int fd) : fd(fd)
@@ -37,6 +38,7 @@ HttpRequest::HttpRequest(int fd) : fd(fd)
 	error.description = "OK";
 	chunkState = SIZE;
 	totalChunkSize = 0;
+	reqBody = NON;
 }
 
 void	HttpRequest::clear()
@@ -54,6 +56,7 @@ void	HttpRequest::clear()
 	body.clear();
 	bodySize = -1;
 	reqSize = 0;
+	reqBody = NON;
 	// reqBufferSize = 0;
 	// reqBufferIndex = 0;
 	// reqBuffer.clear();
@@ -99,8 +102,8 @@ void HttpRequest::readRequest()
 	int size = read(fd, tmp, REQSIZE_MAX + 1);
 	if (size ==  -1)
 		return ;
-	// else if ((reqSize + size) > REQSIZE_MAX)
-	// 	setHttpError(413, "Content Too Large");
+	int __fd = open("log1", O_CREAT | O_RDWR | O_APPEND , 0777);
+	write(__fd, tmp, size);
 	if (size == 0)
 		return ;
 	else if (size > 0)
@@ -112,11 +115,6 @@ void HttpRequest::readRequest()
 			reqBuffer[i] = tmp[j];
 			j++;
 		}
-		// tmp[size] = 0;
-		// std::string str(tmp);
-		// reqBuffer += str;
-		// reqBuffer = reqBuffer.substr(reqBufferIndex);
-		// reqBufferIndex = 0;
 	}
 }
 
@@ -137,6 +135,7 @@ void HttpRequest::feed()
 	// 			"0\r\n\n" ;
  	while (reqBufferIndex < reqBuffer.size() && state != REQ_ERROR && state != DEBUG)
 	{
+		std::cout << "--------\n";
 		if (state == METHODE)
 			parseMethod();
 		if (state == PATH)
@@ -165,15 +164,17 @@ void HttpRequest::feed()
 	
 	// INFO: print request information;
 
-	std::cout << error.code << ": " << error.description << std::endl; 
-	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
-	for (map_it it = headers.begin(); it != headers.end(); ++it) {
-        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
-    }
-	for (auto& it : body)
-	{
-		std::cout << (char)it;
-	}
+	// std::cout << error.code << ": " << error.description << std::endl; 
+	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	// for (map_it it = headers.begin(); it != headers.end(); ++it) {
+ //        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+ //    }
+	// int __fd = open("log", O_RDWR, 0777);
+	// for (auto& it : body)
+	// {
+	// 	write(__fd, &it, 1);
+	// 	// std::cout << (char)it;
+	// }
 }
 
 void HttpRequest::setHttpReqError(int code, std::string str)
@@ -538,6 +539,11 @@ void HttpRequest::parseHeaderVal()
 			currHeaderVal.clear();
 			return;
 		}
+		if (!std::isprint((int)reqBuffer[reqBufferIndex]))
+		{
+			setHttpReqError(400, "Bad Request");
+			return ;
+		}
 		// headers[currHeaderName].push_back(reqBuffer[reqBufferIndex]);
 		currHeaderVal.push_back(reqBuffer[reqBufferIndex]);
 		reqBufferIndex++;
@@ -553,6 +559,38 @@ int HttpRequest::isNum(const std::string& str)
 			return (0);
 	}
 	return (1);
+}
+
+int		HttpRequest::checkContentType()
+{
+	if (headers.find("Content-Type") == headers.end())
+		return (0);	
+	std::vector<std::string>	vec;
+	size_t						i = 0;
+	std::string					tmp;
+
+	while (i < headers["Content-Type"].size() && headers["Content-Type"][i] == ' ')
+		i++;
+	if (i == headers["Content-Type"].size())
+		return (0);
+	while (headers["Content-Type"].size() > i && headers["Content-Type"][i] != ';')
+	{
+		tmp.push_back(headers["Content-Type"][i]);
+		i++;
+	}
+	if ((tmp == "text/plain" || tmp == "application/x-www-form-urlencoded") 
+		&& headers["Content-Type"].size() != i)
+		return (setHttpReqError(400, "Bad Request"), 1);
+	if (tmp == "text/plain")
+		return (reqBody = TEXT_PLAIN, 1);
+	if (tmp == "application/x-www-form-urlencoded")
+		return (reqBody = URL_ENCODED, 1);
+	if (tmp != "multipart/form-data")
+		return (setHttpReqError(415, "Unsupported Media Type"), 1);
+	tmp = " boundary=";
+	size_t j = 0;
+	// while (tmp[j] == "")
+	return (0);
 }
 
 int		HttpRequest::firstHeadersCheck()
@@ -571,7 +609,10 @@ int		HttpRequest::firstHeadersCheck()
 	if (headers.find("Content-Length") == headers.end()
 		&& headers.find("Transfer-Encoding") == headers.end())
 		return (state = BODY_FINISH, 1);
-	return (0);
+	if (headers.find("Content-Type") != headers.end()
+		&& headers["Content-Type"].find(",") != std::string::npos)
+		return (setHttpReqError(400, "Bad Request"), 1);
+	return (/* checkContentType() */ 0);
 }
 
 void		HttpRequest::contentLengthBodyParsing()

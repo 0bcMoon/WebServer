@@ -8,8 +8,8 @@
 #include <vector>
 
 #define URI_MAX		 2048
-#define REQSIZE_MAX  50000
-#define BODY_MAX	 30000
+#define REQSIZE_MAX  5000000
+#define BODY_MAX	 3000000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
 
@@ -64,7 +64,12 @@ typedef struct methodeStr
 	
 } methodeStr;
 
-
+enum reqBodyType {
+	MULTI_PART,
+	TEXT_PLAIN,
+	URL_ENCODED,
+	NON
+};
 
 class HttpRequest 
 {
@@ -99,6 +104,8 @@ class HttpRequest
 		methodeStr							methodeStr;
 		std::string							httpVersion;
 
+		reqBodyType							reqBody;
+		std::string							bodyBoundary;
 		int 		convertChunkSize();
 		void			chunkEnd();
 
@@ -120,8 +127,9 @@ class HttpRequest
 		void		contentLengthBodyParsing();
 		void		chunkedBodyParsing();
 
-		void returnHandle();
-		void nLineHandle();
+		void		returnHandle();
+		void		nLineHandle();
+		int			checkContentType();
 
 	public:
 		enum reqState state;
