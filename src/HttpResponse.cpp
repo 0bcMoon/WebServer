@@ -253,6 +253,7 @@ int HttpResponse::loadFile(int _fd)
 int HttpResponse::pathChecking()
 {
 	this->fullPath = location->globalConfig.getRoot() + this->path;
+
 	struct stat sStat;
 	stat(fullPath.c_str(), &sStat);
 	if (S_ISDIR(sStat.st_mode))

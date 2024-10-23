@@ -315,7 +315,7 @@ void Event::eventLoop()
 					std::cout << client->getPath() << "\n";
 					client->respond();
 					client->response = HttpResponse(ev->ident, this->ctx, &client->request);
-					// client->response.~HttpResponse();
+					// client->respnse.~HttpResponse();
 
 					// INFO : keep alive
 
