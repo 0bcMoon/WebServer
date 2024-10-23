@@ -209,3 +209,8 @@ const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 		return (this->errorPages.find(StatusCode)->second);
 	return (kv->second);
 }
+
+// bool GlobalConfig::isMethodAllowed(int method) const
+// {
+// 	return (this->me)
+// }

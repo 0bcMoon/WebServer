@@ -129,9 +129,17 @@ bool HttpResponse::isPathFounded()
 
 bool HttpResponse::isMethodAllowed()
 {
-	// return (setHttpResError(405, "Method Not Allowed"),
-	// 	this->location->globalConfig.isMethodAllowed(this->methode));
-	return (true);
+	if (strMethod == "GET")
+		methode = GET;
+	else if (strMethod == "POST")
+		methode = POST;
+	else if (strMethod == "DELETE")
+		methode = DELETE;
+	else 
+		methode = NONE;
+	return (this->location->isMethodAllowed(this->methode));
+	// return (setHttpResError(405, "Method Not Allowed"));
+	// return (true);
 }
 
 void HttpResponse::cgiCooking()
@@ -145,8 +153,7 @@ void HttpResponse::cgiCooking()
 }
 
 int HttpResponse::autoIndexCooking()
-{
-	std::vector<std::string> dirContent;
+{ std::vector<std::string> dirContent;
 	DIR *dirStream = opendir(fullPath.c_str());
 	if (dirStream == NULL)
 		return (setHttpResError(500, "Internal Server Error"), 0);
@@ -653,13 +660,10 @@ void			HttpResponse::responseCooking()
 		cgiCooking(/**/);
 	else
 	{
+		if (!isMethodAllowed())
+			return 	setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
 			return ;
-		if (strMethod != "GET")
-		{
-			setHttpResError(405, "Method Not Allowed");
-			return ;
-		}
 		if (strMethod == "POST" && !uploadFile())
 			return;
 		writeResponse();
