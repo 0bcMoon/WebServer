@@ -9,51 +9,52 @@
 
 class Location
 {
-  private:
-	typedef int http_method_t;
-	enum methods_e
-	{
-		GET = 0b1,
-		POST = 0b10,
-		DELETE = 0b100,
-	};
-	struct Redirection
-	{
-		std::string status;
-		std::string url;
-		std::string body; // INFO: body file name;
-	};
-	Redirection redirect;
-	http_method_t methods;
-	bool isRedirection;
-	std::string path;
-	std::map<std::string, std::string> cgiMap;
-	std::string upload_file_path;
-	std::string host;
-	int port;
+	private:
+		typedef int http_method_t;
+		enum methods_e
+		{
+			GET = 0b1,
+			POST = 0b10,
+			DELETE = 0b100,
+		};
+		struct Redirection
+		{
+			std::string status;
+			std::string url;
+			std::string body; // INFO: body file name;
+		};
+		Redirection redirect;
+		http_method_t methods;
+		bool isRedirection;
+		std::string path;
+		std::map<std::string, std::string> cgiMap;
+		std::string upload_file_path;
+		std::string host;
+		int port;
+		std::string alias;
 
-  public:
-	GlobalConfig globalConfig;
+	public:
+		Location();
+		Location &operator=(const Location &location);
+		GlobalConfig globalConfig;
 
-	bool isMethodAllowed(int method) const;
-	void setUploadPath(Tokens &token, Tokens &end);
-	Location();
-	Location &operator=(const Location &location);
-	void setPath(std::string &path);
-	const std::string &getPath();
-	void setRedirect(Tokens &token, Tokens &end);
-	void parseTokens(Tokens &token, Tokens &end);
-	static bool isValidStatusCode(std::string &str);
-	bool HasRedirection() const;
-	const Redirection &getRedirection() const;
-	void setMethods(Tokens &token, Tokens &end);
+		bool isMethodAllowed(int method) const;
+		void setUploadPath(Tokens &token, Tokens &end);
+		void setPath(std::string &path);
+		const std::string &getPath();
+		void setRedirect(Tokens &token, Tokens &end);
+		void parseTokens(Tokens &token, Tokens &end);
+		static bool isValidStatusCode(std::string &str);
+		bool HasRedirection() const;
+		const Redirection &getRedirection() const;
+		void setMethods(Tokens &token, Tokens &end);
 
-	const std::string &geCGItPath(const std::string &ext);
-	const std::string &geCGIext();
-	void setCGI(Tokens &token, Tokens &end);
-	void setINFO(const std::string &host, int port);
-	const std::string &getFileUploadPath();
-	int getPort() const;
-	const std::string& getHost() const;
+		const std::string &geCGItPath(const std::string &ext);
+		const std::string &geCGIext();
+		void setCGI(Tokens &token, Tokens &end);
+		void setINFO(const std::string &host, int port);
+		int getPort() const;
+		const std::string& getHost() const;
+		const std::string &getFileUploadPath();//INFO:uploded file
 };
 #endif

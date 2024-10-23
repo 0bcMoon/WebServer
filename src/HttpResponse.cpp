@@ -15,14 +15,19 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <sys/dirent.h>
+#include <sys/fcntl.h>
+#include <sys/stat.h>
+#include <sys/unistd.h>
 #include <system_error>
 #include <vector>
 #include "CgiHandler.hpp"
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
-HttpResponse::HttpResponse(int fd, ServerContext *ctx) : fd(fd), ctx(ctx)
+HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : fd(fd) , ctx(ctx), request(request)
 {
 	keepAlive = 1;
 	location = NULL;
@@ -48,7 +53,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx) : fd(fd), ctx(ctx)
 	errorRes.connection = "Connection: Keep-Alive\r\n";
 }
 
-std::vector<unsigned char> HttpResponse::getBody() const
+std::vector<char> HttpResponse::getBody() const
 {
 	return (body);
 }
@@ -247,8 +252,10 @@ int HttpResponse::loadFile(int _fd)
 
 int HttpResponse::pathChecking()
 {
-	this->fullPath = location->globalConfig.getRoot() + this->path;
+	size_t offset = location->globalConfig.getAliasOffset() ? this->location->getPath().size() : 0;
+	this->fullPath = location->globalConfig.getRoot() + this->path.substr(offset);
 
+	std::cout << "this is full path "<<this->fullPath << "\n";
 	struct stat sStat;
 	stat(fullPath.c_str(), &sStat);
 	if (S_ISDIR(sStat.st_mode))
@@ -270,7 +277,7 @@ static int isValidHeaderChar(char c)
 	return (isAlpha(c) || (c >= '1' && c <= '9') || c == '-' || c == ':');
 }
 
-static int isStatusLine(std::vector<unsigned char> vec)
+static int isStatusLine(std::vector<char> vec)
 {
 	return (
 		vec[0] == 'H' && vec[1] == 'T' && vec[2] == 'T' && vec[3] == 'P' && vec[4] == '/' && vec[5] == '1'
@@ -298,7 +305,7 @@ int HttpResponse::parseCgiHaders(std::string str)
 	return (1);
 }
 
-static int isLineCrlf(std::vector<unsigned char> vec)
+static int isLineCrlf(std::vector<char> vec)
 {
 	size_t _i = 0;
 	while (_i < vec.size() - 1)
@@ -310,7 +317,7 @@ static int isLineCrlf(std::vector<unsigned char> vec)
 	return (1);
 }
 
-static std::string vec2str(std::vector<unsigned char> vec)
+static std::string vec2str(std::vector<char> vec)
 {
 	std::string str;
 
@@ -355,7 +362,7 @@ void HttpResponse::parseCgiOutput()
 		for (size_t j = 0; j < responseBody[i].size(); j++)
 		{
 			if (lineIndex == cgiRes.lines.size())
-				cgiRes.lines.push_back(std::vector<unsigned char>());
+				cgiRes.lines.push_back(std::vector<char>());
 			cgiRes.lines[lineIndex].push_back(responseBody[i][j]);
 			if (responseBody[i][j] == '\n')
 				lineIndex++;
@@ -653,7 +660,34 @@ void HttpResponse::splitingQuery()
 	path = path.substr(0, pos);
 }
 
-void HttpResponse::responseCooking()
+int				HttpResponse::uploadFile()
+{
+	if (request->reqBody == MULTI_PART)
+	{
+		for (size_t _i = 0; _i < request->multiPartBodys.size();_i++)
+		{
+			std::cout << "file uplod " << location->getFileUploadPath() <<"\n";
+			int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
+			if (__fd < 0)
+				return (setHttpResError(500, "Internal Server Error"), 0);
+			for (size_t __i = 0; __i < request->multiPartBodys[_i].body.size(); __i++)
+				write(__fd, &request->multiPartBodys[_i].body[__i], 1);
+			close (__fd);
+		}
+	}
+	if (request->reqBody == TEXT_PLAIN)
+	{
+		int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
+		if (__fd < 0)
+			return (setHttpResError(500, "Internal Server Error"), 0);
+		for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
+			write(__fd, &body[__i], 1);
+		close (__fd);
+	}
+	return (1);
+}
+
+void			HttpResponse::responseCooking()
 {
 	decodingUrl();
 	splitingQuery();
@@ -666,6 +700,8 @@ void HttpResponse::responseCooking()
 	else
 	{
 		if (!isMethodAllowed() || !pathChecking())
+			return ;
+		if (strMethod == "POST" && !uploadFile())
 			return;
 		writeResponse();
 	}

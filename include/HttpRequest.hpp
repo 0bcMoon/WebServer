@@ -8,8 +8,8 @@
 #include <vector>
 
 #define URI_MAX		 2048
-#define REQSIZE_MAX  50000
-#define BODY_MAX	 30000
+#define REQSIZE_MAX  5000000
+#define BODY_MAX	 3000000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
 
@@ -64,7 +64,19 @@ typedef struct methodeStr
 	
 } methodeStr;
 
+enum reqBodyType {
+	MULTI_PART,
+	TEXT_PLAIN,
+	URL_ENCODED,
+	NON
+};
 
+struct multiPart 
+{
+	std::vector<char>				body;
+	std::map<std::string, std::string>		headers;
+	std::vector<std::string>				strsHeaders;
+};
 
 class HttpRequest 
 {
@@ -85,7 +97,7 @@ class HttpRequest
 		std::string							currHeaderName;
 		std::string							currHeaderVal;
 
-		std::vector<unsigned char>							body; // TODO : body  may be binary (include '\0') fix this;
+		std::vector<char>							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;
 		int                                 reqSize;
 		size_t								reqBufferSize;
@@ -97,6 +109,7 @@ class HttpRequest
 
 		methodeStr							methodeStr;
 		std::string							httpVersion;
+
 
 		int 		convertChunkSize();
 		void			chunkEnd();
@@ -119,10 +132,15 @@ class HttpRequest
 		void		contentLengthBodyParsing();
 		void		chunkedBodyParsing();
 
-		void returnHandle();
-		void nLineHandle();
+		void		returnHandle();
+		void		nLineHandle();
+		int			checkContentType();
 
+		int			parseMuliPartBody();
 	public:
+		reqBodyType									reqBody;
+		std::string									bodyBoundary;
+		std::vector<multiPart>						multiPartBodys;
 		enum reqState state;
 
 		HttpRequest();
@@ -138,7 +156,7 @@ class HttpRequest
 		void		clear();
 
 		std::map<std::string, std::string>	getHeaders() const;
-		std::vector<unsigned char>					getBody() const;
+		std::vector<char>					getBody() const;
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;
 		const std::string &getHost() const;

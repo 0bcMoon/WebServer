@@ -308,12 +308,11 @@ void Event::eventLoop()
 						continue;
 					this->WriteEvent(client->getFd(), EV_DISABLE); // TODO: if it faild whats to do
 					struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
-					client->response.location = this->getLocation(client, ntohs(addr.sin_port));
-					std::cout << client->response.location->getFileUploadPath() << " --------------------\n";
-					// INFO: get port and host remote address isn't availbe
-					std::cout << client->response.location->getPort() << "\n";
-					std::cout << client->response.location->getHost() << "\n";
-					std::cout << client->getPath() << "\n";
+					// std::cout << client->response.location->getFileUploadPath() << " --------------------\n";
+					// // INFO: get port and host remote address isn't availbe
+					// std::cout << client->response.location->getPort() << "\n";
+					// std::cout << client->response.location->getHost() << "\n";
+					// std::cout << client->getPath() << "\n";
 					client->respond();
 					// INFO : keep alive
 
