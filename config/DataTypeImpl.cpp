@@ -142,8 +142,6 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 		this->setIndexes(token, end);
 	else if (*token == "error_page")
 		this->setErrorPages(token, end);
-	else if (*token == "client_upload_path")
-		this->setUploadPath(token, end);
 	else
 		throw ParserException("Invalid token: " + *token);
 	return (true);
@@ -176,20 +174,6 @@ const std::vector<std::string> &GlobalConfig::getIndexes()
 	return (this->indexes);
 }
 
-void GlobalConfig::setUploadPath(Tokens &token, Tokens &end)
-{
-	struct stat buf;
-
-	this->validateOrFaild(token, end);
-	this->upload_file_path = this->consume(token, end);
-	this->CheckIfEnd(token, end);
-	if (stat(this->upload_file_path.data(), &buf) != 0)
-		throw ParserException("Upload path does directory does not exist");
-	if (S_ISDIR(buf.st_mode) == 0)
-		throw ParserException("Upload Path is not a directory");
-	if (access(this->upload_file_path.data(), W_OK) != 0)
-		throw ParserException("invalid Upload path directory");
-}
 
 std::string GlobalConfig::loadFile(const char *filename)
 {
@@ -201,11 +185,12 @@ std::string GlobalConfig::loadFile(const char *filename)
 	return buf.str();
 }
 
+
 const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 {
 	std::map<std::string, std::string>::iterator kv = this->errorPages.find(StatusCode);
 
 	if (kv == this->errorPages.end())
-		return (this->errorPages.find(StatusCode)->second);
+		return (this->errorPages.find(StatusCode)->second); // TODO: Error fix me i may faild 
 	return (kv->second);
 }

@@ -25,6 +25,7 @@ Location &Location::operator=(const Location &location)
 	this->isRedirection = location.isRedirection;
 	this->cgiMap = location.cgiMap;
 	this->methods = location.methods;
+	this->upload_file_path = location.upload_file_path;
 	return *this;
 }
 void Location::setPath(std::string &path)
@@ -85,6 +86,8 @@ void Location::parseTokens(Tokens &token, Tokens &end)
 		this->setCGI(token, end);
 	else if (*token == "allow")
 		this->setMethods(token, end);
+	else if (*token == "client_upload_path")
+		this->setUploadPath(token, end);
 	else
 		this->globalConfig.parseTokens(token, end);
 }
@@ -172,4 +175,19 @@ const std::string& Location::getHost() const
 const std::string &Location::getFileUploadPath()
 {
 	return (this->upload_file_path);
+}
+
+void Location::setUploadPath(Tokens &token, Tokens &end)
+{
+	struct stat buf;
+
+	this->globalConfig.validateOrFaild(token, end);
+	this->upload_file_path = this->globalConfig.consume(token, end);
+	this->globalConfig.CheckIfEnd(token, end);
+	if (stat(this->upload_file_path.data(), &buf) != 0)
+		throw ParserException("Upload path does directory does not exist");
+	if (S_ISDIR(buf.st_mode) == 0)
+		throw ParserException("Upload Path is not a directory");
+	if (access(this->upload_file_path.data(), W_OK) != 0)
+		throw ParserException("invalid Upload path directory");
 }

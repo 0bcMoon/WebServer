@@ -43,8 +43,9 @@ void Client::respond()
 	std::cout << "keepAlive "<<response.keepAlive << "\n";
 	if (request.state == REQUEST_FINISH)
 		response.responseCooking();
-	if (response.state == ERROR)
+	else if (response.state == ERROR)
 	{
+		// request.getStrMethode // impl Logger here
 		write(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
 	request.clear();

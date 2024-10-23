@@ -36,6 +36,7 @@ class Location
 	GlobalConfig globalConfig;
 
 	bool isMethodAllowed(int method) const;
+	void setUploadPath(Tokens &token, Tokens &end);
 	Location();
 	Location &operator=(const Location &location);
 	void setPath(std::string &path);

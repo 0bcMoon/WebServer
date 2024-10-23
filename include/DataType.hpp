@@ -23,7 +23,6 @@ class GlobalConfig
 	std::string loadFile(const char *filename);
 	bool		isValidStatusCode(std::string &str); // WARNING:t5arbi9
 	void		setMethods(Tokens &token, Tokens &end);
-	void		setUploadPath(Tokens &token, Tokens &end);
 	void		validateOrFaild(Tokens &token, Tokens &end);
 	void		CheckIfEnd(Tokens &token, Tokens &end);
 	std::string &consume(Tokens &token, Tokens &end);

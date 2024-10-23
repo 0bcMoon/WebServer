@@ -87,7 +87,6 @@ class HttpRequest
 
 		std::vector<unsigned char>							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;
-
 		int                                 reqSize;
 		size_t								reqBufferSize;
 		size_t								reqBufferIndex;
