@@ -63,13 +63,13 @@ class HttpResponse
 			cgiResponeState	state;
 			size_t			bodyStartIndex;
 			std::string		cgiStatusLine;
-			std::vector<std::vector<unsigned char > > lines;
+			std::vector<std::vector<char > > lines;
 		};
 
 		cgiRespone							cgiRes;
 		int									fd;
 		enum reqMethode						methode;
-		std::vector<unsigned char>							body;
+		std::vector<char>							body;
 		httpError							status;	
 		bool								isCgiBool;
 		errorResponse						errorRes;
@@ -126,7 +126,7 @@ class HttpResponse
 
 		int								autoIndexCooking();
 		static std::string				getExtension(std::string str);
-		std::vector<unsigned char>		getBody() const;
+		std::vector<char>		getBody() const;
 
 
 		void							parseCgiOutput();

@@ -53,7 +53,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	errorRes.connection = "Connection: Keep-Alive\r\n";
 }
 
-std::vector<unsigned char> HttpResponse::getBody() const
+std::vector<char> HttpResponse::getBody() const
 {
 	return (body);
 }
@@ -275,7 +275,7 @@ static int isValidHeaderChar(char c)
 	return (isAlpha(c) || (c >= '1' && c <= '9') || c == '-' || c == ':');
 }
 
-static int isStatusLine(std::vector<unsigned char> vec)
+static int isStatusLine(std::vector<char> vec)
 {
 	return (
 		vec[0] == 'H' && vec[1] == 'T' && vec[2] == 'T' && vec[3] == 'P' && vec[4] == '/' && vec[5] == '1'
@@ -303,7 +303,7 @@ int HttpResponse::parseCgiHaders(std::string str)
 	return (1);
 }
 
-static int isLineCrlf(std::vector<unsigned char> vec)
+static int isLineCrlf(std::vector<char> vec)
 {
 	size_t _i = 0;
 	while (_i < vec.size() - 1)
@@ -315,7 +315,7 @@ static int isLineCrlf(std::vector<unsigned char> vec)
 	return (1);
 }
 
-static std::string vec2str(std::vector<unsigned char> vec)
+static std::string vec2str(std::vector<char> vec)
 {
 	std::string str;
 
@@ -360,7 +360,7 @@ void HttpResponse::parseCgiOutput()
 		for (size_t j = 0; j < responseBody[i].size(); j++)
 		{
 			if (lineIndex == cgiRes.lines.size())
-				cgiRes.lines.push_back(std::vector<unsigned char>());
+				cgiRes.lines.push_back(std::vector<char>());
 			cgiRes.lines[lineIndex].push_back(responseBody[i][j]);
 			if (responseBody[i][j] == '\n')
 				lineIndex++;

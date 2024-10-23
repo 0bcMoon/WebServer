@@ -89,7 +89,7 @@ std::map<std::string, std::string>	HttpRequest::getHeaders() const
 	return (headers);
 }
 
-std::vector<unsigned char>					HttpRequest::getBody() const
+std::vector<char>					HttpRequest::getBody() const
 {
 	return (body);
 }
@@ -131,7 +131,7 @@ void HttpRequest::readRequest()
 	}
 }
 
-static std::string vec2str(std::vector<unsigned char> vec)
+static std::string vec2str(std::vector<char> vec)
 {
 	std::string str;
 
@@ -142,7 +142,7 @@ static std::string vec2str(std::vector<unsigned char> vec)
 	return (str);
 }
 
-static int isValidHeader(std::vector<unsigned char> vec, std::map<std::string, std::string>& map)
+static int isValidHeader(std::vector<char> vec, std::map<std::string, std::string>& map)
 {
 	if (vec[vec.size() - 1] != '\n' || vec[vec.size() - 2] != '\r')
 		return (0);
@@ -171,33 +171,32 @@ int			HttpRequest::parseMuliPartBody()
 {
 	if (reqBody != MULTI_PART)
 		return (1);
-	std::vector<std::vector<unsigned char > >	lines;
+	std::vector<std::vector<char> >	lines;
 	size_t										lineIndex = 0;
 	std::vector<size_t>                         pos;
 
 	for (size_t i = 0; i < body.size(); i++)
 	{
 			if (lineIndex == lines.size())
-				lines.push_back(std::vector<unsigned char >());
+				lines.push_back(std::vector<char >());
 			lines[lineIndex].push_back(body[i]);
 			if (body[i] == '\n')
 				lineIndex++;
 	}
-	if (lines.size() == 0 || lines[0].size() == 0)
+	if (lines.size() < 3 || lines[0].size() == 0)
 		return (setHttpReqError(400, "Bad Request"), 0);
 	lineIndex = 0;
-	if (vec2str(lines[lineIndex]) != "--" + bodyBoundary  + "\r\n"
-			&& vec2str(lines[lineIndex]) != "--" + bodyBoundary + "\n")
+	if (vec2str(lines[lineIndex]) != "--" + bodyBoundary  + "\r\n")
 		return (setHttpReqError(400, "Bad Request"), 0);
 	while (lineIndex < lines.size() - 1)
 	{
-		if (vec2str(lines[lineIndex]) == "--" + bodyBoundary  + "\r\n"
-				|| vec2str(lines[lineIndex]) == "--" + bodyBoundary + "\n")
+		if (vec2str(lines[lineIndex]) == "--" + bodyBoundary  + "\r\n")
+		{
 			pos.push_back(lineIndex + 1);
+		}
 		lineIndex++;
 	}
-	if (vec2str(lines[lines.size() - 1]) != "--" + bodyBoundary + "--\n"
-			&& vec2str(lines[lines.size() - 1]) != "--" + bodyBoundary + "--\r\n")
+	if (vec2str(lines[lines.size() - 1]) != "--" + bodyBoundary + "--\r\n")
 		return (setHttpReqError(400, "Bad Request"), 0);
 	for (size_t i = 0; i < pos.size();i++)
 	{
@@ -214,8 +213,17 @@ int			HttpRequest::parseMuliPartBody()
 		}
 		if (vec2str(lines[it]) != "\r\n")
 			return (setHttpReqError(400, "Bad Request"), 0);
-		while (it < lines.size() - 1 && (i == pos.size() - 1 || it < pos[i + 1]) )
+		it++;
+		while (it < lines.size() && (i == pos.size() - 1 || it < pos[i + 1]))
 		{
+			if (vec2str(lines[it]) == "--" + bodyBoundary + "--\r\n"
+				|| vec2str(lines[it]) == "--" + bodyBoundary + "\r\n")
+			{
+				if (multiPartBodys[i].body.size() >= 2)
+					multiPartBodys[i].body.resize(multiPartBodys[i].body.size() - 2);
+				it++;
+				continue;
+			}
 			for (size_t __i = 0; __i < lines[it].size();__i++)
 			{
 				multiPartBodys[i].body.push_back(lines[it][__i]);

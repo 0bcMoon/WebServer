@@ -73,7 +73,7 @@ enum reqBodyType {
 
 struct multiPart 
 {
-	std::vector<unsigned char>				body;
+	std::vector<char>				body;
 	std::map<std::string, std::string>		headers;
 	std::vector<std::string>				strsHeaders;
 };
@@ -97,7 +97,7 @@ class HttpRequest
 		std::string							currHeaderName;
 		std::string							currHeaderVal;
 
-		std::vector<unsigned char>							body; // TODO : body  may be binary (include '\0') fix this;
+		std::vector<char>							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;
 
 		int                                 reqSize;
@@ -157,7 +157,7 @@ class HttpRequest
 		void		clear();
 
 		std::map<std::string, std::string>	getHeaders() const;
-		std::vector<unsigned char>					getBody() const;
+		std::vector<char>					getBody() const;
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;
 		const std::string &getHost() const;
