@@ -210,7 +210,7 @@ int HttpResponse::loadFile(const std::string &pathName)
 			return (close(_fd), setHttpResError(500, "Internal Server Error"), 0);
 		if (r == 0)
 			break;
-		responseBody.push_back(std::vector<unsigned char>(r));
+		responseBody.push_back(std::vector<char>(r));
 		for (int i = 0; i < r; i++)
 		{
 			responseBody[j][i] = buffer[i];
@@ -234,7 +234,7 @@ int HttpResponse::loadFile(int _fd)
 			return (setHttpResError(500, "Internal Server Error"), 0);
 		if (r == 0)
 			break;
-		responseBody.push_back(std::vector<unsigned char>(r));
+		responseBody.push_back(std::vector<char>(r));
 		for (int i = 0; i < r; i++)
 		{
 			responseBody[j][i] = buffer[i];
@@ -255,7 +255,6 @@ int HttpResponse::pathChecking()
 	size_t offset = location->globalConfig.getAliasOffset() ? this->location->getPath().size() : 0;
 	this->fullPath = location->globalConfig.getRoot() + this->path.substr(offset);
 
-	std::cout << "this is full path "<<this->fullPath << "\n";
 	struct stat sStat;
 	stat(fullPath.c_str(), &sStat);
 	if (S_ISDIR(sStat.st_mode))
@@ -263,7 +262,9 @@ int HttpResponse::pathChecking()
 	if (access(fullPath.c_str(), F_OK) != -1)
 		return (bodyType = LOAD_FILE, loadFile(fullPath));
 	else
+	{
 		return (state = ERROR, setHttpResError(404, "Not Found"), 0);
+	}
 	return (1);
 }
 
@@ -409,50 +410,6 @@ void HttpResponse::parseCgiOutput()
 		}
 	}
 	setHttpResError(502, "Bad Gateway");
-	// while (i < body.size() && (body[i] == '\r' || body[i] == '\n'))
-	// {
-	// 	if (body[i] == '\n')
-	// 	{
-	// 		cgiRes.bodyStartIndex = i + 1;
-	// 		return ;
-	// 	}
-	// 	i++;
-	// }
-	// i = 0;
-	// if (body.size() > 8 && isStatusLine(body))
-	// {
-	// 	while (i < body.size() && body[i] != '\n')
-	// 	{
-	// 		cgiRes.cgiStatusLine.push_back(body[i]);
-	// 		i++;
-	// 	}
-	// 	cgiRes.cgiStatusLine.push_back(body[i]);
-	// }
-	// parseCgiHaders(i);
-	// for (size_t i = 0; i < body.size(); i++)
-	// {
-	// 	if ()
-
-	// 	if ((tmpHeaderName.size() == 0 && !isAlpha(body[i]))
-	// 		|| !isValidHeaderChar(body[i]))
-	// 	{
-	// 		setHttpResError(502, "Bad Gateway");
-	// 		return ;
-	// 	}
-	// 	if (body[i] == ':' && tmpHeaderName.size() == 0)
-	// 	{
-	// 		setHttpResError(502, "Bad Gateway");
-	// 		return ;
-	// 	}
-	// 	if (body[i] == ':')
-	// 	{
-	// 		isName = 0;
-	// 		if (body[i] == ' ')
-	// 			i++;
-	// 	}
-	// 	if (isName)
-	// 		tmpHeaderName.push_back(body[i]);
-	// }
 }
 
 std::string HttpResponse::getCgiContentLenght()
@@ -691,16 +648,21 @@ void			HttpResponse::responseCooking()
 {
 	decodingUrl();
 	splitingQuery();
-	std::cout << "queryStr: " << queryStr << std::endl;
-	std::cout << "pure path: " << path << std::endl;
+	// std::cout << "queryStr: " << queryStr << std::endl;
+	// std::cout << "pure path: " << path << std::endl;
 	if (!isPathFounded())
 		return;
 	if (isCgi())
 		cgiCooking(/**/);
 	else
 	{
-		if (!isMethodAllowed() || !pathChecking())
+		if (!pathChecking())
 			return ;
+		if (strMethod != "GET")
+		{
+			setHttpResError(405, "Method Not Allowed");
+			return ;
+		}
 		if (strMethod == "POST" && !uploadFile())
 			return;
 		writeResponse();

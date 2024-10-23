@@ -43,6 +43,7 @@ HttpRequest::HttpRequest(int fd) : fd(fd)
 
 void	HttpRequest::clear()
 {
+	// std::cout << "--------------------------->"  << methodeStr.tmpMethodeStr << std::endl;
 	chunkState = SIZE;
 	totalChunkSize = 0;
 	chunkSize = 0;
@@ -115,8 +116,6 @@ void HttpRequest::readRequest()
 	int size = read(fd, tmp, REQSIZE_MAX + 1);
 	if (size ==  -1)
 		return ;
-	int __fd = open("log1", O_CREAT | O_RDWR | O_APPEND , 0777);
-	write(__fd, tmp, size);
 	if (size == 0)
 		return ;
 	else if (size > 0)
@@ -272,17 +271,17 @@ void HttpRequest::feed()
 	
 	// INFO: print request information;
 
-	// std::cout << error.code << ": " << error.description << std::endl; 
-	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
-	// for (map_it it = headers.begin(); it != headers.end(); ++it) {
- //        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
- //    }
+	std::cout << error.code << ": " << error.description << std::endl; 
+	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	for (map_it it = headers.begin(); it != headers.end(); ++it) {
+        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+    }
 	// int __fd = open("log", O_RDWR, 0777);
-	// for (auto& it : body)
-	// {
-	// 	write(__fd, &it, 1);
-	// 	// std::cout << (char)it;
-	// }
+	for (auto& it : body)
+	{
+		// write(__fd, &it, 1);
+		std::cout << (char)it;
+	}
 }
 
 void HttpRequest::setHttpReqError(int code, std::string str)
@@ -615,7 +614,7 @@ void	HttpRequest::parseHeaderName()
 		{
 			state = HEADER_VALUE;
 			reqBufferIndex++;
-			if (reqBuffer[reqBufferIndex] == ' ')
+			if (reqBufferIndex < reqBuffer.size() && reqBuffer[reqBufferIndex] == ' ')
 				reqBufferIndex++;
 			return;
 			// headers[currHeaderName];
@@ -685,7 +684,8 @@ int		HttpRequest::checkContentType()
 	if (tmp == "application/x-www-form-urlencoded")
 		return (reqBody = URL_ENCODED, 1);
 	if (tmp != "multipart/form-data")
-		return (setHttpReqError(415, "Unsupported Media Type"), 1);
+		return (0);
+		// return (setHttpReqError(415, "Unsupported Media Type"), 1);
 	reqBody = MULTI_PART;
 	tmp = "; boundary=";
 	size_t j = 0;

@@ -1,13 +1,10 @@
-
 --- handel if at least one Vserver exist and each server has one location define
 --- 
---- get ip address and port
 --- add logging support
 --- FIX BODY_SIZE
 --- LIMIT READ AND WRITE SIZE WITH KEVENT
 --- HANDLING EXCEPTION
 --- transfort file
---- upload file
 --- REDIRECTIONS
 --- HANDLING TIMEOUT IN CGI
 --- DELETE
@@ -22,4 +19,3 @@ Standard Header Conversion:
 Headers are converted to uppercase
 Hyphens (-) are replaced with underscores (_)
 "HTTP_" prefix is added
-
