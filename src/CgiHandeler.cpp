@@ -10,10 +10,6 @@
 #include <unistd.h>
 
 
-// CgiHandler::CgiHandler(std::string reqPath, httpError& status, Location *location, ServerContext *ctx) : reqPath(reqPath), status(status), location(location), ctx(ctx)
-// {
-// }
-
 CgiHandler::CgiHandler(HttpResponse& response) : response(&response)
 {
 	envArr = NULL;
@@ -53,15 +49,17 @@ int		CgiHandler::checkCgiFile()
 
 int			CgiHandler::initEnv()
 {
+	std::stringstream ss;
+	
+	ss << response->location->getPort();
 	if (!checkCgiFile())
 		return (0);
 	env["SERVER_SOFTWARE"] = "macOS";
-	env["SERVER_NAME"] = "";//TODO:server
+	env["SERVER_NAME"] = response->location->getHost();
 	env["GATEWAY_INTERFACE"] = "CGI/1.1";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
-	env["SERVER_PORT"] = "8000";//TODO
+	env["SERVER_PORT"] = ss.str();
 	env["REQUEST_METHOD"] = response->strMethod;
-	// std::cout << "---------------------> " << response->strMethod << std::endl; 
 	env["SCRIPT_NAME"] = response->path;
 	env["PATH_INFO"] = response->location->globalConfig.getRoot() + response->path;
 	env["QUERY_STRING"] = response->queryStr;
@@ -71,7 +69,6 @@ int			CgiHandler::initEnv()
 		std::ostringstream oss;
 		oss << response->getBody().size();
 		env["CONTENT_LENGTH"] = oss.str();
-		// std::cout << "---------------------> " << env["CONTENT_LENGTH"] << std::endl; 
 	}
 	else
 		env["CONTENT_LENGTH"] = "0";

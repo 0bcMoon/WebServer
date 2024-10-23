@@ -86,7 +86,7 @@ class HttpResponse
 		std::string											getCgiContentLenght();
 		int												parseCgiHaders(std::string str);
 		std::string											strMethod;
-		std::vector<std::vector<unsigned char> >			responseBody;
+		std::vector<std::vector<char> >						responseBody;
 		int													keepAlive; // bool? // bool?
 		Location											*location;
 		enum responseState									state;

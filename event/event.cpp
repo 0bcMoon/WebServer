@@ -314,6 +314,9 @@ void Event::eventLoop()
 					std::cout << client->response.location->getHost() << "\n";
 					std::cout << client->getPath() << "\n";
 					client->respond();
+					client->response = HttpResponse(ev->ident, this->ctx, &client->request);
+					// client->response.~HttpResponse();
+
 					// INFO : keep alive
 
 					// if (!(client->response.keepAlive))
@@ -323,7 +326,6 @@ void Event::eventLoop()
 					// 	// this->RemoveClient(ev->ident);
 					// }
 					// else
-					// 	client->response = HttpResponse(ev->ident, this->ctx);
 					/*************************************************************/
 				}
 			}
