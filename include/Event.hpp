@@ -23,7 +23,7 @@ class Event
 	SockAddr_in sockAddrInMap;
 
 	int CreateSocket(SocketAddrSet_t::iterator &address);
-	void setNonBlockingIO(int serverFd);
+	int setNonBlockingIO(int serverFd);
 	bool Listen(int serverFd);
 	std::string get_readable_ip(VirtualServer::SocketAddr address);
 	void insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd);
@@ -35,7 +35,7 @@ class Event
 	int numOfSocket;
 	int newConnection(int socketFd, Connections &connections);
 	bool checkNewClient(int socketFd);
-	int RemoveClient(int clientFd);
+	void RemoveClient(int clientFd);
 	int RegsterClient(int clientFd);
 	int WriteEvent(int fd, uint16_t flags);
 	Location *getLocation(const Client *client, int port);

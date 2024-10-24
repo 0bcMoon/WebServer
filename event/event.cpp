@@ -128,6 +128,8 @@ int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 	setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	memset(&address2, 0, sizeof(struct sockaddr_in));
 
+	this->setNonBlockingIO(socketFd);
+
 	address2.sin_family = AF_INET;
 	address2.sin_addr.s_addr = htonl(address->host);
 	address2.sin_port = htons(address->port);
@@ -155,25 +157,21 @@ std::string Event::get_readable_ip(const VirtualServer::SocketAddr address)
 	return ss.str();
 }
 
-void Event::setNonBlockingIO(int sockfd)
+int Event::setNonBlockingIO(int sockfd)
 {
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1)
-		perror("fcntl(F_GETFL)"), exit(1);
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
-		perror("fcntl(F_SETFL)"), exit(1); // TODO: remove  this
+		return (-1);
+	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | FD_CLOEXEC) == -1)
+		return (-1);
+	return (0);
 }
 
 bool Event::Listen(int socketFd)
 {
-	// TODO: this->MAX_CONNECTION_QUEUE
-
-	if (listen(socketFd, 5) < 0)
-	{
-		perror("listen failed");
-		return false;
-	}
-	return true;
+	if (listen(socketFd, this->MAX_CONNECTION_QUEUE) < 0)
+		return (false);
+	return (true);
 }
 
 bool Event::Listen()
@@ -192,7 +190,8 @@ bool Event::Listen()
 void Event::CreateChangeList()
 {
 	SockAddr_in::iterator it = this->sockAddrInMap.begin();
-	// TODO : monitor read and write
+	// SERVER Scket does not need to monitor writes
+	//
 	for (int i = 0; it != this->sockAddrInMap.end(); it++, i++)
 		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	if (kevent(this->kqueueFd, this->eventChangeList, this->numOfSocket, NULL, 0, NULL) < 0)
@@ -210,22 +209,23 @@ void Event::initIOmutltiplexing()
 		throw std::runtime_error("kqueue faild: " + std::string(strerror(errno)));
 	this->CreateChangeList();
 }
-// TODO:  fix me i may faild ??
+// TODO:  i need someone to speek here (logger )
 int Event::newConnection(int socketFd, Connections &connections)
 {
 	struct sockaddr_in address = this->sockAddrInMap[socketFd];
 	socklen_t size = sizeof(struct sockaddr);
 	int newSocketFd = accept(socketFd, (struct sockaddr *)&address, &size);
-	if (newSocketFd < 0)
-		return -1;
-	std::cout << "client connnection\n";
-	this->setNonBlockingIO(newSocketFd);
-	this->RegsterClient(newSocketFd); // TODO: user udata feild to store server id;
+	if (newSocketFd < 0) // TODO: add logger here
+		return (-1);
+	if (this->setNonBlockingIO(newSocketFd))
+		return (-1);
+	if (this->RegsterClient(newSocketFd))
+		return (-1);
 	connections.addConnection(newSocketFd, socketFd);
 	return newSocketFd;
 }
 
-int Event::RemoveClient(int clientFd)
+void Event::RemoveClient(int clientFd)
 {
 	struct kevent ev_set[2];
 
@@ -233,13 +233,12 @@ int Event::RemoveClient(int clientFd)
 	EV_SET(&ev_set[1], clientFd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
 	kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL);
 	close(clientFd);
-	return 0;
+	// if (close(clientFd));
+		// TODO: add logger here;
 }
 
 int Event::RegsterClient(int clientFd)
 {
-	// TODO: regester may faild
-
 	struct kevent ev_set[2];
 
 	EV_SET(&ev_set[0], clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
@@ -247,6 +246,7 @@ int Event::RegsterClient(int clientFd)
 	return kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL);
 }
 
+// TODO: fix me may i faild
 int Event::WriteEvent(int fd, uint16_t flags)
 {
 	struct kevent ev;
@@ -272,6 +272,8 @@ void Event::eventLoop()
 				this->newConnection(ev->ident, connections);
 			else if (ev->filter == EVFILT_READ)
 			{
+				// TODO: set a time out for this client ?? response ?
+
 				if (ev->flags & EV_EOF && ev->data <= 0)
 				{
 					std::cout << "client disconnected\n";
@@ -308,7 +310,6 @@ void Event::eventLoop()
 						continue;
 					this->WriteEvent(client->getFd(), EV_DISABLE); // TODO: if it faild whats to do
 					struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
-
 					client->response.location  =  this->getLocation(client, ntohs(addr.sin_port));
 					client->respond();
 					client->response = HttpResponse(ev->ident, this->ctx, &client->request);
