@@ -259,29 +259,29 @@ void HttpRequest::feed()
 		if (state == REQ_ERROR)
 			break;
 	}
-	for (size_t i = 0; i < multiPartBodys.size();i++)
-	{
-		std::cout << "WAAAAAAAAA\n";
-		for (map_it it = multiPartBodys[i].headers.begin(); it != multiPartBodys[i].headers.end(); ++it) {
-			std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
-		}
-	}
-	// // if (state == DEBUG && response(fd))
-	// // 	std::cout << "FUCKING DONE" << std::endl;
-	
-	// INFO: print request information;
+	// for (size_t i = 0; i < multiPartBodys.size();i++)
+	// {
+	// 	std::cout << "WAAAAAAAAA\n";
+	// 	for (map_it it = multiPartBodys[i].headers.begin(); it != multiPartBodys[i].headers.end(); ++it) {
+	// 		std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+	// 	}
+	// }
+	// // // if (state == DEBUG && response(fd))
+	// // // 	std::cout << "FUCKING DONE" << std::endl;
+	// 
+	// // INFO: print request information;
 
-	std::cout << error.code << ": " << error.description << std::endl; 
-	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
-	for (map_it it = headers.begin(); it != headers.end(); ++it) {
-        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
-    }
-	// int __fd = open("log", O_RDWR, 0777);
-	for (auto& it : body)
-	{
-		// write(__fd, &it, 1);
-		std::cout << (char)it;
-	}
+	// std::cout << error.code << ": " << error.description << std::endl; 
+	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	// for (map_it it = headers.begin(); it != headers.end(); ++it) {
+ //        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+ //    }
+	// // int __fd = open("log", O_RDWR, 0777);
+	// for (auto& it : body)
+	// {
+	// 	// write(__fd, &it, 1);
+	// 	std::cout << (char)it;
+	// }
 }
 
 void HttpRequest::setHttpReqError(int code, std::string str)

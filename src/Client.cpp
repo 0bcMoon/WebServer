@@ -7,6 +7,7 @@
 #include <string>
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include "Log.hpp"
 #include "ServerContext.hpp"
 
 int Client::getFd() const
@@ -45,9 +46,9 @@ void Client::respond()
 		response.responseCooking();
 	if (response.state == ERROR)
 	{
-		// request.getStrMethode // impl Logger here
+		Log::Error(this->response);
 		write(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
-		write(1, response.getErrorRes().c_str(), response.getErrorRes().size());
+		// write(1, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
 	request.clear();
 }

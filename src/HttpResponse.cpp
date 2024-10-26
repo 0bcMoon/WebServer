@@ -580,6 +580,7 @@ static int isHex(char c)
 	std::string B = "0123456789ABCDEF";
 	std::string b = "0123456789abcdef";
 
+	// noob code
 	if (b.find(c) == std::string::npos && B.find(c) == std::string::npos)
 		return (0);
 	return (1);
@@ -605,7 +606,6 @@ void HttpResponse::decodingUrl()
 			decodedUrl.push_back(path[i]);
 	}
 	path = decodedUrl;
-	std::cout << "Decoded-url: " << path << std::endl;
 }
 
 void HttpResponse::splitingQuery()
@@ -672,9 +672,7 @@ void			HttpResponse::responseCooking()
 std::string decimalToHex(int decimal)
 {
 	if (decimal == 0)
-	{
 		return "0";
-	}
 
 	const char hexDigits[] = "0123456789ABCDEF";
 	std::string hexResult;
@@ -691,12 +689,8 @@ std::string decimalToHex(int decimal)
 		hexResult += hexDigits[decimal % 16];
 		decimal /= 16;
 	}
-
 	if (isNegative)
-	{
 		hexResult += '-';
-	}
-
 	std::reverse(hexResult.begin(), hexResult.end());
 	return hexResult;
 }

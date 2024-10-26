@@ -3,6 +3,8 @@
 
 #include <fstream>
 #include <string>
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 class Log
 {
 	private:
@@ -13,12 +15,24 @@ class Log
 		};
 		static std::ofstream access_log;
 		static std::ofstream error_log;
-		void displayTimestamp(enum LogType logtype);
+		static void displayTimestamp(enum LogType logtype);
 
 	public:
-		void setLogFile(std::string &access, std::string &error);
+		static void setErrorLogFile(const std::string &error);
+		static void setAccessLogFile(const std::string &access);
 		static void Error();
+
+		void connect(int fd);
+		void disconnected(int fd);
+
+		static void Error(const HttpRequest &req);
+		static void Error(const HttpResponse &res) ;
+
+		void Access(HttpRequest &req);
+		void Access(HttpResponse &res) ;
 		static void Access();
+		static void close();
+		static void init();
 };
 
 #endif

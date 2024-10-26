@@ -1,7 +1,10 @@
 #include "ServerContext.hpp"
+#include <unistd.h>
+#include <ctime>
 #include <stdexcept>
 #include <vector>
 #include "DataType.hpp"
+#include "Log.hpp"
 #include "ParserException.hpp"
 #include "VirtualServer.hpp"
 
@@ -39,6 +42,7 @@ ServerContext::ServerContext() : globalParam(0, "/tmp")
 		this->types[ext[i]] = types[i];
 	this->maxBodySize = 100 * 1024 * 1024;
 	this->maxHeaderSize = 100 * 1024 * 1024;
+	this->keepAliveTimeout = 75;
 }
 
 ServerContext::~ServerContext()
@@ -184,4 +188,35 @@ void ServerContext::init()
 		this->servers[i].globalConfig = this->globalParam;
 		this->servers[i].init();
 	}
+}
+
+void ServerContext::setErrorLog(Tokens &token, Tokens &end)
+{
+	this->globalParam.validateOrFaild(token, end);
+	std::string error_log = this->globalParam.consume(token, end);
+	Log::setErrorLogFile(error_log);
+	this->globalParam.CheckIfEnd(token, end);
+}
+void ServerContext::setAccessLog(Tokens &token, Tokens &end)
+{
+	this->globalParam.validateOrFaild(token, end);
+	std::string access_log = this->globalParam.consume(token, end);
+	Log::setAccessLogFile(access_log);
+	this->globalParam.CheckIfEnd(token, end);
+}
+
+void ServerContext::setKeepAlive(Tokens &token, Tokens &end)
+{
+	this->globalParam.validateOrFaild(token, end);
+	std::string s_time = this->globalParam.consume(token, end);
+	this->keepAliveTimeout = 0;
+	for (size_t i = 0;i<s_time.size();i++)
+	{
+		if (s_time[i] <'0' || s_time[i] > '9' )
+			throw ParserException("Invalid keep alive Timeout value");
+		this->keepAliveTimeout = this->keepAliveTimeout * 10 + s_time[i] - '0';
+		if (this->keepAliveTimeout > (1 << 30))
+			throw ParserException("Invlaid keep alive Timeout value");
+	}
+	this->globalParam.CheckIfEnd(token, end);
 }

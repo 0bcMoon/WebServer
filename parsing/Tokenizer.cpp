@@ -90,6 +90,12 @@ void Tokenizer::parseConfig(ServerContext *context)
 			context->pushServer(token, end);
 		else if (*token == "types")
 			context->pushTypes(token, end);
+		else if (*token == "access_log")
+			context->setAccessLog(token, end);
+		else if (*token == "error_log")
+			context->setErrorLog(token, end);
+		else if (*token == "keepalive_timeout")
+			context->setKeepAlive(token, end);
 		else
 			context->parseTokens(token, end); // TODO;
 	}

@@ -35,9 +35,7 @@ class Event
 	int numOfSocket;
 	int newConnection(int socketFd, Connections &connections);
 	bool checkNewClient(int socketFd);
-	void RemoveClient(int clientFd);
-	int RegsterClient(int clientFd);
-	int WriteEvent(int fd, uint16_t flags);
+	int setWriteEvent(int fd, uint16_t flags);
 	Location *getLocation(const Client *client, int port);
 
   public:

@@ -11,10 +11,11 @@ class Connections
 {
 	private:
 		ServerContext	*ctx;
+		int				kqueueFd;
 	public:
 		std::map<int, Client *> clients;
 
-		Connections(ServerContext *ctx);
+		Connections(ServerContext *ctx, int kqueueFd);
 		~Connections();
 		
 		void		closeConnection(int	fd);

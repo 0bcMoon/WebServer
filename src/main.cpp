@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include "Debug.hpp"
 #include "Event.hpp"
+#include "HttpResponse.hpp"
+#include "Log.hpp"
 #include "Tokenizer.hpp"
 #ifdef __cplusplus
 extern "C"
@@ -39,6 +41,7 @@ ServerContext *LoadConfig(const char *path)
 		ctx = new ServerContext();
 		tokenizer.parseConfig(ctx);
 		ctx->init();
+		Log::init();
 	}
 	catch (const Debug &e)
 	{
@@ -61,9 +64,6 @@ void sigpipe_handler(int signum)
 	printf("Caught SIGPIPE. Ignoring.\n");
 }
 
-/*
-* TODO: valida http methode
-*/
 int main()
 {
 	Event *event = NULL;
@@ -79,7 +79,8 @@ int main()
 		return 1;
 	}
 	ctx = LoadConfig("config/nginx.conf");
-	// move this to a function
+
+
 	if (!ctx)
 		return 1;
 	try
@@ -99,6 +100,8 @@ int main()
 		std::cerr << e.what() << "\n";
 	}
 
+	
 	delete event;
 	delete ctx;
+	Log::close();
 }

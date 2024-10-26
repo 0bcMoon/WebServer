@@ -218,36 +218,20 @@ int Event::newConnection(int socketFd, Connections &connections)
 	if (newSocketFd < 0) // TODO: add logger here
 		return (-1);
 	if (this->setNonBlockingIO(newSocketFd))
-		return (-1);
-	if (this->RegsterClient(newSocketFd))
-		return (-1);
+		return (close(newSocketFd));
+
+	struct kevent ev_set[2];
+	EV_SET(&ev_set[0], newSocketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+	EV_SET(&ev_set[1], newSocketFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
+
+	if (kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL) < 0)
+			return (close(newSocketFd)); // report faild connections
 	connections.addConnection(newSocketFd, socketFd);
-	return newSocketFd;
+	return (newSocketFd);
 }
 
-void Event::RemoveClient(int clientFd)
-{
-	struct kevent ev_set[2];
-
-	EV_SET(&ev_set[0], clientFd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-	EV_SET(&ev_set[1], clientFd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-	kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL);
-	close(clientFd);
-	// if (close(clientFd));
-		// TODO: add logger here;
-}
-
-int Event::RegsterClient(int clientFd)
-{
-	struct kevent ev_set[2];
-
-	EV_SET(&ev_set[0], clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-	EV_SET(&ev_set[1], clientFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
-	return kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL);
-}
-
-// TODO: fix me may i faild
-int Event::WriteEvent(int fd, uint16_t flags)
+// TODO: fix me may i fails
+int Event::setWriteEvent(int fd, uint16_t flags)
 {
 	struct kevent ev;
 
@@ -257,28 +241,30 @@ int Event::WriteEvent(int fd, uint16_t flags)
 
 void Event::eventLoop()
 {
-	Connections connections(this->ctx);
+	Connections connections(this->ctx, this->kqueueFd);
+	int nev;
 
 	while (1)
 	{
 		std::cout << "waiting for event\n";
-		int nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
+		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev <= -1)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
 		for (int i = 0; i < nev; i++)
 		{
-			const struct kevent *const ev = &this->evList[i];
+			const struct kevent *ev = &this->evList[i];
 			if (this->checkNewClient(ev->ident))
 				this->newConnection(ev->ident, connections);
 			else if (ev->filter == EVFILT_READ)
 			{
+				// each client has a client_time for read and cgi exec and  on each request
+				//
 				// TODO: set a time out for this client ?? response ?
-
+				// add timer event for (for server t)o read M??
 				if (ev->flags & EV_EOF && ev->data <= 0)
 				{
 					std::cout << "client disconnected\n";
 					connections.closeConnection(ev->ident);
-					this->RemoveClient(ev->ident);
 				}
 				else
 				{
@@ -289,15 +275,19 @@ void Event::eventLoop()
 					Client *client = kv->second;
 					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
 						continue;
-					this->WriteEvent(client->getFd(), EV_ENABLE);
+					// if (has a cgi)
+					// // take pipe fd  cgi process id for monitor  read and write of large files (make cgi like a client can be blocking)
+					// use udata feild for seperate client fd with cgi fd pipe
+					if (this->setWriteEvent(client->getFd(), EV_ENABLE) < 0)
+						connections.closeConnection(client->getFd());
 				}
+
 			}
 			else if (ev->filter == EVFILT_WRITE)
 			{
 				if ((ev->flags & EV_EOF))
 				{
 					std::cout << "client disconnected\n";
-					this->RemoveClient(ev->ident);
 					connections.closeConnection(ev->ident);
 				}
 				else
@@ -306,24 +296,18 @@ void Event::eventLoop()
 					if (kv == connections.clients.end())
 						continue;
 					Client *client = kv->second;
-					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
-						continue;
-					this->WriteEvent(client->getFd(), EV_DISABLE); // TODO: if it faild whats to do
 					struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
 					client->response.location  =  this->getLocation(client, ntohs(addr.sin_port));
 					client->respond();
-					client->response = HttpResponse(ev->ident, this->ctx, &client->request);
 
-					// INFO : keep alive
-
-					// if (!(client->response.keepAlive))
+					// if (client respond has finish)
 					// {
-					// 	// std::cout << "client disconnected\n";
-					// 	// connections.closeConnection(ev->ident);
-					// 	// this->RemoveClient(ev->ident);
+						// if (this->setWriteEvent(client->getFd(), EV_DISABLE) < 0) // stop monitor for write
+						// 	connections.closeConnection(client->getFd());
+						// 	else
+							// 	client->response = HttpResponse(ev->ident, this->ctx, &client->request);
+						// }
 					// }
-					// else
-					/*************************************************************/
 				}
 			}
 		}
