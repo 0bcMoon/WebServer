@@ -40,14 +40,15 @@ void Client::respond()
 			|| response.headers["Connection"].find("Close") != std::string::npos))
 		|| request.state == REQ_ERROR)
 		response.keepAlive = 0;
+
 	if (request.state == REQUEST_FINISH)
 		response.responseCooking();
 	if (response.state == ERROR)
 	{
+		// request.getStrMethode // impl Logger here
 		write(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 		write(1, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
-
 	request.clear();
 }
 

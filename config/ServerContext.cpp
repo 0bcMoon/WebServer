@@ -7,6 +7,7 @@
 
 ServerContext::ServerContext() : globalParam(0, "/tmp")
 {
+	// TODO: add reverse mimes types;
 	std::string types[] = {
 		"text/plain",
 		"text/plain",

@@ -111,21 +111,25 @@ HttpRequest::~HttpRequest() {
 
 void HttpRequest::readRequest()
 {
-	char tmp[REQSIZE_MAX + 10];
-
-	int size = read(fd, tmp, REQSIZE_MAX + 1);
-	if (size ==  -1)
-		return ;
-	if (size == 0)
-		return ;
-	else if (size > 0)
+	char tmp[1000000];
+	while (1)
 	{
-		reqBuffer.resize(reqBuffer.size() + size);
-		size_t j = 0;
-		for (size_t i = reqBuffer.size() - size ; i < reqBuffer.size(); i++)
+		for (size_t i = 0; i < 1000000;i++)
+			tmp[i] = 0;
+		int size = read(fd, tmp, 1000000 + 1);
+		if (size ==  -1)
+			return ;
+		if (size == 0)
+			return ;
+		else if (size > 0)
 		{
-			reqBuffer[i] = tmp[j];
-			j++;
+			reqBuffer.resize(reqBuffer.size() + size);
+			size_t j = 0;
+			for (size_t i = reqBuffer.size() - size ; i < reqBuffer.size(); i++)
+			{
+				reqBuffer[i] = tmp[j];
+				j++;
+			}
 		}
 	}
 }
@@ -259,29 +263,29 @@ void HttpRequest::feed()
 		if (state == REQ_ERROR)
 			break;
 	}
-	for (size_t i = 0; i < multiPartBodys.size();i++)
-	{
-		std::cout << "WAAAAAAAAA\n";
-		for (map_it it = multiPartBodys[i].headers.begin(); it != multiPartBodys[i].headers.end(); ++it) {
-			std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
-		}
-	}
+	// for (size_t i = 0; i < multiPartBodys.size();i++)
+	// {
+	// 	std::cout << "WAAAAAAAAA\n";
+	// 	for (map_it it = multiPartBodys[i].headers.begin(); it != multiPartBodys[i].headers.end(); ++it) {
+	// 		std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+	// 	}
+	// }
 	// // if (state == DEBUG && response(fd))
 	// // 	std::cout << "FUCKING DONE" << std::endl;
 	
 	// INFO: print request information;
 
-	std::cout << error.code << ": " << error.description << std::endl; 
-	std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
-	for (map_it it = headers.begin(); it != headers.end(); ++it) {
-        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
-    }
-	// int __fd = open("log", O_RDWR, 0777);
-	for (auto& it : body)
-	{
-		// write(__fd, &it, 1);
-		std::cout << (char)it;
-	}
+	// std::cout << error.code << ": " << error.description << std::endl; 
+	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;
+	// for (map_it it = headers.begin(); it != headers.end(); ++it) {
+ //        std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
+ //    }
+	// // int __fd = open("log", O_RDWR, 0777);
+	// for (auto& it : body)
+	// {
+	// 	// write(__fd, &it, 1);
+	// 	std::cout << (char)it;
+	// }
 }
 
 void HttpRequest::setHttpReqError(int code, std::string str)

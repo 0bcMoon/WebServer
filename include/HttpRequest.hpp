@@ -8,8 +8,8 @@
 #include <vector>
 
 #define URI_MAX		 2048
-#define REQSIZE_MAX  5000000
-#define BODY_MAX	 3000000
+#define REQSIZE_MAX  1000000000
+#define BODY_MAX	 100000000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
 
@@ -99,7 +99,6 @@ class HttpRequest
 
 		std::vector<char>							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;
-
 		int                                 reqSize;
 		size_t								reqBufferSize;
 		size_t								reqBufferIndex;

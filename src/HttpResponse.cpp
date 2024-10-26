@@ -198,6 +198,8 @@ int HttpResponse::directoryHandler()
 	}
 	if (location->globalConfig.getAutoIndex())
 		return (bodyType = AUTO_INDEX, autoIndexCooking());
+	// else 
+	// 	return (bodyType = NO_TYPE, 1);
 	return (setHttpResError(404, "Not Found"), 0);
 }
 
@@ -231,7 +233,8 @@ int HttpResponse::loadFile(int _fd)
 {
 	char buffer[fileReadingBuffer];
 	int j = 0;
-
+	
+	std::cout << "CGI response: " << std::endl;
 	while (1)
 	{
 		int r = read(_fd, buffer, fileReadingBuffer);
@@ -244,6 +247,7 @@ int HttpResponse::loadFile(int _fd)
 		responseBody.push_back(std::vector<char>(r));
 		for (int i = 0; i < r; i++)
 		{
+			std::cout << buffer[i];
 			responseBody[j][i] = buffer[i];
 		}
 		j++;
@@ -259,7 +263,8 @@ int HttpResponse::loadFile(int _fd)
 
 int HttpResponse::pathChecking()
 {
-	this->fullPath = location->globalConfig.getRoot() + this->path;
+	size_t offset = location->globalConfig.getAliasOffset() ? this->location->getPath().size() : 0;
+	this->fullPath = location->globalConfig.getRoot() + this->path.substr(offset);
 
 	struct stat sStat;
 	stat(fullPath.c_str(), &sStat);
@@ -268,7 +273,9 @@ int HttpResponse::pathChecking()
 	if (access(fullPath.c_str(), F_OK) != -1)
 		return (bodyType = LOAD_FILE, loadFile(fullPath));
 	else
+	{
 		return (state = ERROR, setHttpResError(404, "Not Found"), 0);
+	}
 	return (1);
 }
 
@@ -374,7 +381,7 @@ void HttpResponse::parseCgiOutput()
 		}
 	}
 	/*************************************************************/
-	std::cout << "/*************************************************************/\n";
+	// std::cout << "/*************************************************************/\n";
 	for (size_t i = 0; i < cgiRes.lines.size(); i++)
 	{
 		for (size_t j = 0; j < cgiRes.lines[i].size(); j++)
@@ -425,7 +432,7 @@ std::string HttpResponse::getCgiContentLenght()
 	}
 	std::ostringstream oss;
 	oss << len;
-	std::cout << "--->" << oss.str() << std::endl;
+	// std::cout << "--->" << oss.str() << std::endl;
 	return (oss.str());
 }
 
@@ -463,6 +470,7 @@ void HttpResponse::writeResponse()
 	write(this->fd, getConnectionState().c_str(), getConnectionState().size());
 	write(this->fd, getContentType().c_str(), getContentType().size());
 	write(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
+	std::cout << " <---------> "  << "|" << getContentLenght(bodyType) << "|" << std::endl;
 	write(fd, getDate().c_str(), getDate().size());
 	write(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
 	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
@@ -506,6 +514,8 @@ std::string HttpResponse::getExtension(std::string str)
 
 std::string HttpResponse::getContentType()
 {
+	if (bodyType == NO_TYPE)
+		return ("");
 	if (bodyType == AUTO_INDEX)
 		return ("Content-Type: text/html\r\n");
 	return (
@@ -576,7 +586,7 @@ std::string HttpResponse::getContentLenght(enum responseBodyType type)
 		oss << autoIndexBody.size();
 		return ("Content-Length: " + oss.str() + "\r\n");
 	}
-	return ("");
+	return ("Content-Length: 0\r\n");
 }
 
 static int isHex(char c)
@@ -627,7 +637,7 @@ int				HttpResponse::uploadFile()
 	{
 		for (size_t _i = 0; _i < request->multiPartBodys.size();_i++)
 		{
-			std::cout << "file uplod " << location->getFileUploadPath() <<"\n";
+			// std::cout << "file uplod " << location->getFileUploadPath() <<"\n";
 			int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
 			if (__fd < 0)
 				return (setHttpResError(500, "Internal Server Error"), 0);
@@ -637,6 +647,7 @@ int				HttpResponse::uploadFile()
 		}
 	}
 	if (request->reqBody == TEXT_PLAIN)
+	// else
 	{
 		int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
 		if (__fd < 0)
@@ -657,7 +668,9 @@ void			HttpResponse::responseCooking()
 	if (!isPathFounded())
 		return;
 	if (isCgi())
+	{
 		cgiCooking(/**/);
+	}
 	else
 	{
 		if (!isMethodAllowed())

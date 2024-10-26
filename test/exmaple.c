@@ -1,6 +1,5 @@
 
 
-#include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -16,10 +15,6 @@
 #define MAX_EVENTS 512
 
 // Set a socket to non-blocking mode
-int set_non_blocking(int sockfd)
-{
-
-}
 
 int main()
 {
@@ -35,7 +30,7 @@ int main()
 	}
 
 	int optval = 1;
-	 setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	// Set the server socket to non-blocking mode
 	// if (set_non_blocking(server_fd) == -1)
 	// {
@@ -85,6 +80,8 @@ int main()
 
 	printf("Server listening on port %d...\n", PORT);
 
+	struct kevent evtime;
+
 	while (1)
 	{
 		struct kevent ev_list[MAX_EVENTS];
@@ -110,11 +107,6 @@ int main()
 				}
 
 				// Set the client socket to non-blocking mode
-				if (set_non_blocking(client_fd) == -1)
-				{
-					close(client_fd);
-					continue;
-				}
 
 				// Add the client socket to kqueue for monitoring readable data
 				EV_SET(&ev_set, client_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
@@ -124,7 +116,19 @@ int main()
 					close(client_fd);
 				}
 
+				EV_SET(&ev_set, client_fd, EVFILT_TIMER, EV_ADD | EV_ENABLE , NOTE_SECONDS, 3, NULL);
+				if (kevent(kq, &ev_set, 1, NULL, 0, NULL) == -1)
+				{
+					perror("kevent");
+					close(client_fd);
+				}
 				printf("Accepted new connection\n");
+			}
+			else if (ev_list[i].filter == EVFILT_TIMER)
+			{
+				printf("hi\n");
+				printf("%ld\n", ev_list[i].data);
+				continue;
 			}
 			else if (ev_list[i].filter == EVFILT_READ)
 			{

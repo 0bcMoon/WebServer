@@ -10,6 +10,7 @@
 --- DELETE
 
 --- APPEND DUPLICATE HEADER VALUE //Done!!
+--- PATH_INFO
 
 Yes, the CGI (Common Gateway Interface) specification requires certain HTTP request headers to be passed to the CGI script as environment variables. Here's how headers are transformed:
 

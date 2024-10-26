@@ -16,7 +16,9 @@ GlobalConfig::GlobalConfig()
 {
 	this->autoIndex = -1;
 	this->errorPages["."] = "";
+	this->IsAlias = false; // INFO: this is art Do not touch unless you have a permit.
 }
+
 
 GlobalConfig::GlobalConfig(int autoIndex, const std::string &upload_file_path)
 {
@@ -35,7 +37,10 @@ GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 		return *this;
 
 	if (root.empty())
+	{
 		root = other.root;
+		this->IsAlias = other.IsAlias;
+	}
 	if (upload_file_path.empty())
 		upload_file_path = other.upload_file_path;
 	if (autoIndex == -1)
@@ -60,6 +65,8 @@ void GlobalConfig::setRoot(Tokens &token, Tokens &end)
 {
 	struct stat buf;
 
+	if (!this->root.empty())
+		throw ParserException("Root directive is duplicate");
 	validateOrFaild(token, end);
 	this->root = consume(token, end);
 	if (stat(this->root.c_str(), &buf) != 0)
@@ -142,8 +149,8 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 		this->setIndexes(token, end);
 	else if (*token == "error_page")
 		this->setErrorPages(token, end);
-	else if (*token == "client_upload_path")
-		this->setUploadPath(token, end);
+	else if (*token == "alias")
+		this->setAlias(token, end);
 	else
 		throw ParserException("Invalid token: " + *token);
 	return (true);
@@ -176,38 +183,33 @@ const std::vector<std::string> &GlobalConfig::getIndexes()
 	return (this->indexes);
 }
 
-void GlobalConfig::setUploadPath(Tokens &token, Tokens &end)
-{
-	struct stat buf;
-
-	this->validateOrFaild(token, end);
-	this->upload_file_path = this->consume(token, end);
-	this->CheckIfEnd(token, end);
-	if (stat(this->upload_file_path.data(), &buf) != 0)
-		throw ParserException("Upload path does directory does not exist");
-	if (S_ISDIR(buf.st_mode) == 0)
-		throw ParserException("Upload Path is not a directory");
-	if (access(this->upload_file_path.data(), W_OK) != 0)
-		throw ParserException("invalid Upload path directory");
-}
-
-std::string GlobalConfig::loadFile(const char *filename)
-{
-	std::stringstream buf;
-	std::ifstream input(filename, std::ios::binary);
-	if (!input)
-		throw ParserException("could not open file for reading: " + std::string(filename));
-	buf << input.rdbuf();
-	return buf.str();
-}
-
 const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 {
 	std::map<std::string, std::string>::iterator kv = this->errorPages.find(StatusCode);
 
 	if (kv == this->errorPages.end())
-		return (this->errorPages.find(StatusCode)->second);
+		return (this->errorPages.find(StatusCode)->second); // TODO: Error fix me i may faild 
 	return (kv->second);
+}
+
+void GlobalConfig::setAlias(Tokens &token, Tokens &end)
+{
+	struct stat buf;
+
+	if (!this->root.empty())
+		throw ParserException("Alias directive is duplicate");
+	validateOrFaild(token, end);
+	this->root = consume(token, end);
+	if (stat(this->root.c_str(), &buf) != 0)
+		throw ParserException("Alias directory does not exist");
+	if (S_ISDIR(buf.st_mode) == 0)
+		throw ParserException("Alias is not a directory");
+	this->IsAlias = true;
+	CheckIfEnd(token, end);
+}
+bool GlobalConfig::getAliasOffset() const 
+{
+	return (this->IsAlias);
 }
 
 // bool GlobalConfig::isMethodAllowed(int method) const

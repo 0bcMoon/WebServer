@@ -31,13 +31,15 @@ class Location
 		std::string upload_file_path;
 		std::string host;
 		int port;
+		std::string alias;
 
 	public:
+		Location();
+		Location &operator=(const Location &location);
 		GlobalConfig globalConfig;
 
 		bool isMethodAllowed(int method) const;
-		Location();
-		Location &operator=(const Location &location);
+		void setUploadPath(Tokens &token, Tokens &end);
 		void setPath(std::string &path);
 		const std::string &getPath();
 		void setRedirect(Tokens &token, Tokens &end);
