@@ -4,13 +4,17 @@
 #include "HttpRequest.hpp"
 #include "Location.hpp"
 #include "ServerContext.hpp"
+#include <cstddef>
 #include <string>
 
 
 enum responseState 
 {
 	START,
-	ERROR
+	WRITE_BODY,
+	ERROR,
+	WRITE_ERROR,
+	END_BODY
 };
 
 enum pathType
@@ -81,6 +85,16 @@ class HttpResponse
 		ServerContext						*ctx;
 		HttpRequest							*request;
 	public:
+		size_t								i, j;
+		size_t								writeByte;
+		size_t								eventByte;
+		void			write2client(int fd, const char *str, size_t size);
+		class WriteEception : public std::exception
+		{
+			public :
+				virtual const char* what() const throw();
+		};
+
 		std::string getRandomName();
 		std::string							queryStr;
 		std::string											getCgiContentLenght();
@@ -126,7 +140,7 @@ class HttpResponse
 
 		int								autoIndexCooking();
 		static std::string				getExtension(std::string str);
-		std::vector<char>		getBody() const;
+		std::vector<char>				getBody() const;
 
 
 		void							parseCgiOutput();

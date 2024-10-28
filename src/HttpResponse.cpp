@@ -68,6 +68,18 @@ std::string HttpResponse::getContentLenght()
 	return ("Content-Length: " + oss.str() + "\r\n");
 }
 
+void			HttpResponse::write2client(int fd, const char *str, size_t size)
+{
+	if (write(fd, str, size) < 0)
+		throw WriteEception();
+	writeByte += size;
+}
+
+const char* HttpResponse::WriteEception::what() const throw()
+{
+	return ("failed to write");
+}
+
 std::string HttpResponse::getErrorRes()
 {
 	std::ostringstream oss;
@@ -466,22 +478,21 @@ void HttpResponse::writeCgiResponse()
 
 void HttpResponse::writeResponse()
 {
-	write(this->fd, getStatusLine().c_str(), getStatusLine().size());
-	write(this->fd, getConnectionState().c_str(), getConnectionState().size());
-	write(this->fd, getContentType().c_str(), getContentType().size());
-	write(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
-	std::cout << " <---------> "  << "|" << getContentLenght(bodyType) << "|" << std::endl;
-	write(fd, getDate().c_str(), getDate().size());
-	write(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
+	write2client(this->fd, getStatusLine().c_str(), getStatusLine().size());
+	write2client(this->fd, getConnectionState().c_str(), getConnectionState().size());
+	write2client(this->fd, getContentType().c_str(), getContentType().size());
+	write2client(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
+	write2client(fd, getDate().c_str(), getDate().size());
+	write2client(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
 	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
 	{
-		write(this->fd, it->first.c_str(), it->first.size());
-		write(this->fd, ": ", 2);
-		write(this->fd, it->second.c_str(), it->second.size());
-		write(fd, "\r\n", 2);
+		write2client(this->fd, it->first.c_str(), it->first.size());
+		write2client(this->fd, ": ", 2);
+		write2client(this->fd, it->second.c_str(), it->second.size());
+		write2client(fd, "\r\n", 2);
 	}
-	write(this->fd, "\r\n", 2);
-	sendBody(-1, bodyType);
+	write2client(this->fd, "\r\n", 2);
+	state = WRITE_BODY;	
 }
 
 std::string HttpResponse::getStatusLine()
@@ -533,37 +544,35 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 	size_t begin = 0;
 	if (type == CGI)
 	{
-		// size_t len = 0;
 		std::istringstream oss(getCgiContentLenght());
 		oss >> begin;
-		// std::istringstream oss1(getContentLenght(bodyType));
-		// oss1 >> len;
 		size_t size = 0;
 		for (size_t i = 0; i < responseBody.size(); i++)
 		{
 			size += responseBody[i].size();
 		}
 		begin = size - begin;
-		std::cout << "-----------> " << begin << std::endl;
 	}
 	if (type == LOAD_FILE || type == CGI)
 	{
 		size_t count = 0;
-		for (size_t i = 0; i < responseBody.size(); i++)
+		for (size_t i = this->i; i < responseBody.size(); i++)
 		{
-			for (size_t j = 0; j < responseBody[i].size(); j++)
+			for (size_t j = this->j; j < responseBody[i].size(); j++)
 			{
+				if (writeByte == eventByte)
+					return (this->j = j, this->i = i, 1);
 				if (count >= begin)
-					write(this->fd, &responseBody[i][j], 1);
+					write2client(this->fd, &responseBody[i][j], 1);
 				count++;
 			}
 		}
 	}
 	else if (type == AUTO_INDEX)
 	{
-		write(this->fd, autoIndexBody.c_str(), autoIndexBody.size());
+		write2client(this->fd, autoIndexBody.c_str(), autoIndexBody.size());
 	}
-	return (1);
+	return (state = END_BODY, 1);
 }
 
 std::string HttpResponse::getContentLenght(enum responseBodyType type)
@@ -667,8 +676,7 @@ void			HttpResponse::responseCooking()
 	// std::cout << "pure path: " << path << std::endl;
 	if (!isPathFounded())
 		return;
-	if (isCgi())
-	{
+	if (isCgi()) {
 		cgiCooking(/**/);
 	}
 	else
@@ -677,9 +685,19 @@ void			HttpResponse::responseCooking()
 			return 	setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
 			return ;
-		if (strMethod == "POST" && !uploadFile())
-			return;
-		writeResponse();
+		// if (strMethod == "POST" && !uploadFile())
+		// 	return
+		try 
+		{
+			writeResponse();
+		}
+		catch (std::exception &e)
+		{
+			std::cout << "FUCK: " << e.what() << std::endl;
+			state = WRITE_ERROR;
+			return ; 
+		}
+		sendBody(-1, bodyType);
 	}
 }
 
