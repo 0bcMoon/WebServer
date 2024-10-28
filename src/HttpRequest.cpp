@@ -111,21 +111,26 @@ HttpRequest::~HttpRequest() {
 
 void HttpRequest::readRequest()
 {
-	char tmp[REQSIZE_MAX + 10];
+	char buffer[1000000];//TODO:read
 
-	int size = read(fd, tmp, REQSIZE_MAX + 1);
-	if (size ==  -1)
-		return ;
-	if (size == 0)
-		return ;
-	else if (size > 0)
+	while (1)
 	{
-		reqBuffer.resize(reqBuffer.size() + size);
-		size_t j = 0;
-		for (size_t i = reqBuffer.size() - size ; i < reqBuffer.size(); i++)
+		// for (size_t i = 0; i < 1000000;i++)
+		// 	buffer[i] = 0;
+		int size = read(fd, buffer, 1000000 + 1);
+		if (size ==  -1)
+			return ;
+		if (size == 0)
+			return ;
+		else if (size > 0)
 		{
-			reqBuffer[i] = tmp[j];
-			j++;
+			reqBuffer.resize(reqBuffer.size() + size);
+			size_t j = 0;
+			for (size_t i = reqBuffer.size() - size ; i < reqBuffer.size(); i++)
+			{
+				reqBuffer[i] = buffer[j];
+				j++;
+			}
 		}
 	}
 }
@@ -266,10 +271,10 @@ void HttpRequest::feed()
 	// 		std::cout << "Key: " << it->first << ", Value: " << it->second << "|" <<  std::endl;
 	// 	}
 	// }
-	// // // if (state == DEBUG && response(fd))
-	// // // 	std::cout << "FUCKING DONE" << std::endl;
-	// 
-	// // INFO: print request information;
+	// // if (state == DEBUG && response(fd))
+	// // 	std::cout << "FUCKING DONE" << std::endl;
+	
+	// INFO: print request information;
 
 	// std::cout << error.code << ": " << error.description << std::endl; 
 	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << " --> " << httpVersion << std::endl;

@@ -211,3 +211,8 @@ bool GlobalConfig::getAliasOffset() const
 {
 	return (this->IsAlias);
 }
+
+// bool GlobalConfig::isMethodAllowed(int method) const
+// {
+// 	return (this->me)
+// }

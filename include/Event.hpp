@@ -9,6 +9,7 @@ class Event
 {
   private:
 	ServerContext *ctx;
+	Connections connections;
 	const int MAX_CONNECTION_QUEUE;
 	const int MAX_EVENTS;
 	typedef std::map<std::string, VirtualServer *> ServerNameMap_t;
@@ -36,7 +37,9 @@ class Event
 	int newConnection(int socketFd, Connections &connections);
 	bool checkNewClient(int socketFd);
 	int setWriteEvent(int fd, uint16_t flags);
-	Location *getLocation(const Client *client, int port);
+	Location *getLocation(const Client *client);
+	void ReadEvent(const struct kevent *ev);
+	void WriteEvent(const struct kevent *ev);
 
   public:
 	void initIOmutltiplexing();

@@ -46,7 +46,7 @@ void Client::respond()
 		response.responseCooking();
 	if (response.state == ERROR)
 	{
-		Log::Error(this->response);
+		// Log::Error(this->response);
 		write(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 		// write(1, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}

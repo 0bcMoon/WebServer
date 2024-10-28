@@ -1,6 +1,7 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
+#include <sys/event.h>
 #include <cstddef>
 #include <map>
 #include <string>
@@ -8,8 +9,8 @@
 #include <vector>
 
 #define URI_MAX		 2048
-#define REQSIZE_MAX  5000000
-#define BODY_MAX	 3000000
+#define REQSIZE_MAX  1000000000
+#define BODY_MAX	 100000000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
 
@@ -81,6 +82,7 @@ struct multiPart
 class HttpRequest 
 {
 	private:
+		struct kevent *ev;
 		typedef std::map<std::string, std::string> Headers;
 		 chunkState							chunkState;
 		size_t								totalChunkSize;

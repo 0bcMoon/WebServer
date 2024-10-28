@@ -52,7 +52,7 @@ class Location
 		const std::string &geCGItPath(const std::string &ext);
 		const std::string &geCGIext();
 		void setCGI(Tokens &token, Tokens &end);
-		void setINFO(const std::string &host, int port);
+		void setHostPort(const std::string &host, int port);
 		int getPort() const;
 		const std::string& getHost() const;
 		const std::string &getFileUploadPath();//INFO:uploded file

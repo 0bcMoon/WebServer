@@ -158,7 +158,7 @@ const std::string &Location::getPath()
 {
 	return (this->path);
 }
-void Location::setINFO(const std::string &host, int port)
+void Location::setHostPort(const std::string &host, int port)
 {
 	this->host = host;
 	this->port = port;

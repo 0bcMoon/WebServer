@@ -39,7 +39,9 @@ CgiHandler::~CgiHandler()
 
 int		CgiHandler::checkCgiFile()
 {
-	scriptPath = response->location->globalConfig.getRoot() + response->path;
+	size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size() : 0;
+	this->scriptPath = response->location->globalConfig.getRoot() + response->path.substr(offset);
+	// scriptPath = response->location->globalConfig.getRoot() + response->path;
 	if (access(scriptPath.c_str(), F_OK) == -1)
 		return (response->setHttpResError(404, "Not Found"), 0);
 	if (access(scriptPath.c_str(), X_OK) == -1)
@@ -61,7 +63,7 @@ int			CgiHandler::initEnv()
 	env["SERVER_PORT"] = ss.str();
 	env["REQUEST_METHOD"] = response->strMethod;
 	env["SCRIPT_NAME"] = response->path;
-	env["PATH_INFO"] = response->location->globalConfig.getRoot() + response->path;
+	// env["PATH_INFO"] = "/55" ;
 	env["QUERY_STRING"] = response->queryStr;
 	env["CONTENT_TYPE"] = response->headers["Content-type"];
 	if (env["REQUEST_METHOD"] == "POST")
@@ -69,9 +71,13 @@ int			CgiHandler::initEnv()
 		std::ostringstream oss;
 		oss << response->getBody().size();
 		env["CONTENT_LENGTH"] = oss.str();
+		std::cout << "CONTENT_LENGTH5: " << response->getBody().size() << std::endl;
 	}
 	else
+	{
+		std::cout << "CONTENT_LENGTH: " << response->getBody().size() << std::endl;
 		env["CONTENT_LENGTH"] = "0";
+	}
 	env["REMOTE_ADDR"] = "";//TODO: 
 	env["HTTP_HOST"] = response->headers["Host"];
 	return (1);
@@ -102,14 +108,15 @@ void	CgiHandler::envMapToArr(std::map<std::string, std::string> mapEnv)
 void		CgiHandler::initArgv()
 {
 	argv = new char *[3];
+	// cgiPath = "cgi_tester";
 	argv[0] = new char[cgiPath.size() + 1];
 	for (size_t i = 0; i < cgiPath.size();i++)
 	{
 		argv[0][i] = cgiPath[i];
 	}
 	argv[0][cgiPath.size()] = 0;
-	argv[1] = new char [(response->location->globalConfig.getRoot() + response->path).size() + 1];
-	std::string tmp = response->location->globalConfig.getRoot() + response->path;
+	argv[1] = new char [( response->location->globalConfig.getRoot() +  response->path).size() + 1];
+	std::string tmp =  response->location->globalConfig.getRoot() +  response->path;
 	for (size_t i = 0; i < tmp.size();i++)
 	{
 		argv[1][i] = tmp[i];
@@ -137,6 +144,7 @@ void		CgiHandler::execute(std::string cgiPath)
 {
 	int pipefdOut[2];
 	int pipefdIn[2];
+
 
 	this->cgiPath = cgiPath;
 	if (!initEnv())
@@ -171,11 +179,11 @@ void		CgiHandler::execute(std::string cgiPath)
 	{
 		close(pipefdOut[0]);
 		if (dup2(pipefdOut[1], 1) < 0 && !close(pipefdOut[1]) && !close(pipefdIn[0]))
-			return ;
+			exit(1);
 		if (dup2(pipefdIn[0], 0) < 0 && !close(pipefdOut[1]) && !close(pipefdIn[0]))
-			return ;
-		if (execve(*argv, argv, envArr) < 0 && !close(pipefdOut[1]) && !close(pipefdIn[0]))
-			return ;
+			exit(1);
+		if (execve(*argv, argv, envArr) < 0 && !close(pipefdOut[1]) && !close(pipefdIn[0])) // TODO: expection
+			exit(1);
 	}
 	int status;
 	waitpid(pid, &status, 0); //ERROR

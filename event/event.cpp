@@ -20,7 +20,7 @@
 #include "HttpResponse.hpp"
 #include "VirtualServer.hpp"
 
-Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
+Event::Event() :connections(NULL, -1), MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 {
 	this->evList = NULL;
 	this->eventChangeList = NULL;
@@ -29,7 +29,7 @@ Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 }
 
 Event::Event(int max_connection, int max_events, ServerContext *ctx)
-	: MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
+	:connections(ctx, -1), MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
 	this->ctx = ctx;
 	this->evList = NULL;
@@ -162,7 +162,7 @@ int Event::setNonBlockingIO(int sockfd)
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1)
 		return (-1);
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | FD_CLOEXEC) == -1)
+	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC) < 0)
 		return (-1);
 	return (0);
 }
@@ -227,6 +227,7 @@ int Event::newConnection(int socketFd, Connections &connections)
 	if (kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL) < 0)
 			return (close(newSocketFd)); // report faild connections
 	connections.addConnection(newSocketFd, socketFd);
+
 	return (newSocketFd);
 }
 
@@ -239,16 +240,79 @@ int Event::setWriteEvent(int fd, uint16_t flags)
 	return kevent(this->kqueueFd, &ev, 1, NULL, 0, NULL);
 }
 
+void Event::ReadEvent(const struct kevent *ev)
+{
+	 Client *client;
+	 // init a timer for 16s ?? or add to ther config maybe (we dont care if it a cgi or some thing else)
+	std::cout << "READ event\n";
+	// each client has a client_time for read and cgi exec and  on each request
+	//
+	// TODO: set a time out for this client ?? response ?
+	// add timer event for (for server t)o read M??
+	if (ev->flags & EV_EOF && ev->data <= 0)
+	{
+		std::cout << "client disconnected\n";
+		connections.closeConnection(ev->ident);
+	}
+	else
+	{
+		client = connections.requestHandler(ev->ident);
+		if (client == NULL)
+			return ;
+		else if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
+			return ;
+		// if (has a cgi)
+		// // take pipe fd  cgi process id for monitor  read and write of large files (make cgi like a client can be blocking)
+		// use udata feild for seperate client fd with cgi fd pipe
+		if (this->setWriteEvent(client->getFd(), EV_ENABLE) < 0)
+			connections.closeConnection(client->getFd());
+	}
+}
+void Event::WriteEvent(const struct kevent *ev)
+{
+	 // stop the timer 
+	std::cout << "Writes event\n";
+	if ((ev->flags & EV_EOF))
+	{
+		std::cout << "client disconnected\n";
+		connections.closeConnection(ev->ident);
+	}
+	else
+	{
+		ClientsIter clientIter = connections.clients.find(ev->ident);
+		if (clientIter == connections.clients.end())
+			return ;
+		Client *client = clientIter->second;
+		client->response.location  =  this->getLocation(client);
+		client->respond();
+		if (client->response.state == ERROR)
+			connections.closeConnection(client->getFd());	
+		else 
+		{
+			client->response = HttpResponse(ev->ident, this->ctx, &client->request);
+			this->setWriteEvent(client->getFd(), EV_DISABLE);
+		}
+
+
+		// if (client respond has finish)
+		// {
+		// if (this->setWriteEvent(client->getFd(), EV_DISABLE) < 0) // stop monitor for write
+		// 	connections.closeConnection(client->getFd());
+		// 	else
+		// }
+		// }
+	}
+}
 void Event::eventLoop()
 {
-	Connections connections(this->ctx, this->kqueueFd);
+	connections.init(this->ctx, this->kqueueFd);
 	int nev;
 
 	while (1)
 	{
 		std::cout << "waiting for event\n";
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
-		if (nev <= -1)
+		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
 		for (int i = 0; i < nev; i++)
 		{
@@ -256,60 +320,12 @@ void Event::eventLoop()
 			if (this->checkNewClient(ev->ident))
 				this->newConnection(ev->ident, connections);
 			else if (ev->filter == EVFILT_READ)
-			{
-				// each client has a client_time for read and cgi exec and  on each request
-				//
-				// TODO: set a time out for this client ?? response ?
-				// add timer event for (for server t)o read M??
-				if (ev->flags & EV_EOF && ev->data <= 0)
-				{
-					std::cout << "client disconnected\n";
-					connections.closeConnection(ev->ident);
-				}
-				else
-				{
-					connections.requestHandler(ev->ident);
-					clients_it kv = connections.clients.find(ev->ident);
-					if (kv == connections.clients.end())
-						continue;
-					Client *client = kv->second;
-					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
-						continue;
-					// if (has a cgi)
-					// // take pipe fd  cgi process id for monitor  read and write of large files (make cgi like a client can be blocking)
-					// use udata feild for seperate client fd with cgi fd pipe
-					if (this->setWriteEvent(client->getFd(), EV_ENABLE) < 0)
-						connections.closeConnection(client->getFd());
-				}
-
-			}
+				this->ReadEvent(ev);
 			else if (ev->filter == EVFILT_WRITE)
-			{
-				if ((ev->flags & EV_EOF))
-				{
-					std::cout << "client disconnected\n";
-					connections.closeConnection(ev->ident);
-				}
-				else
-				{
-					clients_it kv = connections.clients.find(ev->ident);
-					if (kv == connections.clients.end())
-						continue;
-					Client *client = kv->second;
-					struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
-					client->response.location  =  this->getLocation(client, ntohs(addr.sin_port));
-					client->respond();
+				this->WriteEvent(ev);
+			else if (ev->filter == EVFILT_TIMER)
+				std::cout << "Timer Event\n";
 
-					// if (client respond has finish)
-					// {
-						// if (this->setWriteEvent(client->getFd(), EV_DISABLE) < 0) // stop monitor for write
-						// 	connections.closeConnection(client->getFd());
-						// 	else
-							// 	client->response = HttpResponse(ev->ident, this->ctx, &client->request);
-						// }
-					// }
-				}
-			}
 		}
 	}
 }
@@ -319,15 +335,17 @@ bool Event::checkNewClient(int socketFd)
 	return (this->sockAddrInMap.find(socketFd) != this->sockAddrInMap.end());
 }
 
-Location *Event::getLocation(const Client *client, int port)
+Location *Event::getLocation(const Client *client)
 {
 	VirtualServer *Vserver;
 	int serverfd;
 	bool IsDefault = true;
 
+	struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
+	int port = ntohs(addr.sin_port);
 	serverfd = client->getServerFd();
 	const std::string &path = client->getPath();
-	const std::string &host = client->getHost();
+	std::string host = client->getHost();
 	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second; // always exist
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())
@@ -335,14 +353,11 @@ Location *Event::getLocation(const Client *client, int port)
 		IsDefault = false; // plz dont fail all my hope on you
 	else
 		Vserver = _Vserver->second;
-
 	Location *location = Vserver->getRoute(path);
-	if (location)
-	{
-		if (IsDefault)
-			location->setINFO(host, port);
-		else
-			location->setINFO(*Vserver->getServerNames().begin(), port);
-	}
+	if (!location)
+		return (NULL);
+	else if (!IsDefault)
+		host = *Vserver->getServerNames().begin();
+	location->setHostPort(host, port);
 	return (location);
 }

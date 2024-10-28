@@ -12,7 +12,7 @@ Connections::Connections(ServerContext *ctx, int kqueueFd) : ctx(ctx), kqueueFd(
 
 Connections::~Connections()
 {
-	for (clients_it it = clients.begin(); it != clients.end(); ++it) {
+	for (ClientsIter it = clients.begin(); it != clients.end(); ++it) {
 		delete it->second;
 	}
 }
@@ -45,9 +45,18 @@ void		Connections::connecting(int fd)
 		addConnection(fd);
 }
 
-void		Connections::requestHandler(int	fd)
+// TODO: return client object : search once
+Client		*Connections::requestHandler(int	fd)
 {
-	if (this->clients.find(fd) == this->clients.end()) // TODO : fix
-		return ;
-	clients[fd]->request.feed();
+	ClientsIter clientIter = this->clients.find(fd);
+	if ( clientIter == this->clients.end()) // TODO : fix
+		return (NULL);
+	clientIter->second->request.feed();
+	return (clientIter->second);
+}
+
+void		Connections::init(ServerContext *ctx, int kqueueFd)
+{
+	this->ctx = ctx;
+	this->kqueueFd = kqueueFd;
 }

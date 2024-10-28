@@ -52,19 +52,15 @@ int main()
 	{
 		error("Error writing to socket");
 	}
-
-	while (read(sockfd, buffer, BUFFER_SIZE - 1) > 0)
-	{
-		printf("%s", buffer);
-		bzero(buffer, BUFFER_SIZE);
-		break;
-	}
-	if (write(sockfd, request, strlen(request) - 10) < 0)
+	if (write(sockfd, request, strlen(request)) < 0)
 	{
 		error("Error writing to socket");
 	}
-	char cl;
-	scanf("%c", &cl);
+
+	// if (write(sockfd, request, strlen(request)) < 0)
+	// {
+	// 	error("Error writing to socket");
+	// }
 	bzero(buffer, BUFFER_SIZE);
 	ssize_t n;
 	printf("Reading\n");
