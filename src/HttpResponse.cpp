@@ -33,6 +33,8 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	location = NULL;
 	isCgiBool = false;
 	bodyType = NO_TYPE;
+	i = 0;
+	j = 0;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Server: XXXXXXXX\r\n"; // TODO:name the server;
@@ -71,14 +73,17 @@ std::string HttpResponse::getContentLenght()
 void			HttpResponse::write2client(int fd, const char *str, size_t size)
 {
 	if (write(fd, str, size) < 0)
-		throw WriteEception();
+	{
+		state = WRITE_ERROR;
+		return ;
+	}
 	writeByte += size;
 }
 
-const char* HttpResponse::WriteEception::what() const throw()
-{
-	return ("failed to write");
-}
+// const char* HttpResponse::WriteEception::what() const throw()
+// {
+// 	return ("failed to write");
+// }
 
 std::string HttpResponse::getErrorRes()
 {
@@ -628,7 +633,7 @@ void HttpResponse::decodingUrl()
 			decodedUrl.push_back(path[i]);
 	}
 	path = decodedUrl;
-	std::cout << "Decoded-url: " << path << std::endl;
+	// std::cout << "Decoded-url: " << path << std::endl;
 }
 
 void HttpResponse::splitingQuery()
@@ -670,10 +675,13 @@ int				HttpResponse::uploadFile()
 
 void			HttpResponse::responseCooking()
 {
+	if (state == WRITE_BODY)
+	{
+		sendBody(-1, bodyType);
+		return ;
+	}
 	decodingUrl();
 	splitingQuery();
-	// std::cout << "queryStr: " << queryStr << std::endl;
-	// std::cout << "pure path: " << path << std::endl;
 	if (!isPathFounded())
 		return;
 	if (isCgi()) {
@@ -685,18 +693,9 @@ void			HttpResponse::responseCooking()
 			return 	setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
 			return ;
-		// if (strMethod == "POST" && !uploadFile())
-		// 	return
-		try 
-		{
-			writeResponse();
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "FUCK: " << e.what() << std::endl;
-			state = WRITE_ERROR;
-			return ; 
-		}
+		writeResponse();
+		if (state == WRITE_ERROR)
+			return ;
 		sendBody(-1, bodyType);
 	}
 }

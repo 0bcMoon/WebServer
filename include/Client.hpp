@@ -32,7 +32,7 @@ class Client
 		int					getServerFd() const;
 		const std::string	&getHost() const;	
 		const std::string	&getPath() const;
-		void				respond();
+		void				respond(size_t data);
 };
 
 #endif

@@ -309,10 +309,22 @@ void Event::eventLoop()
 					this->WriteEvent(client->getFd(), EV_DISABLE); // TODO: if it faild whats to do
 					struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
 
-					client->response.location  =  this->getLocation(client, ntohs(addr.sin_port));
-					client->respond();
-					client->response = HttpResponse(ev->ident, this->ctx, &client->request);
-
+					if (client->response.state != WRITE_BODY)
+					{
+						client->response.location  =  this->getLocation(client, ntohs(addr.sin_port));
+						client->respond(ev->data);
+					}
+					else 
+					{
+						client->response.eventByte = ev->data;
+						client->response.sendBody(-1, client->response.bodyType);
+						if (client->response.state == WRITE_ERROR)
+						{
+							// idk how to handle it
+						}
+					}
+					if (client->response.state != WRITE_BODY)
+						client->response = HttpResponse(ev->ident, this->ctx, &client->request);
 					// INFO : keep alive
 
 					// if (!(client->response.keepAlive))

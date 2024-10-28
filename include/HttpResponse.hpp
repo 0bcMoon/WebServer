@@ -77,7 +77,6 @@ class HttpResponse
 		httpError							status;	
 		bool								isCgiBool;
 		errorResponse						errorRes;
-		enum responseBodyType				bodyType;
 
 		std::string							fullPath;
 		static const int					fileReadingBuffer = 10240;
@@ -85,15 +84,16 @@ class HttpResponse
 		ServerContext						*ctx;
 		HttpRequest							*request;
 	public:
+		enum responseBodyType				bodyType;
 		size_t								i, j;
 		size_t								writeByte;
 		size_t								eventByte;
 		void			write2client(int fd, const char *str, size_t size);
-		class WriteEception : public std::exception
-		{
-			public :
-				virtual const char* what() const throw();
-		};
+		// class WriteEception : public std::exception
+		// {
+		// 	public :
+		// 		virtual const char* what() const throw();
+		// };
 
 		std::string getRandomName();
 		std::string							queryStr;
