@@ -13,6 +13,7 @@ enum responseState
 	START,
 	WRITE_BODY,
 	ERROR,
+	CGI_EXECUTING,
 	WRITE_ERROR,
 	END_BODY
 };
@@ -107,7 +108,7 @@ class HttpResponse
 		std::string											getCgiContentLenght();
 		int												parseCgiHaders(std::string str);
 		std::string											strMethod;
-		std::vector<std::vector<char> >						responseBody;
+		std::vector<std::vector<char> >						responseBody;// INFO:cgi output
 		int													keepAlive; // bool? // bool?
 		Location											*location;
 		enum responseState									state;

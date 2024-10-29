@@ -776,7 +776,7 @@ void			HttpResponse::responseCooking()
 	if (!isPathFounded())
 		return;
 	if (isCgi()) {
-		cgiCooking(/**/);
+		state = CGI_EXECUTING;
 	}
 	else
 	{

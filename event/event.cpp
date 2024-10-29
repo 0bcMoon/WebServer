@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "CgiHandler.hpp"
 #include "Client.hpp"
 #include "Connections.hpp"
 #include "HttpRequest.hpp"
@@ -279,10 +280,14 @@ void Event::WriteEvent(const struct kevent *ev)
 		if (client->response.state != WRITE_BODY)
 		{
 			client->response.location = this->getLocation(client);
-
 			client->respond(ev->data);
 		}
-
+		if (client->response.state == CGI_EXECUTING)
+		{
+			CgiHandler cgi(client->response);
+			cgi.initEnv();
+			// cgi.envMapToArr(cgi.)
+		}
 		if (client->response.state == WRITE_BODY)
 		{
 			client->response.eventByte = ev->data;
@@ -290,8 +295,6 @@ void Event::WriteEvent(const struct kevent *ev)
 		}
 		if (client->response.state != WRITE_BODY)
 		{
-			// client->response.~HttpResponse();
-			// client->response = HttpResponse(ev->ident, this->ctx, &client->request);
 			client->response.clear();
 			this->setWriteEvent(ev->ident, EV_DISABLE);
 		}

@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   CgiHandeler.cpp                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: zkotbi <zkotbi@1337.ma>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/10/29 17:26:09 by zkotbi            #+#    #+#             */
+/*   Updated: 2024/10/29 17:26:11 by zkotbi           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "CgiHandler.hpp"
 #include "DataType.hpp"
 #include "HttpRequest.hpp"
@@ -138,6 +150,15 @@ static int closeFds(int *fd1, int *fd2)
 		close(fd2[1]);
 	}
 	return (1);
+}
+
+char					**CgiHandler::getEnv() const
+{
+	return (envArr);
+}
+char					**CgiHandler::getArgv() const
+{
+	return (this->argv);
 }
 
 void		CgiHandler::execute(std::string cgiPath)
