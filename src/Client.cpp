@@ -37,7 +37,9 @@ void Client::respond(size_t data)
 	response.eventByte = data;
 	if (request.state != REQUEST_FINISH && request.state != REQ_ERROR)
 		return ;
+
 	response = request;
+	// TODO: 9ad had shitty code
 	if ((response.headers.find("Connection") != response.headers.end() //TODO: create a function that return bool from search from file //TODO: handle connection with Cgi
 		&& (response.headers["Connection"].find("close") != std::string::npos
 			|| response.headers["Connection"].find("Close") != std::string::npos))
@@ -46,11 +48,7 @@ void Client::respond(size_t data)
 	if (request.state == REQUEST_FINISH)
 		response.responseCooking();
 	if (response.state == ERROR)
-	{
-		// Log::Error(this->response);
 		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
-		// write(1, response.getErrorRes().c_str(), response.getErrorRes().size());
-	}
 	request.clear();
 }
 

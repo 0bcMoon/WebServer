@@ -242,6 +242,7 @@ int Event::setWriteEvent(int fd, uint16_t flags)
 
 void Event::ReadEvent(const struct kevent *ev)
 {
+
 	if (ev->flags & EV_EOF && ev->data <= 0)
 	{
 		std::cout << "client disconnected\n";
@@ -251,6 +252,7 @@ void Event::ReadEvent(const struct kevent *ev)
 	{
 		connections.requestHandler(ev->ident);
 		ClientsIter kv = connections.clients.find(ev->ident);
+
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
@@ -273,11 +275,14 @@ void Event::WriteEvent(const struct kevent *ev)
 		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
 			&& client->response.state != WRITE_BODY)
 			return;
+
 		if (client->response.state != WRITE_BODY)
 		{
 			client->response.location = this->getLocation(client);
+
 			client->respond(ev->data);
 		}
+
 		if (client->response.state == WRITE_BODY)
 		{
 			client->response.eventByte = ev->data;
@@ -285,8 +290,9 @@ void Event::WriteEvent(const struct kevent *ev)
 		}
 		if (client->response.state != WRITE_BODY)
 		{
-			client->response.~HttpResponse();
-			client->response = HttpResponse(ev->ident, this->ctx, &client->request);
+			// client->response.~HttpResponse();
+			// client->response = HttpResponse(ev->ident, this->ctx, &client->request);
+			client->response.clear();
 			this->setWriteEvent(ev->ident, EV_DISABLE);
 		}
 	}

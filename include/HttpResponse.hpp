@@ -84,9 +84,10 @@ class HttpResponse
 		ServerContext						*ctx;
 		HttpRequest							*request;
 		char buff[BUFFER_SIZE]; // TODO: make me 
+	
 	public:
+
 		enum responseBodyType				bodyType;
-		size_t								i, j;
 		size_t								writeByte;
 		size_t								eventByte;
 		int									responseFd;
@@ -115,7 +116,8 @@ class HttpResponse
 		std::map<std::string, std::string>					resHeaders;
 
 		HttpResponse(int fd, ServerContext *ctx, HttpRequest *request);
-		HttpResponse	operator=(const HttpRequest& req);
+		HttpResponse&	operator=(const HttpRequest& req);
+		void			clear();
 		~HttpResponse();
 
 		void							responseCooking();

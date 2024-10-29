@@ -35,8 +35,68 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	isCgiBool = false;
 	bodyType = NO_TYPE;
 	responseFd = -1;
-	i = 0;
-	j = 0;
+	// i = 0;
+	// j = 0;
+	errorRes.headers =
+		"Content-Type: text/html; charset=UTF-8\r\n"
+		"Server: XXXXXXXX\r\n"; // TODO:name the server;
+	errorRes.contentLen = "Content-Length: 0\r\n";
+	errorRes.bodyHead =
+		"\r\n"
+		"<!DOCTYPE html>\n"
+		"<html>\n"
+		"<head><title>";
+	errorRes.body =
+		"</title></head>\n"
+		"<body>\n"
+		"<h1>";
+	errorRes.bodyfoot =
+		"</h1>\n"
+		"</body>\n"
+		"</html>";
+	errorRes.connection = "Connection: Keep-Alive\r\n";
+}
+
+void			HttpResponse::clear()
+{
+	if (responseFd >= 0)
+		close(responseFd);
+	errorRes.statusLine.clear();
+	errorRes.headers.clear();
+	errorRes.connection.clear();
+	errorRes.contentLen.clear();
+	errorRes.bodyHead.clear();
+	errorRes.title.clear();
+	errorRes.body.clear();
+	errorRes.htmlErrorId.clear();
+	errorRes.bodyfoot.clear();
+	cgiRes.state = HEADERS;
+	cgiRes.bodyStartIndex = 0;
+	cgiRes.cgiStatusLine.clear();
+	cgiRes.lines.clear();
+	methode = NONE;
+	body.clear();
+	status.code = 200;
+	status.description = "OK";
+	isCgiBool = 0;
+	fullPath.clear();
+	autoIndexBody.clear();
+	writeByte = 0;
+	eventByte = 0;
+	fileSize = 0;
+	sendSize = 0;
+	queryStr.clear();
+	strMethod.clear();
+	responseBody.clear();
+	state = START;
+	path.clear();
+	headers.clear();
+	resHeaders.clear();
+	keepAlive = 1;
+	location = NULL;
+	isCgiBool = false;
+	bodyType = NO_TYPE;
+	responseFd = -1;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Server: XXXXXXXX\r\n"; // TODO:name the server;
@@ -109,7 +169,7 @@ std::string HttpResponse::getErrorRes()
 		+ errorRes.title + errorRes.body + errorRes.htmlErrorId + errorRes.bodyfoot);
 }
 
-HttpResponse HttpResponse::operator=(const HttpRequest &req)
+HttpResponse& HttpResponse::operator=(const HttpRequest &req)
 {
 	path = req.getPath();
 	headers = req.getHeaders();
@@ -406,17 +466,13 @@ void HttpResponse::parseCgiOutput()
 				lineIndex++;
 		}
 	}
-	/*************************************************************/
-	// std::cout << "/*************************************************************/\n";
 	for (size_t i = 0; i < cgiRes.lines.size(); i++)
 	{
 		for (size_t j = 0; j < cgiRes.lines[i].size(); j++)
 		{
 			std::cout << cgiRes.lines[i][j];
 		}
-		// std::cout << std::endl;
 	}
-	/*************************************************************/
 	for (size_t i = 0; i < cgiRes.lines.size(); i++)
 	{
 		if (isLineCrlf(cgiRes.lines[i]))
@@ -571,12 +627,12 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 	if (/* type == LOAD_FILE ||  */type == CGI)
 	{
 		size_t count = 0;
-		for (size_t i = this->i; i < responseBody.size(); i++)
+		for (size_t i = 0; i < responseBody.size(); i++)
 		{
-			for (size_t j = this->j; j < responseBody[i].size(); j++)
+			for (size_t j = 0; j < responseBody[i].size(); j++)
 			{
-				if (writeByte == eventByte)
-					return (this->j = j, this->i = i, 1);
+				// if (writeByte == eventByte)
+				// 	return (this->j = j, this->i = i, 1);
 				if (count >= begin)
 					write2client(this->fd, &responseBody[i][j], 1);
 				count++;
