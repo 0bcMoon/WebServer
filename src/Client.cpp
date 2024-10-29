@@ -39,7 +39,7 @@ void Client::respond(size_t data)
 		return ;
 
 	response = request;
-	// TODO: 9ad had shitty code
+	// TODO: find()
 	if ((response.headers.find("Connection") != response.headers.end() //TODO: create a function that return bool from search from file //TODO: handle connection with Cgi
 		&& (response.headers["Connection"].find("close") != std::string::npos
 			|| response.headers["Connection"].find("Close") != std::string::npos))

@@ -9,7 +9,6 @@
 #include <string>
 class CgiHandler {
 	private:
-		std::map<std::string, std::string>	env;
 		std::string							cgiPath;
 		std::string							scriptName;
 		std::string							scriptPath;
@@ -18,6 +17,7 @@ class CgiHandler {
 
 		char								**envArr;
 		char								**argv;
+		std::map<std::string, std::string>	env;
 	public:
 		// CgiHandler(std::string reqPath, httpError& status, Location *location, ServerContext *ctx);
 
@@ -29,5 +29,7 @@ class CgiHandler {
 		void					execute(std::string cgiPath);
 		int						initEnv();
 		void					initArgv();
+		char					**getEnv() const;
+		char					**getArgv() const;
 };
 #endif
