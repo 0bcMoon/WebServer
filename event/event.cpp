@@ -324,7 +324,7 @@ void Event::eventLoop()
 				else
 					throw std::runtime_error("Errror unkonw event\n");
 			}
-			catch (std::exception &e)
+			catch (HttpResponse::IOException &e)
 			{
 				this->connections.closeConnection(ev->ident);
 				std::cout << e.what() << "\n";

@@ -44,7 +44,7 @@ int		CgiHandler::checkCgiFile()
 	// scriptPath = response->location->globalConfig.getRoot() + response->path;
 	if (access(scriptPath.c_str(), F_OK) == -1)
 		return (response->setHttpResError(404, "Not Found"), 0);
-	if (access(scriptPath.c_str(), X_OK) == -1)
+	if (access(scriptPath.c_str(), R_OK) == -1)
 		return (response->setHttpResError(403, "Forbidden"), 0);
 	return (1);
 }
