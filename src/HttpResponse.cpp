@@ -1,5 +1,6 @@
 #include "HttpResponse.hpp"
 #include <dirent.h>
+#include <exception>
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/dirent.h>
@@ -33,6 +34,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	location = NULL;
 	isCgiBool = false;
 	bodyType = NO_TYPE;
+	responseFd = -1;
 	i = 0;
 	j = 0;
 	errorRes.headers =
@@ -55,6 +57,12 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	errorRes.connection = "Connection: Keep-Alive\r\n";
 }
 
+HttpResponse::~HttpResponse()
+{
+	if (responseFd >= 0)
+		close(responseFd);
+}
+
 std::vector<char> HttpResponse::getBody() const
 {
 	return (body);
@@ -75,15 +83,15 @@ void			HttpResponse::write2client(int fd, const char *str, size_t size)
 	if (write(fd, str, size) < 0)
 	{
 		state = WRITE_ERROR;
-		return ;
+		throw  WriteEception();
 	}
 	writeByte += size;
 }
 
-// const char* HttpResponse::WriteEception::what() const throw()
-// {
-// 	return ("failed to write");
-// }
+const char* HttpResponse::WriteEception::what() const throw()
+{
+	return ("failed to write");
+}
 
 std::string HttpResponse::getErrorRes()
 {
@@ -211,7 +219,7 @@ int HttpResponse::directoryHandler()
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
-			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), loadFile(fullPath));
+			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1/* , loadFile(fullPath) */);
 	}
 	if (location->globalConfig.getAutoIndex())
 		return (bodyType = AUTO_INDEX, autoIndexCooking());
@@ -288,7 +296,7 @@ int HttpResponse::pathChecking()
 	if (S_ISDIR(sStat.st_mode))
 		return (directoryHandler());
 	if (access(fullPath.c_str(), F_OK) != -1)
-		return (bodyType = LOAD_FILE, loadFile(fullPath));
+		return (bodyType = LOAD_FILE, 1/* loadFile(fullPath) */);
 	else
 	{
 		return (state = ERROR, setHttpResError(404, "Not Found"), 0);
@@ -483,6 +491,7 @@ void HttpResponse::writeCgiResponse()
 
 void HttpResponse::writeResponse()
 {
+	writeByte = 0;
 	write2client(this->fd, getStatusLine().c_str(), getStatusLine().size());
 	write2client(this->fd, getConnectionState().c_str(), getConnectionState().size());
 	write2client(this->fd, getContentType().c_str(), getContentType().size());
@@ -558,7 +567,7 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 		}
 		begin = size - begin;
 	}
-	if (type == LOAD_FILE || type == CGI)
+	if (/* type == LOAD_FILE ||  */type == CGI)
 	{
 		size_t count = 0;
 		for (size_t i = this->i; i < responseBody.size(); i++)
@@ -572,17 +581,38 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 				count++;
 			}
 		}
+		state = END_BODY;
 	}
+	if (type == LOAD_FILE)
+	{
+		size_t		readbuffer;
+
+		while (eventByte > writeByte)
+		{
+			readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
+			int size = read(responseFd, buff, readbuffer);
+			if (size < 0)
+				throw WriteEception();
+			if (size == 0)
+				break ;
+			write2client(fd, buff, size);
+			this->sendSize += size;
+		}
+		if (this->sendSize == fileSize)
+			state = END_BODY;
+		writeByte = 0;
+	}	
 	else if (type == AUTO_INDEX)
 	{
 		write2client(this->fd, autoIndexBody.c_str(), autoIndexBody.size());
+		state = END_BODY;
 	}
-	return (state = END_BODY, 1);
+	return (/* state = END_BODY, */ 1);
 }
 
 std::string HttpResponse::getContentLenght(enum responseBodyType type)
 {
-	if (type == LOAD_FILE || type == CGI)
+	if (/* type == LOAD_FILE ||  */type == CGI)
 	{
 		std::ostringstream oss;
 
@@ -593,6 +623,15 @@ std::string HttpResponse::getContentLenght(enum responseBodyType type)
 		}
 		oss << size;
 		return ("Content-Length: " + oss.str() + "\r\n");
+	}
+	if (type == LOAD_FILE)
+	{
+		std::stringstream ss;
+		struct stat s;
+		stat(this->fullPath.c_str(), &s);
+		ss << s.st_size;
+		fileSize = s.st_size;
+		return ("Content-Length: " + ss.str() + "\r\n");
 	}
 	if (type == AUTO_INDEX)
 	{
@@ -675,11 +714,6 @@ int				HttpResponse::uploadFile()
 
 void			HttpResponse::responseCooking()
 {
-	if (state == WRITE_BODY)
-	{
-		sendBody(-1, bodyType);
-		return ;
-	}
 	decodingUrl();
 	splitingQuery();
 	if (!isPathFounded())
@@ -693,10 +727,18 @@ void			HttpResponse::responseCooking()
 			return 	setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
 			return ;
-		writeResponse();
-		if (state == WRITE_ERROR)
-			return ;
-		sendBody(-1, bodyType);
+		try {
+			writeResponse();
+		} catch (std::exception &e) {
+			std::cout << e.what() << std::endl;
+			exit(8);
+		}
+		if (bodyType == LOAD_FILE)
+		{
+			responseFd = open(fullPath.c_str(), O_RDONLY);
+			if (responseFd < 0)
+				setHttpResError(500, "Internal Server Error");
+		}
 	}
 }
 

@@ -48,10 +48,9 @@ void Client::respond(size_t data)
 	{
 		// request.getStrMethode // impl Logger here
 		write(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
-		write(1, response.getErrorRes().c_str(), response.getErrorRes().size());
+		// write(1, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
-	if (response.state != WRITE_BODY)
-		request.clear();
+	request.clear();
 }
 
 const std::string &Client::getHost() const

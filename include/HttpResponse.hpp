@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <string>
 
-
+#define BUFFER_SIZE 1000000
 enum responseState 
 {
 	START,
@@ -83,17 +83,22 @@ class HttpResponse
 		std::string							autoIndexBody;
 		ServerContext						*ctx;
 		HttpRequest							*request;
+		char buff[BUFFER_SIZE]; // TODO: make me 
 	public:
 		enum responseBodyType				bodyType;
 		size_t								i, j;
 		size_t								writeByte;
 		size_t								eventByte;
+		int									responseFd;
 		void			write2client(int fd, const char *str, size_t size);
-		// class WriteEception : public std::exception
-		// {
-		// 	public :
-		// 		virtual const char* what() const throw();
-		// };
+
+		size_t								fileSize;
+		size_t								sendSize;
+		class WriteEception : public std::exception
+		{
+			public :
+				virtual const char* what() const throw();
+		};
 
 		std::string getRandomName();
 		std::string							queryStr;
@@ -110,6 +115,7 @@ class HttpResponse
 
 		HttpResponse(int fd, ServerContext *ctx, HttpRequest *request);
 		HttpResponse	operator=(const HttpRequest& req);
+		~HttpResponse();
 
 		void							responseCooking();
 		bool							isCgi();

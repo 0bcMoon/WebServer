@@ -285,13 +285,18 @@ void Event::eventLoop()
 					if (kv == connections.clients.end())
 						continue;
 					Client *client = kv->second;
-					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
+					// if (client->response.state == WRITE_BODY)
+					// 	std::cout << "WRITE\n";
+					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+						&& client->response.state != WRITE_BODY)
 						continue;
+					std::cout << " write event enables\n";
 					this->WriteEvent(client->getFd(), EV_ENABLE);
 				}
 			}
 			else if (ev->filter == EVFILT_WRITE)
 			{
+				std::cout << "Write Event happend\n";
 				if ((ev->flags & EV_EOF))
 				{
 					std::cout << "client disconnected\n";
@@ -304,9 +309,11 @@ void Event::eventLoop()
 					if (kv == connections.clients.end())
 						continue;
 					Client *client = kv->second;
-					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
+					if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+						&& client->response.state != WRITE_BODY)
 						continue;
-					this->WriteEvent(client->getFd(), EV_DISABLE); // TODO: if it faild whats to do
+
+					// this->WriteEvent(client->getFd(), EV_DISABLE); // TODO: if it faild whats to do
 					struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
 
 					if (client->response.state != WRITE_BODY)
@@ -314,17 +321,33 @@ void Event::eventLoop()
 						client->response.location  =  this->getLocation(client, ntohs(addr.sin_port));
 						client->respond(ev->data);
 					}
-					else 
+					if (client->response.state == WRITE_BODY)
 					{
+						std::cout << client->response.path << std::endl;
 						client->response.eventByte = ev->data;
-						client->response.sendBody(-1, client->response.bodyType);
-						if (client->response.state == WRITE_ERROR)
-						{
-							// idk how to handle it
+						try {
+							client->response.sendBody(-1, client->response.bodyType);
 						}
+						catch (std::exception &e) {
+							std::cout << e.what() << std::endl;
+							exit(8);
+						}
+
+						if (client->response.state == ERROR)
+						{
+							std::cout << "ERROR" << std::endl;
+							exit(8);
+						}
+						// if (client->response.state == WRITE_ERROR)
+						// {
+						// 	// idk how to handle it
+						// }
 					}
 					if (client->response.state != WRITE_BODY)
+					{
 						client->response = HttpResponse(ev->ident, this->ctx, &client->request);
+					}
+					// this->WriteEvent(client->getFd(), EV_ENABLE); // TODO: if it faild whats to do
 					// INFO : keep alive
 
 					// if (!(client->response.keepAlive))
