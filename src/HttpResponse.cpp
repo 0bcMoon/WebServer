@@ -1,5 +1,6 @@
 #include "HttpResponse.hpp"
 #include <dirent.h>
+#include <exception>
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/dirent.h>
@@ -33,6 +34,9 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	location = NULL;
 	isCgiBool = false;
 	bodyType = NO_TYPE;
+	responseFd = -1;
+	i = 0;
+	j = 0;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Server: XXXXXXXX\r\n"; // TODO:name the server;
@@ -53,6 +57,13 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	errorRes.connection = "Connection: Keep-Alive\r\n";
 }
 
+HttpResponse::~HttpResponse()
+{
+	std::cout << "Destructor has been called\n";
+	if (responseFd >= 0)
+		close(responseFd);
+}
+
 std::vector<char> HttpResponse::getBody() const
 {
 	return (body);
@@ -66,6 +77,21 @@ std::string HttpResponse::getContentLenght()
 		<< (errorRes.bodyHead.size() + errorRes.title.size() + errorRes.body.size() + errorRes.htmlErrorId.size()
 			+ errorRes.bodyfoot.size() - 2);
 	return ("Content-Length: " + oss.str() + "\r\n");
+}
+
+void			HttpResponse::write2client(int fd, const char *str, size_t size)
+{
+	if (write(fd, str, size) < 0)
+	{
+		state = WRITE_ERROR;
+		throw  IOException();
+	}
+	writeByte += size;
+}
+
+const char* HttpResponse::IOException::what() const throw()
+{
+	return ("failed to write");
 }
 
 std::string HttpResponse::getErrorRes()
@@ -194,7 +220,7 @@ int HttpResponse::directoryHandler()
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
-			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), loadFile(fullPath));
+			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1/* , loadFile(fullPath) */);
 	}
 	if (location->globalConfig.getAutoIndex())
 		return (bodyType = AUTO_INDEX, autoIndexCooking());
@@ -271,7 +297,7 @@ int HttpResponse::pathChecking()
 	if (S_ISDIR(sStat.st_mode))
 		return (directoryHandler());
 	if (access(fullPath.c_str(), F_OK) != -1)
-		return (bodyType = LOAD_FILE, loadFile(fullPath));
+		return (bodyType = LOAD_FILE, 1/* loadFile(fullPath) */);
 	else
 	{
 		return (state = ERROR, setHttpResError(404, "Not Found"), 0);
@@ -466,22 +492,22 @@ void HttpResponse::writeCgiResponse()
 
 void HttpResponse::writeResponse()
 {
-	write(this->fd, getStatusLine().c_str(), getStatusLine().size());
-	write(this->fd, getConnectionState().c_str(), getConnectionState().size());
-	write(this->fd, getContentType().c_str(), getContentType().size());
-	write(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
-	std::cout << " <---------> "  << "|" << getContentLenght(bodyType) << "|" << std::endl;
-	write(fd, getDate().c_str(), getDate().size());
-	write(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
+	writeByte = 0;
+	write2client(this->fd, getStatusLine().c_str(), getStatusLine().size());
+	write2client(this->fd, getConnectionState().c_str(), getConnectionState().size());
+	write2client(this->fd, getContentType().c_str(), getContentType().size());
+	write2client(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
+	write2client(fd, getDate().c_str(), getDate().size());
+	write2client(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
 	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
 	{
-		write(this->fd, it->first.c_str(), it->first.size());
-		write(this->fd, ": ", 2);
-		write(this->fd, it->second.c_str(), it->second.size());
-		write(fd, "\r\n", 2);
+		write2client(this->fd, it->first.c_str(), it->first.size());
+		write2client(this->fd, ": ", 2);
+		write2client(this->fd, it->second.c_str(), it->second.size());
+		write2client(fd, "\r\n", 2);
 	}
-	write(this->fd, "\r\n", 2);
-	sendBody(-1, bodyType);
+	write2client(this->fd, "\r\n", 2);
+	state = WRITE_BODY;	
 }
 
 std::string HttpResponse::getStatusLine()
@@ -542,29 +568,52 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 		}
 		begin = size - begin;
 	}
-	if (type == LOAD_FILE || type == CGI)
+	if (/* type == LOAD_FILE ||  */type == CGI)
 	{
 		size_t count = 0;
-		for (size_t i = 0; i < responseBody.size(); i++)
+		for (size_t i = this->i; i < responseBody.size(); i++)
 		{
-			for (size_t j = 0; j < responseBody[i].size(); j++)
+			for (size_t j = this->j; j < responseBody[i].size(); j++)
 			{
+				if (writeByte == eventByte)
+					return (this->j = j, this->i = i, 1);
 				if (count >= begin)
-					write(this->fd, &responseBody[i][j], 1);
+					write2client(this->fd, &responseBody[i][j], 1);
 				count++;
 			}
 		}
+		state = END_BODY;
 	}
+	if (type == LOAD_FILE)
+	{
+		size_t		readbuffer;
+
+		while (eventByte > writeByte)
+		{
+			readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
+			int size = read(responseFd, buff, readbuffer);
+			if (size < 0)
+				throw IOException();
+			if (size == 0)
+				break ;
+			write2client(fd, buff, size);
+			this->sendSize += size;
+		}
+		if (this->sendSize == fileSize)
+			state = END_BODY;
+		writeByte = 0;
+	}	
 	else if (type == AUTO_INDEX)
 	{
-		write(this->fd, autoIndexBody.c_str(), autoIndexBody.size());
+		write2client(this->fd, autoIndexBody.c_str(), autoIndexBody.size());
+		state = END_BODY;
 	}
-	return (1);
+	return (/* state = END_BODY, */ 1);
 }
 
 std::string HttpResponse::getContentLenght(enum responseBodyType type)
 {
-	if (type == LOAD_FILE || type == CGI)
+	if (/* type == LOAD_FILE ||  */type == CGI)
 	{
 		std::ostringstream oss;
 
@@ -575,6 +624,15 @@ std::string HttpResponse::getContentLenght(enum responseBodyType type)
 		}
 		oss << size;
 		return ("Content-Length: " + oss.str() + "\r\n");
+	}
+	if (type == LOAD_FILE)
+	{
+		std::stringstream ss;
+		struct stat s;
+		stat(this->fullPath.c_str(), &s);
+		ss << s.st_size;
+		fileSize = s.st_size;
+		return ("Content-Length: " + ss.str() + "\r\n");
 	}
 	if (type == AUTO_INDEX)
 	{
@@ -661,17 +719,22 @@ void			HttpResponse::responseCooking()
 	splitingQuery();
 	if (!isPathFounded())
 		return;
-	if (isCgi())
-		cgiCooking();
+	if (isCgi()) {
+		cgiCooking(/**/);
+	}
 	else
 	{
 		if (!isMethodAllowed())
 			return 	setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
 			return ;
-		if (strMethod == "POST" && !uploadFile())
-			return;
 		writeResponse();
+		if (bodyType == LOAD_FILE)
+		{
+			this->responseFd = open(fullPath.c_str(), O_RDONLY);
+			if (responseFd < 0)
+				setHttpResError(500, "Internal Server Error");
+		}
 	}
 }
 

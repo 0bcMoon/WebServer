@@ -1,4 +1,5 @@
 #include "Client.hpp"
+#include <cstddef>
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <cassert>
@@ -31,8 +32,9 @@ Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serv
 	state = REQUEST;
 }
 
-void Client::respond()
+void Client::respond(size_t data)
 {
+	response.eventByte = data;
 	if (request.state != REQUEST_FINISH && request.state != REQ_ERROR)
 		return ;
 	response = request;
@@ -41,13 +43,12 @@ void Client::respond()
 			|| response.headers["Connection"].find("Close") != std::string::npos))
 		|| request.state == REQ_ERROR)
 		response.keepAlive = 0;
-
 	if (request.state == REQUEST_FINISH)
 		response.responseCooking();
 	if (response.state == ERROR)
 	{
 		// Log::Error(this->response);
-		write(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
+		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 		// write(1, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
 	request.clear();

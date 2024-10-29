@@ -20,7 +20,7 @@
 #include "HttpResponse.hpp"
 #include "VirtualServer.hpp"
 
-Event::Event() :connections(NULL, -1), MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
+Event::Event() : connections(NULL, -1), MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 {
 	this->evList = NULL;
 	this->eventChangeList = NULL;
@@ -29,7 +29,7 @@ Event::Event() :connections(NULL, -1), MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024
 }
 
 Event::Event(int max_connection, int max_events, ServerContext *ctx)
-	:connections(ctx, -1), MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
+	: connections(ctx, -1), MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
 	this->ctx = ctx;
 	this->evList = NULL;
@@ -225,7 +225,7 @@ int Event::newConnection(int socketFd, Connections &connections)
 	EV_SET(&ev_set[1], newSocketFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
 
 	if (kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL) < 0)
-			return (close(newSocketFd)); // report faild connections
+		return (close(newSocketFd)); // report faild connections
 	connections.addConnection(newSocketFd, socketFd);
 
 	return (newSocketFd);
@@ -242,13 +242,6 @@ int Event::setWriteEvent(int fd, uint16_t flags)
 
 void Event::ReadEvent(const struct kevent *ev)
 {
-	 Client *client;
-	 // init a timer for 16s ?? or add to ther config maybe (we dont care if it a cgi or some thing else)
-	std::cout << "READ event\n";
-	// each client has a client_time for read and cgi exec and  on each request
-	//
-	// TODO: set a time out for this client ?? response ?
-	// add timer event for (for server t)o read M??
 	if (ev->flags & EV_EOF && ev->data <= 0)
 	{
 		std::cout << "client disconnected\n";
@@ -256,51 +249,46 @@ void Event::ReadEvent(const struct kevent *ev)
 	}
 	else
 	{
-		client = connections.requestHandler(ev->ident);
-		if (client == NULL)
-			return ;
-		else if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR)
-			return ;
-		// if (has a cgi)
-		// // take pipe fd  cgi process id for monitor  read and write of large files (make cgi like a client can be blocking)
-		// use udata feild for seperate client fd with cgi fd pipe
-		if (this->setWriteEvent(client->getFd(), EV_ENABLE) < 0)
-			connections.closeConnection(client->getFd());
+		connections.requestHandler(ev->ident);
+		ClientsIter kv = connections.clients.find(ev->ident);
+		if (kv == connections.clients.end())
+			return;
+		Client *client = kv->second;
+		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+			&& client->response.state != WRITE_BODY)
+			return;
+		this->setWriteEvent(client->getFd(), EV_ENABLE);
 	}
 }
 void Event::WriteEvent(const struct kevent *ev)
 {
-	 // stop the timer 
-	std::cout << "Writes event\n";
-	if ((ev->flags & EV_EOF))
-	{
-		std::cout << "client disconnected\n";
+	if (ev->flags & EV_EOF)
 		connections.closeConnection(ev->ident);
-	}
 	else
 	{
-		ClientsIter clientIter = connections.clients.find(ev->ident);
-		if (clientIter == connections.clients.end())
-			return ;
-		Client *client = clientIter->second;
-		client->response.location  =  this->getLocation(client);
-		client->respond();
-		if (client->response.state == ERROR)
-			connections.closeConnection(client->getFd());	
-		else 
+		ClientsIter kv = connections.clients.find(ev->ident);
+		if (kv == connections.clients.end())
+			return;
+		Client *client = kv->second;
+		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+			&& client->response.state != WRITE_BODY)
+			return;
+		if (client->response.state != WRITE_BODY)
 		{
-			client->response = HttpResponse(ev->ident, this->ctx, &client->request);
-			this->setWriteEvent(client->getFd(), EV_DISABLE);
+			client->response.location = this->getLocation(client);
+			client->respond(ev->data);
 		}
-
-
-		// if (client respond has finish)
-		// {
-		// if (this->setWriteEvent(client->getFd(), EV_DISABLE) < 0) // stop monitor for write
-		// 	connections.closeConnection(client->getFd());
-		// 	else
-		// }
-		// }
+		if (client->response.state == WRITE_BODY)
+		{
+			client->response.eventByte = ev->data;
+			client->response.sendBody(-1, client->response.bodyType);
+		}
+		if (client->response.state != WRITE_BODY)
+		{
+			client->response.~HttpResponse();
+			client->response = HttpResponse(ev->ident, this->ctx, &client->request);
+			this->setWriteEvent(ev->ident, EV_DISABLE);
+		}
 	}
 }
 void Event::eventLoop()
@@ -310,7 +298,6 @@ void Event::eventLoop()
 
 	while (1)
 	{
-		std::cout << "waiting for event\n";
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
@@ -318,14 +305,24 @@ void Event::eventLoop()
 		{
 			const struct kevent *ev = &this->evList[i];
 			if (this->checkNewClient(ev->ident))
+			{
 				this->newConnection(ev->ident, connections);
-			else if (ev->filter == EVFILT_READ)
-				this->ReadEvent(ev);
-			else if (ev->filter == EVFILT_WRITE)
-				this->WriteEvent(ev);
-			else if (ev->filter == EVFILT_TIMER)
-				std::cout << "Timer Event\n";
-
+				continue;
+			}
+			try
+			{
+				if (ev->filter == EVFILT_READ)
+					this->ReadEvent(ev);
+				else if (ev->filter == EVFILT_WRITE)
+					this->WriteEvent(ev);
+				else
+					throw std::runtime_error("Errror unkonw event\n");
+			}
+			catch (std::exception &e)
+			{
+				this->connections.closeConnection(ev->ident);
+				std::cout << e.what() << "\n";
+			}
 		}
 	}
 }
