@@ -17,9 +17,10 @@ class Location
 			POST = 0b10,
 			DELETE = 0b100,
 		};
+
 		struct Redirection
 		{
-			std::string status;
+			std::string status; //3xx
 			std::string url;
 			std::string body; // INFO: body file name;
 		};

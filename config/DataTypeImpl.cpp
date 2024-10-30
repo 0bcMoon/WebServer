@@ -188,7 +188,10 @@ const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 	std::map<std::string, std::string>::iterator kv = this->errorPages.find(StatusCode);
 
 	if (kv == this->errorPages.end())
+	{
+		std::cout << "this should never reacher for now\n";
 		return (this->errorPages.find(StatusCode)->second); // TODO: Error fix me i may faild 
+	}
 	return (kv->second);
 }
 

@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   CgiHandeler.cpp                                    :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: zkotbi <zkotbi@1337.ma>                    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/10/29 17:26:09 by zkotbi            #+#    #+#             */
-/*   Updated: 2024/10/29 17:26:11 by zkotbi           ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "CgiHandler.hpp"
 #include "DataType.hpp"
 #include "HttpRequest.hpp"
@@ -54,6 +42,7 @@ int		CgiHandler::checkCgiFile()
 	size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size() : 0;
 	this->scriptPath = response->location->globalConfig.getRoot() + response->path.substr(offset);
 	// scriptPath = response->location->globalConfig.getRoot() + response->path;
+	//
 	if (access(scriptPath.c_str(), F_OK) == -1)
 		return (response->setHttpResError(404, "Not Found"), 0);
 	if (access(scriptPath.c_str(), R_OK) == -1)
@@ -150,15 +139,6 @@ static int closeFds(int *fd1, int *fd2)
 		close(fd2[1]);
 	}
 	return (1);
-}
-
-char					**CgiHandler::getEnv() const
-{
-	return (envArr);
-}
-char					**CgiHandler::getArgv() const
-{
-	return (this->argv);
 }
 
 void		CgiHandler::execute(std::string cgiPath)

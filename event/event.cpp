@@ -243,7 +243,6 @@ int Event::setWriteEvent(int fd, uint16_t flags)
 
 void Event::ReadEvent(const struct kevent *ev)
 {
-
 	if (ev->flags & EV_EOF && ev->data <= 0)
 	{
 		std::cout << "client disconnected\n";
@@ -284,8 +283,9 @@ void Event::WriteEvent(const struct kevent *ev)
 		}
 		if (client->response.state == CGI_EXECUTING)
 		{
+			// client->getCGIEnv();
 			CgiHandler cgi(client->response);
-			cgi.initEnv();
+			// cgi.initEnv();
 			// cgi.envMapToArr(cgi.)
 		}
 		if (client->response.state == WRITE_BODY)
@@ -324,6 +324,10 @@ void Event::eventLoop()
 					this->ReadEvent(ev);
 				else if (ev->filter == EVFILT_WRITE)
 					this->WriteEvent(ev);
+				else if (ev->filter == EVFILT_PROC)
+					;
+				else if (ev->filter == EVFILT_PROC)
+					;
 				else
 					throw std::runtime_error("Errror unkonw event\n");
 			}

@@ -24,8 +24,8 @@ class CgiHandler {
 		CgiHandler(HttpResponse &response);
 
 		~CgiHandler();
-		void				envMapToArr(std::map<std::string, std::string> mapEnv);
-		int					checkCgiFile();
+		void					envMapToArr(std::map<std::string, std::string> mapEnv);
+		int						checkCgiFile();
 		void					execute(std::string cgiPath);
 		int						initEnv();
 		void					initArgv();

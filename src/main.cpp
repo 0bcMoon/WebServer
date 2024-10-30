@@ -79,8 +79,6 @@ int main()
 		return 1;
 	}
 	ctx = LoadConfig("config/nginx.conf");
-
-
 	if (!ctx)
 		return 1;
 	try
