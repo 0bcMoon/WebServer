@@ -35,6 +35,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	isCgiBool = false;
 	bodyType = NO_TYPE;
 	responseFd = -1;
+	isErrDef = 1;
 	// i = 0;
 	// j = 0;
 	errorRes.headers =
@@ -61,6 +62,7 @@ void			HttpResponse::clear()
 {
 	if (responseFd >= 0)
 		close(responseFd);
+	isErrDef = 1;
 	errorRes.statusLine.clear();
 	errorRes.headers.clear();
 	errorRes.connection.clear();
@@ -70,6 +72,7 @@ void			HttpResponse::clear()
 	errorRes.body.clear();
 	errorRes.htmlErrorId.clear();
 	errorRes.bodyfoot.clear();
+	errorPage.clear();
 	cgiRes.state = HEADERS;
 	cgiRes.bodyStartIndex = 0;
 	cgiRes.cgiStatusLine.clear();
@@ -96,6 +99,7 @@ void			HttpResponse::clear()
 	location = NULL;
 	isCgiBool = false;
 	bodyType = NO_TYPE;
+	close(responseFd);
 	responseFd = -1;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
@@ -132,10 +136,18 @@ std::vector<char> HttpResponse::getBody() const
 std::string HttpResponse::getContentLenght()
 {
 	std::ostringstream oss;
-
-	oss
-		<< (errorRes.bodyHead.size() + errorRes.title.size() + errorRes.body.size() + errorRes.htmlErrorId.size()
-			+ errorRes.bodyfoot.size() - 2);
+	struct stat               s;
+	if (errorPage.size() && !stat(errorPage.c_str(), &s))
+	{
+		isErrDef = 0;
+		oss << s.st_size;
+		fileSize = s.st_size;
+	}
+	else
+	{
+		oss << (errorRes.bodyHead.size() + errorRes.title.size() + errorRes.body.size() + errorRes.htmlErrorId.size()
+				+ errorRes.bodyfoot.size() - 2);
+	}
 	return ("Content-Length: " + oss.str() + "\r\n");
 }
 
@@ -158,12 +170,20 @@ std::string HttpResponse::getErrorRes()
 {
 	std::ostringstream oss;
 	oss << status.code;
+	std::string errorCode = oss.str();
+	this->errorPage = location->globalConfig.getErrorPage(errorCode);
 	errorRes.statusLine = "HTTP/1.1 " + oss.str() + " " + status.description + "\r\n";
 	errorRes.title = oss.str() + " " + status.description;
 	errorRes.htmlErrorId = oss.str() + " " + status.description;
 	if (!keepAlive)
 		errorRes.connection = "Connection: close\r\n";
 	errorRes.contentLen = getContentLenght();
+	if (this->responseFd >= 0)
+		close(responseFd);
+	this->responseFd = open(errorPage.c_str(), O_RDONLY);
+	if (!isErrDef && responseFd >= 0)
+		return (bodyType = LOAD_FILE, state = WRITE_BODY,
+			errorRes.statusLine + errorRes.headers + errorRes.connection + errorRes.contentLen + "\r\n");
 	return (
 		errorRes.statusLine + errorRes.headers + errorRes.connection + errorRes.contentLen + errorRes.bodyHead
 		+ errorRes.title + errorRes.body + errorRes.htmlErrorId + errorRes.bodyfoot);

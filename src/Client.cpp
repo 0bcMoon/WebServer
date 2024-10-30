@@ -49,6 +49,9 @@ void Client::respond(size_t data)
 		response.responseCooking();
 	if (response.state == ERROR)
 	{
+		// 
+		// location->globalConfig.getErrorPage(response.getStatusCode());	
+
 		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
 }

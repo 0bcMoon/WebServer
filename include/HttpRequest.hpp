@@ -138,7 +138,8 @@ class HttpRequest
 		int			checkContentType();
 
 		int			parseMuliPartBody();
-		char		buffer[1000000];
+		char						buffer[1000000];
+
 	public:
 		reqBodyType									reqBody;
 		std::string									bodyBoundary;

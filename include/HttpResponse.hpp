@@ -84,8 +84,9 @@ class HttpResponse
 		std::string							autoIndexBody;
 		ServerContext						*ctx;
 		HttpRequest							*request;
-		char buff[BUFFER_SIZE]; // TODO: make me 
-	
+		char								buff[BUFFER_SIZE]; // TODO: make me 
+		std::string							errorPage;	
+		bool								isErrDef;	
 	public:
 
 		enum responseBodyType				bodyType;
