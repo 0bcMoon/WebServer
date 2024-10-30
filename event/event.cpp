@@ -251,15 +251,16 @@ void Event::ReadEvent(const struct kevent *ev)
 	}
 	else
 	{
+		// std::cout << "DEBUG" << std::endl;
 		connections.requestHandler(ev->ident);
 		ClientsIter kv = connections.clients.find(ev->ident);
 
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
-		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
-			&& client->response.state != WRITE_BODY)
-			return;
+		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+		// 	&& client->response.state != WRITE_BODY)
+		// 	return;
 		this->setWriteEvent(client->getFd(), EV_ENABLE);
 	}
 }
@@ -273,6 +274,7 @@ void Event::WriteEvent(const struct kevent *ev)
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
+		client->request.feed();
 		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
 			&& client->response.state != WRITE_BODY)
 			return;
@@ -284,9 +286,9 @@ void Event::WriteEvent(const struct kevent *ev)
 		}
 		if (client->response.state == CGI_EXECUTING)
 		{
-			CgiHandler cgi(client->response);
-			cgi.initEnv();
-			// cgi.envMapToArr(cgi.)
+			// CgiHandler cgi(client->response);
+			// cgi.initEnv();
+			// // cgi.envMapToArr(cgi.)
 		}
 		if (client->response.state == WRITE_BODY)
 		{
@@ -296,7 +298,9 @@ void Event::WriteEvent(const struct kevent *ev)
 		if (client->response.state != WRITE_BODY)
 		{
 			client->response.clear();
-			this->setWriteEvent(ev->ident, EV_DISABLE);
+			client->request.clear();
+			if (client->request.eof)
+				this->setWriteEvent(ev->ident, EV_DISABLE);
 		}
 	}
 }

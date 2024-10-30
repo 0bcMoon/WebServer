@@ -116,7 +116,6 @@ class HttpRequest
 		int 		convertChunkSize();
 		void			chunkEnd();
 
-		void		readRequest();
 
 		void		parseMethod();
 		void		parsePath();
@@ -144,6 +143,7 @@ class HttpRequest
 		std::string									bodyBoundary;
 		std::vector<multiPart>						multiPartBodys;
 		enum reqState state;
+		bool										eof;
 
 		HttpRequest();
 		HttpRequest(int fd);
@@ -151,6 +151,7 @@ class HttpRequest
 
 		void		setHttpReqError(int code, std::string str);
 		void		feed();
+		void		readRequest();
 
 		void		setFd(int fd);
 

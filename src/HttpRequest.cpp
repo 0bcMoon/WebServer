@@ -24,6 +24,10 @@ HttpRequest::HttpRequest() : fd(-1)
 	error.code = 200;
 	error.description = "OK";
 	reqBody = NON;
+	if (reqBufferIndex < reqBuffer.size())
+		eof = 0;
+	else 
+		eof = 1;
 }
 
 HttpRequest::HttpRequest(int fd) : fd(fd)
@@ -39,6 +43,10 @@ HttpRequest::HttpRequest(int fd) : fd(fd)
 	chunkState = SIZE;
 	totalChunkSize = 0;
 	reqBody = NON;
+	if (reqBufferIndex < reqBuffer.size())
+		eof = 0;
+	else 
+		eof = 1;
 }
 
 void	HttpRequest::clear()
@@ -68,6 +76,11 @@ void	HttpRequest::clear()
 	methodeStr.eqMethodeStr.clear();
 	methodeStr.tmpMethodeStr.clear();
 	httpVersion.clear();
+	// std::cout << "index: " << reqBufferIndex << ", size: " << reqBuffer.size() << std::endl;
+	if (reqBufferIndex < reqBuffer.size())
+		eof = 0;
+	else 
+		eof = 1;
 }
 
 static int isAlpha(char c)
@@ -240,7 +253,7 @@ int			HttpRequest::parseMuliPartBody()
 
 void HttpRequest::feed()
 {
-	readRequest();
+	// readRequest();
  	while (reqBufferIndex < reqBuffer.size() && state != REQ_ERROR && state != DEBUG)
 	{
 		if (state == METHODE)
@@ -260,9 +273,13 @@ void HttpRequest::feed()
 		if (state == BODY)
 			parseBody();
 		if (state == BODY_FINISH /*&& parseMuliPartBody()*/)
+		{
+			std::cout << "debug" << std::endl;
 			state = REQUEST_FINISH;
-		if (state == REQ_ERROR)
-			break;
+			break ;
+		}
+		// if (state == REQ_ERROR)
+		// 	break;
 	}
 	// for (size_t i = 0; i < multiPartBodys.size();i++)
 	// {

@@ -49,7 +49,6 @@ void Client::respond(size_t data)
 		response.responseCooking();
 	if (response.state == ERROR)
 		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
-	request.clear();
 }
 
 const std::string &Client::getHost() const
