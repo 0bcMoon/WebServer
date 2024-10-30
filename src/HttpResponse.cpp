@@ -649,7 +649,9 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 			readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
 			int size = read(responseFd, buff, readbuffer);
 			if (size < 0)
+			{
 				throw IOException();
+			}
 			if (size == 0)
 				break ;
 			write2client(fd, buff, size);

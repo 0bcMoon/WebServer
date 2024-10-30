@@ -252,7 +252,7 @@ void Event::ReadEvent(const struct kevent *ev)
 	else
 	{
 		// std::cout << "DEBUG" << std::endl;
-		connections.requestHandler(ev->ident);
+		connections.requestHandler(ev->ident, ev->data);
 		ClientsIter kv = connections.clients.find(ev->ident);
 
 		if (kv == connections.clients.end())
@@ -297,6 +297,8 @@ void Event::WriteEvent(const struct kevent *ev)
 		}
 		if (client->response.state != WRITE_BODY)
 		{
+			// if (!client->response.keepAlive)
+			// 	throw HttpResponse::IOException();
 			client->response.clear();
 			client->request.clear();
 			if (client->request.eof)

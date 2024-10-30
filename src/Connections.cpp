@@ -46,13 +46,13 @@ void		Connections::connecting(int fd)
 }
 
 // TODO: return client object : search once
-Client		*Connections::requestHandler(int	fd)
+Client		*Connections::requestHandler(int	fd, int data)
 {
 	ClientsIter clientIter = this->clients.find(fd);
 	if ( clientIter == this->clients.end()) // TODO : fix
 		return (NULL);
 
-	clientIter->second->request.readRequest();
+	clientIter->second->request.readRequest(data);
 	// clientIter->second->request.feed();
 	return (clientIter->second);
 }
