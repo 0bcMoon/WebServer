@@ -92,7 +92,7 @@ class HttpResponse
 		size_t								writeByte;
 		size_t								eventByte;
 		int									responseFd;
-		void			write2client(int fd, const char *str, size_t size);
+		void								write2client(int fd, const char *str, size_t size);
 
 		size_t								fileSize;
 		size_t								sendSize;

@@ -96,9 +96,9 @@ void Location::parseTokens(Tokens &token, Tokens &end)
 
 void Location::setCGI(Tokens &token, Tokens &end)
 {
-
 	std::string							cgi_path;
 	std::string							cgi_ext;
+
 	this->globalConfig.validateOrFaild(token, end);
 	cgi_ext = this->globalConfig.consume(token, end);
 	cgi_path = this->globalConfig.consume(token, end);
@@ -110,9 +110,8 @@ void Location::setCGI(Tokens &token, Tokens &end)
 	this->cgiMap[cgi_ext] = cgi_path;
 }
 
-const std::string &Location::geCGItPath(const std::string &ext)
+const std::string &Location::getCGIPath(const std::string &ext)
 {
-	
 	std::map<std::string, std::string>::iterator	kv;
 	kv = this->cgiMap.find(ext);
 	if (kv == this->cgiMap.end())

@@ -196,7 +196,7 @@ std::string HttpResponse::getStatusDescr() const
 
 bool HttpResponse::isCgi()
 {
-	return (location->geCGItPath("." + getExtension(path)).size());
+	return (location->getCGIPath("." + getExtension(path)).size());
 }
 
 void HttpResponse::setHttpResError(int code, std::string str)
@@ -231,7 +231,7 @@ bool HttpResponse::isMethodAllowed()
 void HttpResponse::cgiCooking()
 {
 	CgiHandler cgi(*this);
-	cgi.execute(location->geCGItPath("." + getExtension(path)));
+	cgi.execute(location->getCGIPath("." + getExtension(path)));
 	if (state == ERROR)
 		return;
 	bodyType = CGI;
@@ -330,7 +330,7 @@ int HttpResponse::loadFile(int _fd)
 			return (setHttpResError(500, "Internal Server Error"), 0);
 		if (r == 0)
 			break;
-		responseBody.push_back(std::vector<char>(r));
+		responseBody.push_back(std::vector<char>(r)); // Gay pepole code
 		for (int i = 0; i < r; i++)
 		{
 			std::cout << buffer[i];
@@ -775,9 +775,8 @@ void			HttpResponse::responseCooking()
 	splitingQuery();
 	if (!isPathFounded())
 		return;
-	if (isCgi()) {
+	if (isCgi()) 
 		state = CGI_EXECUTING;
-	}
 	else
 	{
 		if (!isMethodAllowed())

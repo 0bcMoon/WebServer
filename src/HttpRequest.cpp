@@ -24,6 +24,10 @@ HttpRequest::HttpRequest() : fd(-1)
 	error.code = 200;
 	error.description = "OK";
 	reqBody = NON;
+	if (reqBufferIndex < reqBuffer.size())
+		eof = 0;
+	else 
+		eof = 1;
 }
 
 HttpRequest::HttpRequest(int fd) : fd(fd)
@@ -39,6 +43,10 @@ HttpRequest::HttpRequest(int fd) : fd(fd)
 	chunkState = SIZE;
 	totalChunkSize = 0;
 	reqBody = NON;
+	if (reqBufferIndex < reqBuffer.size())
+		eof = 0;
+	else 
+		eof = 1;
 }
 
 void	HttpRequest::clear()
@@ -68,6 +76,11 @@ void	HttpRequest::clear()
 	methodeStr.eqMethodeStr.clear();
 	methodeStr.tmpMethodeStr.clear();
 	httpVersion.clear();
+	// std::cout << "index: " << reqBufferIndex << ", size: " << reqBuffer.size() << std::endl;
+	if (reqBufferIndex < reqBuffer.size())
+		eof = 0;
+	else 
+		eof = 1;
 }
 
 static int isAlpha(char c)
@@ -85,7 +98,7 @@ const std::string	&HttpRequest::getPath() const
 	return (this->path);
 }
 
-std::map<std::string, std::string>	HttpRequest::getHeaders() const
+const std::map<std::string, std::string>	&HttpRequest::getHeaders() const
 {
 	return (headers);
 }
@@ -115,8 +128,6 @@ void HttpRequest::readRequest()
 
 	while (1)
 	{
-		// for (size_t i = 0; i < 1000000;i++)
-		// 	buffer[i] = 0;
 		int size = read(fd, buffer, 1000000 + 1);
 		if (size ==  -1)
 			return ;
@@ -240,7 +251,7 @@ int			HttpRequest::parseMuliPartBody()
 
 void HttpRequest::feed()
 {
-	readRequest();
+	// readRequest();
  	while (reqBufferIndex < reqBuffer.size() && state != REQ_ERROR && state != DEBUG)
 	{
 		if (state == METHODE)
@@ -260,9 +271,12 @@ void HttpRequest::feed()
 		if (state == BODY)
 			parseBody();
 		if (state == BODY_FINISH /*&& parseMuliPartBody()*/)
+		{
 			state = REQUEST_FINISH;
-		if (state == REQ_ERROR)
-			break;
+			break ;
+		}
+		// if (state == REQ_ERROR)
+		// 	break;
 	}
 	// for (size_t i = 0; i < multiPartBodys.size();i++)
 	// {

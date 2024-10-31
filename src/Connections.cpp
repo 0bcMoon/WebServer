@@ -51,7 +51,9 @@ Client		*Connections::requestHandler(int	fd)
 	ClientsIter clientIter = this->clients.find(fd);
 	if ( clientIter == this->clients.end()) // TODO : fix
 		return (NULL);
-	clientIter->second->request.feed();
+
+	clientIter->second->request.readRequest();
+	// clientIter->second->request.feed();
 	return (clientIter->second);
 }
 

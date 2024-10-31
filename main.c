@@ -56,6 +56,30 @@ int main()
 	{
 		error("Error writing to socket");
 	}
+	if (write(sockfd, request, strlen(request)) < 0)
+	{
+		error("Error writing to socket");
+	}
+	if (write(sockfd, request, strlen(request)) < 0)
+	{
+		error("Error writing to socket");
+	}
+	if (write(sockfd, request, strlen(request)) < 0)
+	{
+		error("Error writing to socket");
+	}
+	if (write(sockfd, request, strlen(request)) < 0)
+	{
+		error("Error writing to socket");
+	}
+	if (write(sockfd, request, strlen(request)) < 0)
+	{
+		error("Error writing to socket");
+	}
+	if (write(sockfd, request, strlen(request)) < 0)
+	{
+		error("Error writing to socket");
+	}
 
 	// if (write(sockfd, request, strlen(request)) < 0)
 	// {
@@ -66,7 +90,7 @@ int main()
 	printf("Reading\n");
 	while ((n = read(sockfd, buffer, BUFFER_SIZE - 1)) > 0)
 	{
-		printf("size %zu\n", n);
+		// printf("size %zu\n", n);
 		printf("%s", buffer);
 		bzero(buffer, BUFFER_SIZE);
 	}

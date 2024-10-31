@@ -5,11 +5,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cassert>
+#include <cctype>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <new>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -20,7 +22,14 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include "VirtualServer.hpp"
+#define CGI_VAR_SIZE 11
 
+void log_file(const std::string &name)
+{
+	std::stringstream ss;
+	ss << "lsof -p " << getpid() << " > " << name;
+	system(ss.str().data());
+}
 Event::Event() : connections(NULL, -1), MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 {
 	this->evList = NULL;
@@ -191,8 +200,7 @@ bool Event::Listen()
 void Event::CreateChangeList()
 {
 	SockAddr_in::iterator it = this->sockAddrInMap.begin();
-	// SERVER Scket does not need to monitor writes
-	//
+	// SERVER socket does not need to monitor writes
 	for (int i = 0; it != this->sockAddrInMap.end(); it++, i++)
 		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	if (kevent(this->kqueueFd, this->eventChangeList, this->numOfSocket, NULL, 0, NULL) < 0)
@@ -256,12 +264,177 @@ void Event::ReadEvent(const struct kevent *ev)
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
-		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
-			&& client->response.state != WRITE_BODY)
-			return;
+		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+		// 	&& client->response.state != WRITE_BODY)
+		// 	return;
 		this->setWriteEvent(client->getFd(), EV_ENABLE);
 	}
 }
+
+char *joinCstr(const std::string &s1, const std::string &s2)
+{
+	char *str = NULL;
+	str = new char[s1.size() + s1.size() + 2];
+	size_t idx = 0;
+	for (size_t i = 0; i < s1.size(); i++)
+		str[idx++] = s1[i];
+	str[idx++] = '=';
+	for (size_t i = 0; i < s2.size(); i++)
+		str[idx++] = s2[i];
+	str[idx] = '\0';
+	return (str);
+}
+
+std::string ToEnv(std::map<std::string, std::string>::iterator &header)
+{
+	std::string str = "HTTP_";
+	int idx = 0;
+	for (size_t i = 0; i < header->first.size(); i++, idx++)
+	{
+		char c = header->first[i];
+		if (c == '-')
+			c = '_';
+		str.push_back(std::toupper(c));
+	}
+	str.push_back('=');
+	str += header->second;
+	return (str);
+}
+
+
+void loadEnv(HttpResponse &response, std::vector<std::string> &envArr)
+{
+	std::map<std::string, std::string> env;
+	std::stringstream ss;
+	std::map<std::string, std::string>::iterator it = response.headers.begin();
+	for (int i = 0; it != response.headers.end(); it++, i++)
+		envArr.push_back(ToEnv(it));
+	ss << response.location->getPort();
+	env["SERVER_SOFTWARE"] = "macOS";
+	env["GATEWAY_INTERFACE"] = "CGI/1.1";
+	env["SERVER_PROTOCOL"] = "HTTP/1.1";
+	env["SERVER_PORT"] = ss.str();
+	env["SERVER_NAME"] = response.location->getHost();
+	env["REQUEST_METHOD"] = response.strMethod;
+	env["SCRIPT_NAME"] = response.path;
+	env["QUERY_STRING"] = response.queryStr;
+	env["REMOTE_ADDR"] = ""; // TODO:
+	env["PATH_INFO"] = "/cgi";
+	env["HTTP_HOST"] = response.headers["Host"];
+	env["CONTENT_TYPE"] = response.headers["Content-type"];
+	if (response.strMethod == "POST")
+	{
+		ss.clear();
+		ss << response.getBody().size();
+		env["CONTENT_LENGTH"] = ss.str();
+	}
+	else
+		env["CONTENT_LENGTH"] = "0"; // -1 ??
+
+	it = env.begin();
+	for (int i = 0; it != env.end(); it++, i++)
+		envArr.push_back(it->first + "=" + it->second);
+}
+bool Event::IsFileExist(HttpResponse &response)
+{
+	size_t offset =
+		response.location->globalConfig.getAliasOffset() ? response.location->getPath().size() : 0; // offset for alais
+	std::string scriptPath = response.location->globalConfig.getRoot() + response.path.substr(offset);
+
+	if (access(scriptPath.c_str(), F_OK) == -1)
+		return (response.setHttpResError(404, "Not Found"), 1);
+	if (access(scriptPath.c_str(), R_OK) == -1)
+		return (response.setHttpResError(403, "Forbidden"), 1);
+	return (0);
+}
+
+void closePipe(int fd[2])
+{
+	close(fd[1]);
+	close(fd[0]);
+}
+
+int redirectPipe(int pipeIn[2], int pipeOut[2])
+{
+	close(pipeIn[1]);
+	close(pipeOut[0]);
+
+	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
+		return (-1);
+	if (dup2(pipeIn[0], STDIN_FILENO) < 0)
+		return (-1);
+	close(pipeOut[1]);
+	close(pipeIn[0]);
+	return (0);
+}
+
+void child_process(HttpResponse &response, int pipeIn[2], int pipeOut[2])
+{
+	size_t offset =
+		response.location->globalConfig.getAliasOffset() ? response.location->getPath().size() : 0; // offset for alais
+	std::string scriptPath = response.location->globalConfig.getRoot() + response.path.substr(offset);
+
+	std::vector<std::string> env;
+	loadEnv(response, env);
+
+	std::string path = response.location->getCGIPath(".php");
+	const char *args[3] = {path.data(), scriptPath.data(), NULL};
+	char **argv = new char *[env.size() + 1];
+	size_t i = 0;
+	for (; i < env.size(); i++)
+		argv[i] = (char *)env[i].data();
+	argv[i] = NULL;
+	if (redirectPipe(pipeIn, pipeOut))
+	{
+		closePipe(pipeOut);
+		closePipe(pipeIn);
+		throw std::runtime_error("Child RunTime\n");
+	}
+	execve(*args, (char *const *)args, argv);
+	std::cerr << "your should't be here mister\n" << strerror(errno) << "\n";
+	throw std::runtime_error("child process faild");
+}
+Event::Proc Event::RunCGIScript(HttpResponse &response)
+{
+	Event::Proc proc;
+	int pipeIn[2], pipeOut[2];
+
+	if (this->IsFileExist(response))
+		return proc;
+	if (pipe(pipeIn) < 0)
+		return (response.setHttpResError(500, "Internal Server Error"), Proc());
+	else if (pipe(pipeOut) < 0)
+		return (closePipe(pipeIn), response.setHttpResError(500, "Internal Server Error"), Proc());
+
+	proc.pid = fork();
+	if (proc.pid < 0)
+	{
+		closePipe(pipeIn);
+		closePipe(pipeOut);
+		return (response.setHttpResError(500, "Internal Server Error"), Proc());
+	}
+	else if (proc.pid == 0)
+		child_process(response, pipeIn, pipeOut);
+	close(pipeIn[0]);
+	close(pipeOut[1]);
+	proc.fout = pipeOut[0];
+	proc.fin = pipeIn[1];
+	return (proc);
+}
+
+void Event::RegesterNewProc(HttpResponse &response)
+{
+	Event::Proc proc = RunCGIScript(response);
+	if (proc.pid == -1)
+		return ;
+	struct kevent ev[3];
+	EV_SET(&ev[0], proc.pid, EVFILT_PROC, NOTE_EXIT, 0, 0, NULL);
+	EV_SET(&ev[1], proc.fin, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, (void *)PIPE);
+	EV_SET(&ev[0], proc.fout, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void *)PIPE);
+	if (kevent(this->kqueueFd, ev, 3, 0, 0, NULL) < 0)
+		response.setHttpResError(500, "Internal Server Error");
+}
+
 void Event::WriteEvent(const struct kevent *ev)
 {
 	if (ev->flags & EV_EOF)
@@ -272,10 +445,10 @@ void Event::WriteEvent(const struct kevent *ev)
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
+		client->request.feed();
 		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
 			&& client->response.state != WRITE_BODY)
 			return;
-
 		if (client->response.state != WRITE_BODY)
 		{
 			client->response.location = this->getLocation(client);
@@ -283,8 +456,9 @@ void Event::WriteEvent(const struct kevent *ev)
 		}
 		if (client->response.state == CGI_EXECUTING)
 		{
+			this->RegesterNewProc(client->response);
 			// client->getCGIEnv();
-			CgiHandler cgi(client->response);
+			// CgiHandler cgi(client->response);
 			// cgi.initEnv();
 			// cgi.envMapToArr(cgi.)
 		}
@@ -296,7 +470,9 @@ void Event::WriteEvent(const struct kevent *ev)
 		if (client->response.state != WRITE_BODY)
 		{
 			client->response.clear();
-			this->setWriteEvent(ev->ident, EV_DISABLE);
+			client->request.clear();
+			if (client->request.eof)
+				this->setWriteEvent(ev->ident, EV_DISABLE);
 		}
 	}
 }
@@ -307,6 +483,8 @@ void Event::eventLoop()
 
 	while (1)
 	{
+		std::cout << "Waiting for event\n";
+
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
@@ -326,12 +504,17 @@ void Event::eventLoop()
 					this->WriteEvent(ev);
 				else if (ev->filter == EVFILT_PROC)
 					;
-				else if (ev->filter == EVFILT_PROC)
+				else if (ev->filter == EVFILT_TIMER)
 					;
 				else
 					throw std::runtime_error("Errror unkonw event\n");
 			}
 			catch (HttpResponse::IOException &e)
+			{
+				this->connections.closeConnection(ev->ident);
+				std::cout << e.what() << "\n";
+			}
+			catch (std::bad_alloc &e)
 			{
 				this->connections.closeConnection(ev->ident);
 				std::cout << e.what() << "\n";
@@ -370,4 +553,10 @@ Location *Event::getLocation(const Client *client)
 		host = *Vserver->getServerNames().begin();
 	location->setHostPort(host, port);
 	return (location);
+}
+Event::Proc::Proc()
+{
+	this->fin = -1l;
+	this->fout = -1l;
+	this->pid = -1l;
 }

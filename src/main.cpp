@@ -33,7 +33,7 @@ ServerContext *LoadConfig(const char *path)
 {
 	ServerContext *ctx = NULL;
 
-	try // ugly but fix the problem
+	try
 	{
 		Tokenizer tokenizer;
 		tokenizer.readConfig(path);

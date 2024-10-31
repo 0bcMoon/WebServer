@@ -41,8 +41,7 @@ int		CgiHandler::checkCgiFile()
 {
 	size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size() : 0;
 	this->scriptPath = response->location->globalConfig.getRoot() + response->path.substr(offset);
-	// scriptPath = response->location->globalConfig.getRoot() + response->path;
-	//
+
 	if (access(scriptPath.c_str(), F_OK) == -1)
 		return (response->setHttpResError(404, "Not Found"), 0);
 	if (access(scriptPath.c_str(), R_OK) == -1)
@@ -58,29 +57,30 @@ int			CgiHandler::initEnv()
 	if (!checkCgiFile())
 		return (0);
 	env["SERVER_SOFTWARE"] = "macOS";
-	env["SERVER_NAME"] = response->location->getHost();
 	env["GATEWAY_INTERFACE"] = "CGI/1.1";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
 	env["SERVER_PORT"] = ss.str();
+	env["SERVER_NAME"] = response->location->getHost();
 	env["REQUEST_METHOD"] = response->strMethod;
 	env["SCRIPT_NAME"] = response->path;
-	// env["PATH_INFO"] = "/55" ;
 	env["QUERY_STRING"] = response->queryStr;
+	env["REMOTE_ADDR"] = "";//TODO: 
+	env["PATH_INFO"] = "/cgi" ;
+	// env["CONTENT_LENGTH"] = oss.str();
+	env["HTTP_HOST"] = response->headers["Host"];
 	env["CONTENT_TYPE"] = response->headers["Content-type"];
-	if (env["REQUEST_METHOD"] == "POST")
+
+	if (env["REQUEST_METHOD"] == "POST") // dump shit
 	{
 		std::ostringstream oss;
 		oss << response->getBody().size();
-		env["CONTENT_LENGTH"] = oss.str();
 		std::cout << "CONTENT_LENGTH5: " << response->getBody().size() << std::endl;
 	}
 	else
 	{
 		std::cout << "CONTENT_LENGTH: " << response->getBody().size() << std::endl;
-		env["CONTENT_LENGTH"] = "0";
+		env["CONTENT_LENGTH"] = "0"; // -1 ??
 	}
-	env["REMOTE_ADDR"] = "";//TODO: 
-	env["HTTP_HOST"] = response->headers["Host"];
 	return (1);
 }
 
@@ -163,9 +163,9 @@ void		CgiHandler::execute(std::string cgiPath)
 		response->setHttpResError(500, "Internal Server Error");
 		return ;
 	}
-	for (size_t i = 0; i < response->getBody().size(); i++)
+	for (size_t i = 0; i < response->getBody().size(); i++) //gay people code  why write bytes by bytes and why write before process has started
 	{
-		if (env["REQUEST_METHOD"] == "POST")
+		if (env["REQUEST_METHOD"] == "POST") // and why search map for each time  ?? a
 			write(pipefdIn[1], &response->getBody()[i], 1);
 	}
 	int pid = fork();

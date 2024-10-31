@@ -8,6 +8,18 @@
 class Event
 {
   private:
+	enum EventType
+	{
+		SOCKET = 0,
+		PIPE = 1,
+	};
+	struct Proc
+	{
+		Proc();
+		pid_t pid;
+		int fout;
+		int fin;
+	};
 	ServerContext *ctx;
 	Connections connections;
 	const int MAX_CONNECTION_QUEUE;
@@ -40,6 +52,9 @@ class Event
 	Location *getLocation(const Client *client);
 	void ReadEvent(const struct kevent *ev);
 	void WriteEvent(const struct kevent *ev);
+	void RegesterNewProc(HttpResponse &response);
+	bool IsFileExist(HttpResponse &response);
+	Event::Proc RunCGIScript(HttpResponse &response);
 
   public:
 	void initIOmutltiplexing();
