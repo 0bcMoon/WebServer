@@ -48,7 +48,12 @@ void Client::respond(size_t data)
 	if (request.state == REQUEST_FINISH)
 		response.responseCooking();
 	if (response.state == ERROR)
+	{
+		// 
+		// location->globalConfig.getErrorPage(response.getStatusCode());	
+
 		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
+	}
 }
 
 const std::string &Client::getHost() const

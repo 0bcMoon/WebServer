@@ -64,6 +64,9 @@ void sigpipe_handler(int signum)
 	printf("Caught SIGPIPE. Ignoring.\n");
 }
 
+/*
+ * TODO: add cgi output size limit 
+ */
 int main()
 {
 	Event *event = NULL;

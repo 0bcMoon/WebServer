@@ -1,6 +1,7 @@
 #ifndef HTTPRESPONSE_HPP
 #define HTTPRESPONSE_HPP
 
+#include "DataType.hpp"
 #include "HttpRequest.hpp"
 #include "Location.hpp"
 #include "ServerContext.hpp"
@@ -68,13 +69,13 @@ class HttpResponse
 			cgiResponeState	state;
 			size_t			bodyStartIndex;
 			std::string		cgiStatusLine;
-			std::vector<std::vector<char > > lines;
+			std::vector<std::vector<char > > lines;// gay pepole code
 		};
 
 		cgiRespone							cgiRes;
 		int									fd;
 		enum reqMethode						methode;
-		std::vector<char>							body;
+		std::vector<char>					body; // seperate 
 		httpError							status;	
 		bool								isCgiBool;
 		errorResponse						errorRes;
@@ -84,9 +85,12 @@ class HttpResponse
 		std::string							autoIndexBody;
 		ServerContext						*ctx;
 		HttpRequest							*request;
-		char buff[BUFFER_SIZE]; // TODO: make me 
-	
+		char								buff[BUFFER_SIZE]; // TODO: make me 
+		std::string							errorPage;	
+		bool								isErrDef;	
 	public:
+		std::vector<char>					CGIOutput;
+		GlobalConfig::Proc					proc;
 
 		enum responseBodyType				bodyType;
 		size_t								writeByte;

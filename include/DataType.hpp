@@ -1,6 +1,8 @@
 #ifndef DataType_H
 #define DataType_H
 
+#include <sys/_types/_pid_t.h>
+#include <cstddef>
 #include <map>
 #include <string>
 #include <vector>
@@ -20,6 +22,16 @@ class GlobalConfig
 		bool									IsAlias;
 
 	public:
+		struct Proc
+		{
+			Proc();
+			void die();
+			Proc &operator=(Proc &other);
+			int pid;
+			int fout;
+			int fin;
+			int woffset;
+		};
 
 		bool		isValidStatusCode(std::string &str); // WARNING:t5arbi9
 		void		setMethods(Tokens &token, Tokens &end);
@@ -57,10 +69,8 @@ class GlobalConfig
 
 		const std::vector<std::string> &getIndexes();
 		void setIndexes(Tokens &token, Tokens &end);
-		// TODO Indexes getter may be with caching ??
-
 		void setErrorPages(Tokens &token, Tokens &end);
-		const std::string&getErrorPage(std::string &StatusCode);
+		const std::string &getErrorPage(std::string &StatusCode);
 		bool getAliasOffset() const ;
 
 };

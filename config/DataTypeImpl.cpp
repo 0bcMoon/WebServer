@@ -1,7 +1,10 @@
 #include <fcntl.h>
+#include <sys/signal.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include <unistd.h>
+#include <cassert>
+#include <csignal>
 #include <cstddef>
 #include <fstream>
 #include <iostream>
@@ -215,7 +218,29 @@ bool GlobalConfig::getAliasOffset() const
 	return (this->IsAlias);
 }
 
-// bool GlobalConfig::isMethodAllowed(int method) const
-// {
-// 	return (this->me)
-// }
+GlobalConfig::Proc::Proc()
+{
+	this->fin = -1;
+	this->woffset = 0;
+	this->fout = -1;
+	this->pid = -1;
+}
+
+GlobalConfig::Proc &GlobalConfig::Proc::operator=(Proc &other)
+{
+	std::cout << "copy operator has been called\n";
+	this->pid = other.pid;
+	this->fin = other.fin;
+	this->fout = other.fout;
+	return (*this);
+}
+void GlobalConfig::Proc::die()
+{
+	assert(this->pid > 0 && "Major Error Need to be fix");
+	assert(this->fin > 0 && "Major Error Need to be fix");
+	assert(this->fout > 0 && "Major Error Need to be fix");
+
+	::kill(this->pid, SIGKILL);
+	::close(this->fout);
+	::close(this->fin);
+}

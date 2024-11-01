@@ -2,24 +2,22 @@
 #define Event_HPP
 #include <sys/event.h>
 #include "Connections.hpp"
+#include "DataType.hpp"
 #include "ServerContext.hpp"
 #include "VirtualServer.hpp"
 
 class Event
 {
+
+public:
   private:
 	enum EventType
 	{
 		SOCKET = 0,
 		PIPE = 1,
 	};
-	struct Proc
-	{
-		Proc();
-		pid_t pid;
-		int fout;
-		int fin;
-	};
+
+
 	ServerContext *ctx;
 	Connections connections;
 	const int MAX_CONNECTION_QUEUE;
@@ -53,8 +51,9 @@ class Event
 	void ReadEvent(const struct kevent *ev);
 	void WriteEvent(const struct kevent *ev);
 	void RegesterNewProc(HttpResponse &response);
+	void TimerEvent(const struct kevent *ev);
 	bool IsFileExist(HttpResponse &response);
-	Event::Proc RunCGIScript(HttpResponse &response);
+	GlobalConfig::Proc RunCGIScript(HttpResponse &response);
 
   public:
 	void initIOmutltiplexing();

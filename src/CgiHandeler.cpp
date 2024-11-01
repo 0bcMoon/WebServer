@@ -195,3 +195,4 @@ void		CgiHandler::execute(std::string cgiPath)
 	response->loadFile(pipefdOut[0]);//INFO:Hicham
 	close(pipefdOut[0]);
 }
+

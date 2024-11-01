@@ -1,4 +1,5 @@
 #include "../include/HttpRequest.hpp"
+#include "HttpResponse.hpp"
 #include <cctype>
 #include <climits>
 #include <cstddef>
@@ -122,26 +123,21 @@ HttpRequest::~HttpRequest() {
 
 }
 
-void HttpRequest::readRequest()
+void HttpRequest::readRequest(int data)
 {
-	char buffer[1000000];//TODO:read
-
-	while (1)
+	int size = read(fd, this->buffer, data);
+	if (size == -1)
+		throw HttpResponse::IOException();
+	if (size == 0)
+		return ;
+	else if (size > 0)
 	{
-		int size = read(fd, buffer, 1000000 + 1);
-		if (size ==  -1)
-			return ;
-		if (size == 0)
-			return ;
-		else if (size > 0)
+		reqBuffer.resize(reqBuffer.size() + size);
+		size_t j = 0;
+		for (size_t i = reqBuffer.size() - size ; i < reqBuffer.size(); i++)
 		{
-			reqBuffer.resize(reqBuffer.size() + size);
-			size_t j = 0;
-			for (size_t i = reqBuffer.size() - size ; i < reqBuffer.size(); i++)
-			{
-				reqBuffer[i] = buffer[j];
-				j++;
-			}
+			reqBuffer[i] = buffer[j];
+			j++;
 		}
 	}
 }
