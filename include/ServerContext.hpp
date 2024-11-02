@@ -8,6 +8,8 @@
 class ServerContext
 {
   private:
+	static const int CGITimeOut = 5;// 5 second
+	static const int ClientReadTime = 30;// 30 second
 	typedef std::map<std::string, std::string> Type;
 	int keepAliveTimeout;
 	GlobalConfig globalParam;
@@ -38,6 +40,8 @@ class ServerContext
 	void setErrorLog(Tokens &token, Tokens &end);
 	void setAccessLog(Tokens &token, Tokens &end);
 	void setKeepAlive(Tokens &token, Tokens &end);
+	int getCGITimeOut() const;
+	int getClientReadTime() const ;
 
 };
 

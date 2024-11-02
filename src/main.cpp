@@ -65,7 +65,7 @@ void sigpipe_handler(int signum)
 }
 
 /*
- * TODO: add cgi output size limit 
+ *TODO: 
  */
 int main()
 {

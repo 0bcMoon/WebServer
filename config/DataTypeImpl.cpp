@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <sys/event.h>
 #include <sys/signal.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
@@ -6,6 +7,7 @@
 #include <cassert>
 #include <csignal>
 #include <cstddef>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -13,7 +15,7 @@
 #include <string>
 #include <vector>
 #include "DataType.hpp"
-#include "ParserException.hpp"
+#include <Tokenizer.hpp>
 
 GlobalConfig::GlobalConfig()
 {
@@ -69,13 +71,13 @@ void GlobalConfig::setRoot(Tokens &token, Tokens &end)
 	struct stat buf;
 
 	if (!this->root.empty())
-		throw ParserException("Root directive is duplicate");
+		throw Tokenizer::ParserException("Root directive is duplicate");
 	validateOrFaild(token, end);
 	this->root = consume(token, end);
 	if (stat(this->root.c_str(), &buf) != 0)
-		throw ParserException("Root directory does not exist");
+		throw Tokenizer::ParserException("Root directory does not exist");
 	if (S_ISDIR(buf.st_mode) == 0)
-		throw ParserException("Root is not a directory");
+		throw Tokenizer::ParserException("Root is not a directory");
 	CheckIfEnd(token, end);
 }
 
@@ -93,7 +95,7 @@ void GlobalConfig::setAutoIndex(Tokens &token, Tokens &end)
 	else if (*token == "off")
 		this->autoIndex = false;
 	else
-		throw ParserException("Invalid value for autoindex");
+		throw Tokenizer::ParserException("Invalid value for autoindex");
 	token++;
 	CheckIfEnd(token, end);
 }
@@ -120,30 +122,30 @@ void GlobalConfig::validateOrFaild(Tokens &token, Tokens &end)
 {
 	token++;
 	if (token == end || IsId(*token))
-		throw ParserException("Unexpected token: " + (token == end ? "end of file" : *token));
+		throw Tokenizer::ParserException("Unexpected token: " + (token == end ? "end of file" : *token));
 }
 
 void GlobalConfig::CheckIfEnd(Tokens &token, Tokens &end)
 {
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	else if (*token != ";")
-		throw ParserException("Unexpected `;` found: " + *token);
+		throw Tokenizer::ParserException("Unexpected `;` found: " + *token);
 	token++;
 }
 
 std::string &GlobalConfig::consume(Tokens &token, Tokens &end)
 {
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	if (IsId(*token))
-		throw ParserException("Unexpected token: " + *token);
+		throw Tokenizer::ParserException("Unexpected token: " + *token);
 	return *token++;
 }
 bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 {
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	else if (*token == "root")
 		this->setRoot(token, end);
 	else if (*token == "autoindex")
@@ -155,7 +157,7 @@ bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 	else if (*token == "alias")
 		this->setAlias(token, end);
 	else
-		throw ParserException("Invalid token: " + *token);
+		throw Tokenizer::ParserException("Invalid token: " + *token);
 	return (true);
 }
 
@@ -169,14 +171,14 @@ void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 	while (token != end && *token != ";")
 		vec.push_back(this->consume(token, end));
 	if (vec.size() <= 1)
-		throw ParserException("Invalid error page define");
+		throw Tokenizer::ParserException("Invalid error page define");
 	this->CheckIfEnd(token, end);
 	if (access(vec.back().data(), F_OK | R_OK) == -1)
-		throw ParserException("file does not exist" + vec.back());
+		throw Tokenizer::ParserException("file does not exist" + vec.back());
 	for (size_t i = 0; i < vec.size() - 1; i++)
 	{
 		if (!this->isValidStatusCode(vec[i]))
-			throw ParserException("Invalid status Code " + vec[i]);
+			throw Tokenizer::ParserException("Invalid status Code " + vec[i]);
 		this->errorPages[vec[i]] = vec.back().data();
 	}
 }
@@ -188,13 +190,12 @@ const std::vector<std::string> &GlobalConfig::getIndexes()
 
 const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 {
-	std::map<std::string, std::string>::iterator kv = this->errorPages.find(StatusCode);
+	const std::map<std::string, std::string>::iterator &kv = this->errorPages.find(StatusCode);
 
-	if (kv == this->errorPages.end())
-	{
-		std::cout << "this should never reacher for now\n";
-		return (this->errorPages.find(StatusCode)->second); // TODO: Error fix me i may faild 
-	}
+	// if (kv == this->errorPages.end())
+	// {
+	// 	return (this->errorPages.find(StatusCode)->second); // TODO: Error fix me i may faild 
+	// }
 	return (kv->second);
 }
 
@@ -203,13 +204,13 @@ void GlobalConfig::setAlias(Tokens &token, Tokens &end)
 	struct stat buf;
 
 	if (!this->root.empty())
-		throw ParserException("Alias directive is duplicate");
+		throw Tokenizer::ParserException("Alias directive is duplicate");
 	validateOrFaild(token, end);
 	this->root = consume(token, end);
 	if (stat(this->root.c_str(), &buf) != 0)
-		throw ParserException("Alias directory does not exist");
+		throw Tokenizer::ParserException("Alias directory does not exist");
 	if (S_ISDIR(buf.st_mode) == 0)
-		throw ParserException("Alias is not a directory");
+		throw Tokenizer::ParserException("Alias is not a directory");
 	this->IsAlias = true;
 	CheckIfEnd(token, end);
 }
@@ -224,23 +225,29 @@ GlobalConfig::Proc::Proc()
 	this->woffset = 0;
 	this->fout = -1;
 	this->pid = -1;
+	this->state = NONE;
 }
 
 GlobalConfig::Proc &GlobalConfig::Proc::operator=(Proc &other)
 {
-	std::cout << "copy operator has been called\n";
 	this->pid = other.pid;
 	this->fin = other.fin;
 	this->fout = other.fout;
+	this->state = other.state;
 	return (*this);
 }
 void GlobalConfig::Proc::die()
 {
 	assert(this->pid > 0 && "Major Error Need to be fix");
-	assert(this->fin > 0 && "Major Error Need to be fix");
-	assert(this->fout > 0 && "Major Error Need to be fix");
 
-	::kill(this->pid, SIGKILL);
-	::close(this->fout);
-	::close(this->fin);
+	kill(this->pid, SIGKILL);
 }
+
+void GlobalConfig::Proc::clean()
+{
+	assert(this->fin >= 0 && "Major Error Need to be fix");
+	assert(this->fout >= 0 && "Major Error Need to be fix");
+	close(this->fin);
+	close(this->fout);
+}
+

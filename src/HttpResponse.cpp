@@ -219,7 +219,7 @@ bool HttpResponse::isCgi()
 	return (location->getCGIPath("." + getExtension(path)).size());
 }
 
-void HttpResponse::setHttpResError(int code, std::string str)
+void HttpResponse::setHttpResError(int code, const std::string &str)
 {
 	state = ERROR;
 	status.code = code;

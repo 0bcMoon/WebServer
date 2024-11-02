@@ -135,7 +135,7 @@ class HttpResponse
 		bool							isPathFounded();
 		bool							isMethodAllowed();
 		int								pathChecking();
-		void							setHttpResError(int code, std::string str);
+		void							setHttpResError(int code, const std::string &str);
 
 		std::string						getErrorRes();
 		std::string						getContentLenght(); // TYPO

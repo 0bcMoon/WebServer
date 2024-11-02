@@ -9,7 +9,7 @@
 #include <cstring>
 #include <string>
 #include "DataType.hpp"
-#include "ParserException.hpp"
+#include "Tokenizer.hpp"
 Location::Location() 
 {
 	this->cgiMap["."] = "";	
@@ -60,16 +60,16 @@ void Location::setRedirect(Tokens &token, Tokens &end)
 		vec.push_back(this->globalConfig.consume(token, end));
 	this->globalConfig.CheckIfEnd(token, end);
 	if (vec.size() != 3)
-		throw ParserException("invalid redirects argument: usage return status url|None Body|None");
+		throw Tokenizer::ParserException("invalid redirects argument: usage return status url|None Body|None");
 	redirect.body = vec[2];
 	redirect.url = vec[1];
 	redirect.status = vec[0];
 	if (redirect.body == "None" && redirect.url == "None")
-		throw ParserException("Body or redirection url most be define in redirection");
+		throw Tokenizer::ParserException("Body or redirection url most be define in redirection");
 	else if (redirect.body != "None" && access(redirect.body.data(), F_OK | R_OK) != 0)
-		throw ParserException("invalid file in Redirection: " + redirect.body + " " + std::string(strerror(errno)));
+		throw Tokenizer::ParserException("invalid file in Redirection: " + redirect.body + " " + std::string(strerror(errno)));
 	else if (!this->globalConfig.isValidStatusCode(redirect.status) || redirect.status[0] != '3')
-		throw ParserException("Invalid Redirection Status Code: " + *token);
+		throw Tokenizer::ParserException("Invalid Redirection Status Code: " + *token);
 	if (redirect.body == "None")
 		redirect.body.clear();
 	if (redirect.url == "None")
@@ -104,9 +104,9 @@ void Location::setCGI(Tokens &token, Tokens &end)
 	cgi_path = this->globalConfig.consume(token, end);
 	this->globalConfig.CheckIfEnd(token, end);
 	if (cgi_ext[0] != '.' || cgi_ext.size() <= 1)
-		throw ParserException("Invalid CGI extension" + cgi_ext);
+		throw Tokenizer::ParserException("Invalid CGI extension" + cgi_ext);
 	if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
-		throw ParserException("Invalid CGI path" + cgi_path + ": " + std::string(strerror(errno)));
+		throw Tokenizer::ParserException("Invalid CGI path" + cgi_path + ": " + std::string(strerror(errno)));
 	this->cgiMap[cgi_ext] = cgi_path;
 }
 
@@ -146,12 +146,12 @@ void Location::setMethods(Tokens &token, Tokens &end)
 		else if (*token == "DELETE")
 			this->methods |= DELETE;
 		else
-			throw ParserException("Invalid or un support method: " + *token);
+			throw Tokenizer::ParserException("Invalid or un support method: " + *token);
 		token++;
 	}
 	this->globalConfig.CheckIfEnd(token, end);
 	if (this->methods == 0)
-		throw ParserException("empty  method list");
+		throw Tokenizer::ParserException("empty  method list");
 }
 const std::string &Location::getPath()
 {
@@ -188,9 +188,9 @@ void Location::setUploadPath(Tokens &token, Tokens &end)
 	if (this->upload_file_path.back() != '/')
 		this->upload_file_path.push_back('/');
 	if (stat(this->upload_file_path.data(), &buf) != 0)
-		throw ParserException("Upload path does directory does not exist");
+		throw Tokenizer::ParserException("Upload path does directory does not exist");
 	if (S_ISDIR(buf.st_mode) == 0)
-		throw ParserException("Upload Path is not a directory");
+		throw Tokenizer::ParserException("Upload Path is not a directory");
 	if (access(this->upload_file_path.data(), W_OK) != 0)
-		throw ParserException("invalid Upload path directory");
+		throw Tokenizer::ParserException("invalid Upload path directory");
 }

@@ -5,15 +5,11 @@
 #include <ostream>
 #include <vector>
 
+void take_str(const std::string &str)
+{
+	// do something
+}
 int main()
 {
-	// std::vector<char> vec;
-	// vec.resize(10);
-	// read(1, vec.data(), 10);
-	// std::cout << "first read done\n";
-	// vec.resize(16);
-	// read(1, vec.data() + 10, 6);
-	// for (size_t i = 0; i < vec.size(); i++)
-	// 	std::cout << vec[i];
-	// std::cout << std::endl;
+	take_str("Hello world");
 }

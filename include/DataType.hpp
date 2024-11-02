@@ -1,8 +1,6 @@
 #ifndef DataType_H
 #define DataType_H
 
-#include <sys/_types/_pid_t.h>
-#include <cstddef>
 #include <map>
 #include <string>
 #include <vector>
@@ -24,13 +22,20 @@ class GlobalConfig
 	public:
 		struct Proc
 		{
+			enum State
+			{
+				TIMEOUT,
+				NONE
+			};
 			Proc();
+			void clean();
 			void die();
 			Proc &operator=(Proc &other);
 			int pid;
 			int fout;
 			int fin;
 			int woffset;
+			enum State state;
 		};
 
 		bool		isValidStatusCode(std::string &str); // WARNING:t5arbi9

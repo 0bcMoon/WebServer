@@ -6,13 +6,13 @@
 /*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/29 16:45:56 by hicham            #+#    #+#             */
-/*   Updated: 2024/10/17 12:44:00 by hibenouk         ###   ########.fr       */
+/*   Updated: 2024/11/02 20:00:39 by hibenouk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Trie.hpp"
 #include <cstring>
-#include "ParserException.hpp"
+#include "Tokenizer.hpp"
 
 Trie::TrieNode::TrieNode() : isEnd(false)
 {
@@ -57,13 +57,13 @@ bool Trie::insert(Location &location)
 	{
 		idx = path[i];
 		if (idx < 0 || idx > 128)
-			throw ParserException("InValide char in path " + path);
+			throw Tokenizer::ParserException("InValide char in path " + path);
 		if (currNode->children[idx] == NULL)
 			currNode->children[idx] = new TrieNode();
 		currNode = currNode->children[idx];
 	}
 	if (currNode->isEnd)
-		throw ParserException("Duplicate location route at: " + path);
+		throw Tokenizer::ParserException("Duplicate location route at: " + path);
 	currNode->isEnd = true;
 	currNode->location = location;
 	this->locations.push_back(&currNode->location);
@@ -95,6 +95,6 @@ void Trie::init(const GlobalConfig &conf)
 	{
 		this->locations[i]->globalConfig = conf;
 		if (this->locations[i]->globalConfig.getRoot().empty())
-			throw ParserException("Root in loaction must not be empty");
+			throw Tokenizer::ParserException("Root in loaction must not be empty");
 	}
 }

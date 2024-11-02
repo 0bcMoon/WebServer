@@ -1,12 +1,8 @@
 #include "ServerContext.hpp"
 #include <unistd.h>
 #include <ctime>
-#include <stdexcept>
-#include <vector>
-#include "DataType.hpp"
+#include "Tokenizer.hpp"
 #include "Log.hpp"
-#include "ParserException.hpp"
-#include "VirtualServer.hpp"
 
 ServerContext::ServerContext() : globalParam(0, "/tmp")
 {
@@ -69,9 +65,9 @@ void ServerContext::pushServer(Tokens &token, Tokens &end)
 {
 	token++;
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	else if (*token != "{")
-		throw ParserException("Unexpact token: " + *token);
+		throw Tokenizer::ParserException("Unexpact token: " + *token);
 	token++;
 
 	this->servers.push_back(VirtualServer()); // push empty VirtualServer to keep
@@ -87,7 +83,7 @@ void ServerContext::pushServer(Tokens &token, Tokens &end)
 			server.parseTokens(token, end);
 	}
 	if (token == end || *token != "}")
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	token++;
 }
 
@@ -103,10 +99,10 @@ static long toBytes(std::string &size)
 	for (size_t i = 0; i < size.size() - 1; i++)
 	{
 		if (size[i] < '0' || size[i] > '9')
-			throw ParserException("Invalid size");
+			throw Tokenizer::ParserException("Invalid size");
 		sizeValue = sizeValue * 10 + size[i] - '0';
 		if (sizeValue > (1 << 16))
-			throw ParserException("Size too large");
+			throw Tokenizer::ParserException("Size too large");
 	}
 	switch (size[size.size() - 1])
 	{
@@ -125,7 +121,7 @@ void ServerContext::setMaxBodySize(Tokens &token, Tokens &end)
 	globalParam.validateOrFaild(token, end);
 	this->maxBodySize = toBytes(*token);
 	if (this->maxBodySize == -1)
-		throw ParserException("Invalid max body size or too large max is 100");
+		throw Tokenizer::ParserException("Invalid max body size or too large max is 100");
 	token++;
 	globalParam.CheckIfEnd(token, end);
 }
@@ -141,7 +137,7 @@ void ServerContext::setMaxHeaderSize(Tokens &token, Tokens &end)
 	this->maxHeaderSize = toBytes(*token);
 
 	if (this->maxHeaderSize == -1)
-		throw ParserException("Invalid max header size or too large max is 100");
+		throw Tokenizer::ParserException("Invalid max header size or too large max is 100");
 	token++;
 	globalParam.CheckIfEnd(token, end);
 }
@@ -163,12 +159,12 @@ void ServerContext::pushTypes(Tokens &token, Tokens &end)
 {
 	token++;
 	if (token == end || *token != "{")
-		throw ParserException("Unexpected  " + ((token == end) ? "end of file" : "token " + *token));
+		throw Tokenizer::ParserException("Unexpected  " + ((token == end) ? "end of file" : "token " + *token));
 	token++;
 	while (token != end && *token != "}")
 		this->addTypes(token, end);
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	token++;
 }
 const std::string &ServerContext::getType(const std::string &ext)
@@ -182,7 +178,7 @@ const std::string &ServerContext::getType(const std::string &ext)
 void ServerContext::init()
 {
 	if (this->servers.size() == 0)
-		throw ParserException("No Virtual Server has been define");
+		throw Tokenizer::ParserException("No Virtual Server has been define");
 	for (size_t i = 0; i < this->servers.size(); i++)
 	{
 		this->servers[i].globalConfig = this->globalParam;
@@ -213,10 +209,21 @@ void ServerContext::setKeepAlive(Tokens &token, Tokens &end)
 	for (size_t i = 0;i<s_time.size();i++)
 	{
 		if (s_time[i] <'0' || s_time[i] > '9' )
-			throw ParserException("Invalid keep alive Timeout value");
+			throw Tokenizer::ParserException("Invalid keep alive Timeout value");
 		this->keepAliveTimeout = this->keepAliveTimeout * 10 + s_time[i] - '0';
 		if (this->keepAliveTimeout > (1 << 30))
-			throw ParserException("Invlaid keep alive Timeout value");
+			throw Tokenizer::ParserException("Invlaid keep alive Timeout value");
 	}
 	this->globalParam.CheckIfEnd(token, end);
 }
+
+int ServerContext::getCGITimeOut() const
+{
+	return (this->CGITimeOut);
+}
+
+int ServerContext::getClientReadTime() const 
+{
+	return (this->ClientReadTime);
+}
+

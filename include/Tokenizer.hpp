@@ -15,6 +15,19 @@ class Tokenizer
 	std::string getQuotedString(size_t &offset);
 
   public:
+
+	class ParserException: public std::exception
+	{
+		private:
+			std::string message;
+
+		public:
+			// ~ParserException();
+			ParserException(std::string msg) ;
+			ParserException();
+			~ParserException() throw();
+			virtual const char *what() const throw();
+	};
 	static bool IsId(char c);
 	void parseConfig(ServerContext *context);
 	void CreateTokens();
