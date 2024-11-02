@@ -266,7 +266,7 @@ void HttpRequest::feed()
 			crlfGetting();
 		if (state == BODY)
 			parseBody();
-		if (state == BODY_FINISH /*&& parseMuliPartBody()*/)
+		if (state == BODY_FINISH && parseMuliPartBody())
 		{
 			state = REQUEST_FINISH;
 			break ;
@@ -735,7 +735,7 @@ int		HttpRequest::firstHeadersCheck()
 	if (headers.find("Content-Type") != headers.end()
 		&& headers["Content-Type"].find(",") != std::string::npos)
 		return (setHttpReqError(400, "Bad Request"), 1);
-	return (/* checkContentType() */0);
+	return (checkContentType());
 }
 
 void		HttpRequest::contentLengthBodyParsing()

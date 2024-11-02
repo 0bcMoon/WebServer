@@ -53,7 +53,7 @@ Client		*Connections::requestHandler(int	fd, int data)
 		return (NULL);
 
 	clientIter->second->request.readRequest(data);
-	// clientIter->second->request.feed();
+	clientIter->second->request.feed();
 	return (clientIter->second);
 }
 

@@ -274,7 +274,7 @@ void Event::WriteEvent(const struct kevent *ev)
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
-		client->request.feed();
+		// client->request.feed();
 		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
 			&& client->response.state != WRITE_BODY)
 			return;
@@ -313,6 +313,7 @@ void Event::eventLoop()
 
 	while (1)
 	{
+		std::cout << "waiting for event" << std::endl;
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));

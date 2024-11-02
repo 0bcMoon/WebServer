@@ -773,8 +773,8 @@ int				HttpResponse::uploadFile()
 			int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
 			if (__fd < 0)
 				return (setHttpResError(500, "Internal Server Error"), 0);
-			for (size_t __i = 0; __i < request->multiPartBodys[_i].body.size(); __i++)
-				write(__fd, &request->multiPartBodys[_i].body[__i], 1);
+			// for (size_t __i = 0; __i < request->multiPartBodys[_i].body.size(); __i++)
+			write(__fd, request->multiPartBodys[_i].body.data(), request->multiPartBodys[_i].body.size());
 			close (__fd);
 		}
 	}
@@ -784,8 +784,8 @@ int				HttpResponse::uploadFile()
 		int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
 		if (__fd < 0)
 			return (setHttpResError(500, "Internal Server Error"), 0);
-		for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
-			write(__fd, &body[__i], 1);
+		// for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
+		write(__fd, body.data(), body.size());
 		close (__fd);
 	}
 	return (1);
@@ -805,6 +805,8 @@ void			HttpResponse::responseCooking()
 		if (!isMethodAllowed())
 			return 	setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
+			return ;
+		if (methode == POST && !uploadFile())
 			return ;
 		writeResponse();
 		if (bodyType == LOAD_FILE)
