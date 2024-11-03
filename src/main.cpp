@@ -1,5 +1,3 @@
-
-
 #include <unistd.h>
 #include <csignal>
 #include <cstdio>
@@ -43,7 +41,7 @@ ServerContext *LoadConfig(const char *path)
 		ctx->init();
 		Log::init();
 	}
-	catch (const Debug &e)
+	catch (const Tokenizer::ParserException &e)
 	{
 		std::cout << e.what() << std::endl;
 		delete ctx;
@@ -65,7 +63,7 @@ void sigpipe_handler(int signum)
 }
 
 /*
- *TODO: 
+ * TODO: 
  */
 int main()
 {
