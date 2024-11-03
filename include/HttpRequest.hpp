@@ -103,7 +103,6 @@ class HttpRequest
 		int                                 reqSize;
 		size_t								reqBufferSize;
 		size_t								reqBufferIndex;
-		// std::string							reqBuffer; // buffer  may be binary (include '\0') fix this;
 		std::vector<char>							reqBuffer; // buffer  may be binary (include '\0') fix this;
 
 		httpError							error;
@@ -159,7 +158,7 @@ class HttpRequest
 		static int	isNum(const std::string& str);
 		void		clear();
 
-		std::map<std::string, std::string>	getHeaders() const;
+		const std::map<std::string, std::string>	&getHeaders() const;
 		std::vector<char>					getBody() const;
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;

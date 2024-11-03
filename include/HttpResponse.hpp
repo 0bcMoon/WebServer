@@ -1,6 +1,7 @@
 #ifndef HTTPRESPONSE_HPP
 #define HTTPRESPONSE_HPP
 
+#include "DataType.hpp"
 #include "HttpRequest.hpp"
 #include "Location.hpp"
 #include "ServerContext.hpp"
@@ -29,13 +30,6 @@ enum pathType
 class HttpResponse
 {
 	private:
-		enum responseBodyType 
-		{
-			LOAD_FILE,	
-			NO_TYPE,
-			AUTO_INDEX,
-			CGI
-		};
 		enum reqMethode
 		{
 			GET  = 0b1,
@@ -68,13 +62,12 @@ class HttpResponse
 			cgiResponeState	state;
 			size_t			bodyStartIndex;
 			std::string		cgiStatusLine;
-			std::vector<std::vector<char > > lines;
+			std::vector<std::vector<char > > lines;// mok li kadiro
 		};
 
 		cgiRespone							cgiRes;
-		int									fd;
 		enum reqMethode						methode;
-		std::vector<char>							body;
+		std::vector<char>					body; // seperate 
 		httpError							status;	
 		bool								isCgiBool;
 		errorResponse						errorRes;
@@ -88,15 +81,25 @@ class HttpResponse
 		std::string							errorPage;	
 		bool								isErrDef;	
 	public:
+		enum responseBodyType 
+		{
+			LOAD_FILE,	
+			NO_TYPE,
+			AUTO_INDEX,
+			CGI
+		};
+		std::vector<char>					CGIOutput;
+		GlobalConfig::Proc					proc;
 
 		enum responseBodyType				bodyType;
 		size_t								writeByte;
 		size_t								eventByte;
 		int									responseFd;
-		void			write2client(int fd, const char *str, size_t size);
+		void								write2client(int fd, const char *str, size_t size);
 
 		size_t								fileSize;
 		size_t								sendSize;
+		int									fd;
 
 		class IOException : public std::exception
 		{
@@ -110,7 +113,7 @@ class HttpResponse
 		int												parseCgiHaders(std::string str);
 		std::string											strMethod;
 		std::vector<std::vector<char> >						responseBody;// INFO:cgi output
-		int													keepAlive; // bool? // bool?
+		bool													keepAlive;
 		Location											*location;
 		enum responseState									state;
 		std::string											path;
@@ -132,7 +135,7 @@ class HttpResponse
 		bool							isPathFounded();
 		bool							isMethodAllowed();
 		int								pathChecking();
-		void							setHttpResError(int code, std::string str);
+		void							setHttpResError(int code, const std::string &str);
 
 		std::string						getErrorRes();
 		std::string						getContentLenght(); // TYPO

@@ -2,12 +2,22 @@
 #define Event_HPP
 #include <sys/event.h>
 #include "Connections.hpp"
+#include "DataType.hpp"
 #include "ServerContext.hpp"
 #include "VirtualServer.hpp"
 
 class Event
 {
+
+public:
   private:
+	enum EventType
+	{
+		SOCKET = 0,
+		PIPE = 1,
+	};
+
+
 	ServerContext *ctx;
 	Connections connections;
 	const int MAX_CONNECTION_QUEUE;
@@ -22,6 +32,10 @@ class Event
 	SocketMap_t socketMap;
 	std::map<int, VirtualServer *> defaultServer;
 	SockAddr_in sockAddrInMap;
+	struct kevent *eventChangeList;
+	struct kevent *evList;
+	int kqueueFd;
+	int numOfSocket;
 
 	int CreateSocket(SocketAddrSet_t::iterator &address);
 	int setNonBlockingIO(int serverFd);
@@ -29,17 +43,19 @@ class Event
 	std::string get_readable_ip(VirtualServer::SocketAddr address);
 	void insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd);
 	void InsertDefaultServer(VirtualServer *server, int socketFd);
-	struct kevent *eventChangeList;
-	struct kevent *evList;
-	int kqueueFd;
 	void CreateChangeList();
-	int numOfSocket;
 	int newConnection(int socketFd, Connections &connections);
 	bool checkNewClient(int socketFd);
 	int setWriteEvent(int fd, uint16_t flags);
 	Location *getLocation(const Client *client);
+	bool IsFileExist(HttpResponse &response);
+	GlobalConfig::Proc RunCGIScript(HttpResponse &response);
+
 	void ReadEvent(const struct kevent *ev);
 	void WriteEvent(const struct kevent *ev);
+	void RegisterNewProc(HttpResponse &response);
+	void TimerEvent(const struct kevent *ev);
+	void ProcEvent(const struct kevent *ev);
 
   public:
 	void initIOmutltiplexing();

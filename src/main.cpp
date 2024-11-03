@@ -33,7 +33,7 @@ ServerContext *LoadConfig(const char *path)
 {
 	ServerContext *ctx = NULL;
 
-	try // ugly but fix the problem
+	try
 	{
 		Tokenizer tokenizer;
 		tokenizer.readConfig(path);
@@ -43,7 +43,7 @@ ServerContext *LoadConfig(const char *path)
 		ctx->init();
 		Log::init();
 	}
-	catch (const Debug &e)
+	catch (const Tokenizer::ParserException &e)
 	{
 		std::cout << e.what() << std::endl;
 		delete ctx;
@@ -64,6 +64,9 @@ void sigpipe_handler(int signum)
 	printf("Caught SIGPIPE. Ignoring.\n");
 }
 
+/*
+ *TODO: 
+ */
 int main()
 {
 	Event *event = NULL;
@@ -79,8 +82,6 @@ int main()
 		return 1;
 	}
 	ctx = LoadConfig("config/nginx.conf");
-
-
 	if (!ctx)
 		return 1;
 	try

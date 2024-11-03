@@ -4,7 +4,7 @@
 #include <iomanip>
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
-#include "ParserException.hpp"
+#include "Tokenizer.hpp"
 
 std::ofstream Log::access_log;
 std::ofstream Log::error_log;
@@ -63,14 +63,14 @@ void Log::setErrorLogFile(const std::string &error)
 	Log::error_log.open(error, std::ios::out);
 
 	if (!Log::error_log.is_open())
-		throw ParserException("could not open Error log file :" + error);
+		throw Tokenizer::ParserException("could not open Error log file :" + error);
 }
 
 void Log::setAccessLogFile(const std::string &access)
 {
 	Log::access_log.open(access, std::ios::out);
 	if (!Log::access_log.is_open())
-		throw ParserException("could not open Access log file :" + access);
+		throw Tokenizer::ParserException("could not open Access log file :" + access);
 }
 
 void Log::init()

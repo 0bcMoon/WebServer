@@ -19,12 +19,7 @@ Connections::~Connections()
 
 void	Connections::closeConnection(int	fd)
 {
-	struct kevent ev_set[2];
-
-	EV_SET(&ev_set[0], fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-	EV_SET(&ev_set[1], fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-	kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL); 
-	close(fd);
+	close(fd); // after close file fd all event will be clear
 	delete clients[fd];
 	clients.erase(fd);
 }

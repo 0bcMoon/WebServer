@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "Location.hpp"
-#include "ParserException.hpp"
+#include "Tokenizer.hpp"
 
 VirtualServer::VirtualServer() 
 {
@@ -25,13 +25,13 @@ void VirtualServer::pushLocation(Tokens &token, Tokens &end)
 	this->globalConfig.validateOrFaild(token, end);
 	location.setPath(this->globalConfig.consume(token, end));
 	if (token == end || *token != "{")
-		throw ParserException("Unexpected Token: " + *token);
+		throw Tokenizer::ParserException("Unexpected Token: " + *token);
 	token++;
 	while (token != end && *token != "}")
 		location.parseTokens(token, end);
 
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	token++;
 	 this->routes.insert(location);
 }
@@ -81,7 +81,7 @@ int parseHost(std::string s_host)
 	{
 		octet = parseNumber(octets[i]);
 		if (octet < 0 || octet > 255)
-			throw ParserException("Invalid host" + s_host);
+			throw Tokenizer::ParserException("Invalid host" + s_host);
 		addr |= (octet << ((3 - i) * 8)); // TODO : make  right bytes order
 	}
 	return (addr);
@@ -95,7 +95,7 @@ void VirtualServer::setListen(Tokens &token, Tokens &end)
 	this->globalConfig.validateOrFaild(token, end);
 	size_t pos = token->find(':');
 	if (pos == 0 || pos == token->size() - 1)
-		throw ParserException("Unvalid [host:]port " + *token);
+		throw Tokenizer::ParserException("Unvalid [host:]port " + *token);
 
 	if (pos != std::string::npos)
 		host = token->substr(0, pos);
@@ -104,10 +104,10 @@ void VirtualServer::setListen(Tokens &token, Tokens &end)
 	port = token->substr(pos + (pos != 0), token->size() - pos);
 	socketAddr.port = parseNumber(port);
 	if (socketAddr.port <= 0)
-		throw ParserException("Invlaid Port number " + port);
+		throw Tokenizer::ParserException("Invlaid Port number " + port);
 	socketAddr.host = parseHost(host);
 	if (listen.find(socketAddr) != listen.end())
-		throw ParserException("dublicate listen: " + host + ":" + port);
+		throw Tokenizer::ParserException("dublicate listen: " + host + ":" + port);
 	listen.insert(socketAddr);
 	token++;
 	this->globalConfig.CheckIfEnd(token, end);
@@ -136,7 +136,7 @@ void VirtualServer::setServerNames(Tokens &token, Tokens &end)
 void VirtualServer::parseTokens(Tokens &token, Tokens &end)
 {
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	if (*token == "listen")
 		this->setListen(token, end);
 	else if (*token == "server_name")

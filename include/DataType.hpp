@@ -20,6 +20,23 @@ class GlobalConfig
 		bool									IsAlias;
 
 	public:
+		struct Proc
+		{
+			enum State
+			{
+				TIMEOUT,
+				NONE
+			};
+			Proc();
+			void clean();
+			void die();
+			Proc &operator=(Proc &other);
+			int pid;
+			int fout;
+			int fin;
+			int woffset;
+			enum State state;
+		};
 
 		bool		isValidStatusCode(std::string &str); // WARNING:t5arbi9
 		void		setMethods(Tokens &token, Tokens &end);
@@ -57,10 +74,8 @@ class GlobalConfig
 
 		const std::vector<std::string> &getIndexes();
 		void setIndexes(Tokens &token, Tokens &end);
-		// TODO Indexes getter may be with caching ??
-
 		void setErrorPages(Tokens &token, Tokens &end);
-		const std::string&getErrorPage(std::string &StatusCode);
+		const std::string &getErrorPage(std::string &StatusCode);
 		bool getAliasOffset() const ;
 
 };

@@ -1,7 +1,6 @@
 #include "Tokenizer.hpp"
 #include "DataType.hpp"
 #include "ServerContext.hpp"
-#include "ParserException.hpp"
 #include "VirtualServer.hpp"
 #include <fstream>
 #include <stack>
@@ -100,3 +99,19 @@ void Tokenizer::parseConfig(ServerContext *context)
 			context->parseTokens(token, end); // TODO;
 	}
 }
+
+Tokenizer::ParserException::ParserException(std::string msg)
+{
+	message = msg;
+}
+
+
+Tokenizer::ParserException::ParserException() : message("") {}
+
+const char *Tokenizer::ParserException::what() const throw()
+{
+	return (message.c_str());
+}
+
+
+Tokenizer::ParserException::~ParserException() throw() {}

@@ -47,11 +47,16 @@ void Client::respond(size_t data)
 		response.keepAlive = 0;
 	if (request.state == REQUEST_FINISH)
 		response.responseCooking();
+	if (response.state == CGI_EXECUTING)
+	{
+		response.bodyType = HttpResponse::CGI;
+		response.writeCgiResponse();
+	}
+	if (response.isCgi() && response.state != END_BODY
+		&& response.state != ERROR) 
+		response.state = CGI_EXECUTING;
 	if (response.state == ERROR)
 	{
-		// 
-		// location->globalConfig.getErrorPage(response.getStatusCode());	
-
 		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
 }

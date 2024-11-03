@@ -17,9 +17,10 @@ class Location
 			POST = 0b10,
 			DELETE = 0b100,
 		};
+
 		struct Redirection
 		{
-			std::string status;
+			std::string status; //3xx
 			std::string url;
 			std::string body; // INFO: body file name;
 		};
@@ -49,7 +50,7 @@ class Location
 		const Redirection &getRedirection() const;
 		void setMethods(Tokens &token, Tokens &end);
 
-		const std::string &geCGItPath(const std::string &ext);
+		const std::string &getCGIPath(const std::string &ext);
 		const std::string &geCGIext();
 		void setCGI(Tokens &token, Tokens &end);
 		void setHostPort(const std::string &host, int port);
