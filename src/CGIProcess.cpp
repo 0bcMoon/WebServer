@@ -99,7 +99,7 @@ void CGIProcess::child_process()
 	this->cgi_bin = response->location->globalConfig.getRoot() + response->path.substr(offset);
 
 	this->loadEnv();
-	std::string path = response->location->getCGIPath(".php"); // INFO: make this dynamique
+	std::string path = response->location->getCGIPath(".py"); // INFO: make this dynamique
 	const char *args[3] = {path.data(), cgi_bin.data(), NULL};
 	char **argv = new char *[env.size() + 1];
 	size_t i = 0;

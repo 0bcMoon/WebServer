@@ -5,12 +5,11 @@
 #include <cstddef>
 #include <map>
 #include <string>
-#include <utility>
 #include <vector>
 
 #define URI_MAX		 2048
 #define REQSIZE_MAX  1000000000
-#define BODY_MAX	 100000000
+#define BODY_MAX	 1000000000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
 
@@ -74,7 +73,7 @@ enum reqBodyType {
 
 struct multiPart 
 {
-	std::vector<char>				body;
+	std::vector<char>						body;
 	std::map<std::string, std::string>		headers;
 	std::vector<std::string>				strsHeaders;
 };

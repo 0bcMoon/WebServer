@@ -40,7 +40,6 @@ class Client
 		const std::string	&getHost() const;	
 		const std::string	&getPath() const;
 		void				respond(size_t data);
-		int StartTimer();
 		enum TimerType getTimerType() const ;
 };
 

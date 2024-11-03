@@ -53,10 +53,13 @@ class Event
 
 		void ReadEvent(const struct kevent *ev);
 		void WriteEvent(const struct kevent *ev);
-		void RegesterNewProc(HttpResponse &response);
+		void RegisterNewProc(Client *client);
 		void TimerEvent(const struct kevent *ev);
 		void ProcEvent(const struct kevent *ev);
 		void StartTimer(Client *client);
+
+		void wpipe(const struct kevent *ev);
+		void rpipe(const struct kevent *ev);
 	class EventExpection: public std::exception
 	{
 		private:

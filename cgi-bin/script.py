@@ -1,7 +1,6 @@
-import cgi
-import cgitb
 import os
 from urllib.parse import parse_qs
+import datetime
 
 # Enable debugging
 # cgitb.enable()
@@ -38,7 +37,6 @@ for key, value in os.environ.items():
 print("</ul>")
 
 # Output the current date and time
-import datetime
 print(f"<p>Current date and time: {datetime.datetime.now()}</p>")
 
 # End HTML output

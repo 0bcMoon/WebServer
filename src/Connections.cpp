@@ -39,7 +39,7 @@ Client		*Connections::requestHandler(int	fd, int data)
 		return (NULL);
 
 	clientIter->second->request.readRequest(data);
-	// clientIter->second->request.feed();
+	clientIter->second->request.feed();
 	return (clientIter->second);
 }
 
@@ -47,4 +47,12 @@ void		Connections::init(ServerContext *ctx, int kqueueFd)
 {
 	this->ctx = ctx;
 	this->kqueueFd = kqueueFd;
+}
+
+Client		*Connections::getClient(int fd)
+{
+	std::map<int, Client *>::iterator kv = this->clients.find(fd);
+	if (kv == this->clients.end())
+		return (NULL);
+	return (kv->second);
 }

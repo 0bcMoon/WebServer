@@ -22,7 +22,6 @@
 #include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
-#include <system_error>
 #include <vector>
 #include "CgiHandler.hpp"
 #include "HttpRequest.hpp"
@@ -76,7 +75,8 @@ void			HttpResponse::clear()
 	cgiRes.state = HEADERS;
 	cgiRes.bodyStartIndex = 0;
 	cgiRes.cgiStatusLine.clear();
-	cgiRes.lines.clear();
+	cgiRes.lines.resize(0);
+	CGIOutput.resize(0);
 	methode = NONE;
 	body.clear();
 	status.code = 200;
@@ -199,8 +199,8 @@ HttpResponse& HttpResponse::operator=(const HttpRequest &req)
 	strMethod = req.getStrMethode();
 	if (req.state == REQ_ERROR)
 		state = ERROR;
-	else
-		state = START;
+	// else
+	// 	state = ;
 	return (*this);
 }
 
@@ -468,43 +468,34 @@ static int parseCgiStatusLine(std::string line)
 
 void HttpResponse::parseCgiOutput()
 {
-	std::string tmpHeaderName;
-	std::string tmpHeaderVal;
-	size_t lineIndex = 0;
+	std::string	tmpHeaderName;
+	std::string	tmpHeaderVal;
+	size_t	lineIndex = 0;
 
 	cgiRes.state = HEADERS;
-	if (responseBody.size() == 0 || responseBody[0].size() == 0)
+	// std::cout << "----->" << CGIOutput.size() << std::endl;
+	if (CGIOutput.size() == 0)
 		return;
-	for (size_t i = 0; i < responseBody.size(); i++)
+
+
+	for (size_t j = 0; j < CGIOutput.size(); j++)
 	{
-		for (size_t j = 0; j < responseBody[i].size(); j++)
-		{
-			if (lineIndex == cgiRes.lines.size())
-				cgiRes.lines.push_back(std::vector<char>());
-			cgiRes.lines[lineIndex].push_back(responseBody[i][j]);
-			if (responseBody[i][j] == '\n')
-				lineIndex++;
-		}
+		if (lineIndex == cgiRes.lines.size())
+			cgiRes.lines.push_back(std::vector<char>());
+		cgiRes.lines[lineIndex].push_back(CGIOutput[j]);
+		if (CGIOutput[j] == '\n')
+			lineIndex++;
 	}
-	for (size_t i = 0; i < cgiRes.lines.size(); i++)
-	{
-		for (size_t j = 0; j < cgiRes.lines[i].size(); j++)
-		{
-			std::cout << cgiRes.lines[i][j];
-		}
-	}
+
+	// for (size_t i = 0; i < cgiRes.lines.size(); i++)
+	// {
+	// 	write(1, cgiRes.lines[i].data(), cgiRes.lines[i].size());
+	// }
 	for (size_t i = 0; i < cgiRes.lines.size(); i++)
 	{
 		if (isLineCrlf(cgiRes.lines[i]))
 		{
 			cgiRes.bodyStartIndex = i + 1;
-			// for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
-			// {
-			// 	write(1, it->first.c_str(), it->first.size());
-			// 	write(1, ": ", 2);
-			// 	write(1, it->second.c_str(), it->second.size());
-			// 	write(1, "\r\n", 2);
-			// }
 			return;
 		}
 		if (i == 0 && cgiRes.lines[i].size() > 8 && isStatusLine(cgiRes.lines[i]))
@@ -547,6 +538,7 @@ void HttpResponse::writeCgiResponse()
 		resHeaders["Connection"] = "Close";
 	resHeaders["Content-Type"] = "text/plain";
 	parseCgiOutput();
+	// std::cout << "ERROR" << std::endl;
 	if (state == ERROR)
 		return;
 	if (cgiRes.cgiStatusLine.size() == 0)
@@ -632,6 +624,7 @@ std::string HttpResponse::getDate()
 
 int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 {
+	state = WRITE_BODY;
 	size_t begin = 0;
 	if (type == CGI)
 	{
@@ -644,20 +637,28 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 		}
 		begin = size - begin;
 	}
+	// for (size_t i = 0; i < cgiRes.lines.size(); i++)
+	// {
+	// 	write(1, cgiRes.lines[i].data(), cgiRes.lines[i].size());
+	// }
 	if (/* type == LOAD_FILE ||  */type == CGI)
 	{
-		size_t count = 0;
-		for (size_t i = 0; i < responseBody.size(); i++)
+		for (size_t i = cgiRes.bodyStartIndex; i < cgiRes.lines.size(); i++)
 		{
-			for (size_t j = 0; j < responseBody[i].size(); j++)
-			{
-				// if (writeByte == eventByte)
-				// 	return (this->j = j, this->i = i, 1);
-				if (count >= begin)
-					write2client(this->fd, &responseBody[i][j], 1);
-				count++;
-			}
+			write(this->fd, cgiRes.lines[i].data(), cgiRes.lines[i].size());
 		}
+		// size_t count = 0;
+		// for (size_t i = 0; i < responseBody.size(); i++)
+		// {
+		// 	for (size_t j = 0; j < responseBody[i].size(); j++)
+		// 	{
+		// 		// if (writeByte == eventByte)
+		// 		// 	return (this->j = j, this->i = i, 1);
+		// 		if (count >= begin)
+		// 			write2client(this->fd, &responseBody[i][j], 1);
+		// 		count++;
+		// 	}
+		// }
 		state = END_BODY;
 	}
 	if (type == LOAD_FILE)
@@ -771,8 +772,8 @@ int				HttpResponse::uploadFile()
 			int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
 			if (__fd < 0)
 				return (setHttpResError(500, "Internal Server Error"), 0);
-			for (size_t __i = 0; __i < request->multiPartBodys[_i].body.size(); __i++)
-				write(__fd, &request->multiPartBodys[_i].body[__i], 1); // dump code
+			// for (size_t __i = 0; __i < request->multiPartBodys[_i].body.size(); __i++)
+			write(__fd, request->multiPartBodys[_i].body.data(), request->multiPartBodys[_i].body.size());
 			close (__fd);
 		}
 	}
@@ -782,8 +783,8 @@ int				HttpResponse::uploadFile()
 		int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
 		if (__fd < 0)
 			return (setHttpResError(500, "Internal Server Error"), 0);
-		for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
-			write(__fd, &body[__i], 1); // dump code
+		// for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
+		write(__fd, body.data(), body.size());
 		close (__fd);
 	}
 	return (1);
@@ -793,15 +794,15 @@ void			HttpResponse::responseCooking()
 {
 	decodingUrl();
 	splitingQuery();
-	if (!isPathFounded())
+	if (!isPathFounded() || isCgi())
 		return;
-	if (isCgi()) 
-		state = CGI_EXECUTING;
 	else
 	{
 		if (!isMethodAllowed())
 			return 	setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
+			return ;
+		if (methode == POST && !uploadFile())
 			return ;
 		writeResponse();
 		if (bodyType == LOAD_FILE)

@@ -240,13 +240,13 @@ void GlobalConfig::Proc::die()
 {
 	assert(this->pid > 0 && "Major Error Need to be fix");
 
-	kill(this->pid, SIGKILL);
+	::kill(this->pid, SIGKILL);
 }
 
 void GlobalConfig::Proc::clean()
 {
-	assert(this->fin >= 0 && "Major Error Need to be fix");
-	assert(this->fout >= 0 && "Major Error Need to be fix");
+	// assert(this->fin >= 0 && "Major Error Need to be fix");
+	// assert(this->fout >= 0 && "Major Error Need to be fix");
 	close(this->fin);
 	close(this->fout);
 }

@@ -258,7 +258,7 @@ void Event::ReadEvent(const struct kevent *ev)
 {
 	if (ev->flags & EV_EOF && ev->data <= 0)
 	{
-		std::cout << "client disconnected\n";
+		// std::cout << "client disconnected\n";
 		connections.closeConnection(ev->ident);
 	}
 	else
@@ -275,17 +275,18 @@ void Event::ReadEvent(const struct kevent *ev)
 	}
 }
 
-void Event::RegesterNewProc(HttpResponse &response)
+void Event::RegisterNewProc(Client *client)
 {
-	std::cout << " aprocess event has been regster\n";
+	HttpResponse &response = client->response;
+	// std::cout << " a process event has been regster\n";
 	CGIProcess cgi;
 	GlobalConfig::Proc proc = cgi.RunCGIScript(response);
 	if (proc.pid == -1)
 		return;
+
 	struct kevent ev[4];
 	int evSize = (response.strMethod == "POST") + 3;
-
-	EV_SET(&ev[0], proc.pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, (void *)&response);
+	EV_SET(&ev[0], proc.pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, (void *)(size_t )client->getFd());
 	EV_SET(
 		&ev[1],
 		proc.pid,
@@ -293,9 +294,10 @@ void Event::RegesterNewProc(HttpResponse &response)
 		EV_ADD | EV_ENABLE | EV_ONESHOT,
 		NOTE_SECONDS,
 		this->ctx->getCGITimeOut(),
-		(void *)&response);
-	EV_SET(&ev[2], proc.fout, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void *)&response);
-	EV_SET(&ev[3], proc.fin, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, (void *)&response);
+		(void *)(size_t )client->getFd()
+		);
+	EV_SET(&ev[2], proc.fout, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void *)(size_t )client->getFd());
+	EV_SET(&ev[3], proc.fin, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, (void *)(size_t )client->getFd());
 	if (kevent(this->kqueueFd, ev, evSize, 0, 0, NULL) < 0)
 	{
 		proc.die();
@@ -315,10 +317,10 @@ void Event::WriteEvent(const struct kevent *ev)
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
-		client->request.feed();
-		if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
-			&& client->response.state != WRITE_BODY)
-			return;
+		// client->request.feed();
+		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+		// 	&& client->response.state != WRITE_BODY && client->response.state iCGI_EXECUTING)
+		// 	return;
 		if (client->response.state != WRITE_BODY)
 		{
 			client->response.location = this->getLocation(client);
@@ -326,7 +328,8 @@ void Event::WriteEvent(const struct kevent *ev)
 		}
 		if (client->response.state == CGI_EXECUTING)
 		{
-			this->RegesterNewProc(client->response);
+			// std::cout << "ERROR" << std::endl;
+			this->RegisterNewProc(client);
 			if (this->setWriteEvent(client->getFd(), EV_DISABLE) < 0) // testing // unstable code
 				this->connections.closeConnection(client->getFd());
 			return;
@@ -338,6 +341,7 @@ void Event::WriteEvent(const struct kevent *ev)
 		}
 		if (client->response.state != WRITE_BODY)
 		{
+			std::cout << "=----------------------->\n";
 			// if (!client->response.keepAlive)
 			// 	throw HttpResponse::IOException();
 			client->response.clear();
@@ -348,12 +352,19 @@ void Event::WriteEvent(const struct kevent *ev)
 	}
 }
 
-void rpipe(const struct kevent *ev)
+void Event::rpipe(const struct kevent *ev)
 {
-	HttpResponse *response = (HttpResponse *)ev->udata;
+	int fd = (size_t)ev->udata;
+	Client *client = this->connections.getClient(fd);
+	if (!client)
+	{
+		close(ev->ident); // testing
+		return ;
+		// return (void)(std::cout << "client has been free");
+	}
+	HttpResponse *response = &client->response;
 	if (ev->flags & EV_EOF && !ev->data)
 		return (void)(close(ev->ident)); // set some state for start parsing
-
 	size_t OldSize = response->CGIOutput.size();
 	size_t NewSize = ev->data + OldSize;
 	response->CGIOutput.resize(NewSize);
@@ -363,12 +374,16 @@ void rpipe(const struct kevent *ev)
 		throw HttpResponse::IOException();
 }
 
-void wpipe(const struct kevent *ev)
+void Event::wpipe(const struct kevent *ev)
 {
 	// add some writes offset that does cl
-	//
-	std::cout << "WriteEvent pipe enter\n"; // TODO: test with post
-	HttpResponse *response = (HttpResponse *)ev->udata;
+	// std::cout << "WriteEvent pipe enter\n"; // TODO: test with post
+	int fd = (size_t)ev->udata;
+	Client *client = this->connections.getClient(fd);
+	if (!client)
+		return (void)(std::cout << "client has been free3\n");
+	HttpResponse *response = &client->response;
+
 	int avdata = std::abs(response->proc.woffset - (int)response->getBody().size());
 	int wdata = std::min((int)ev->data, avdata);
 	response->proc.woffset += wdata;
@@ -378,37 +393,49 @@ void wpipe(const struct kevent *ev)
 
 void Event::TimerEvent(const struct kevent *ev)
 {
-	std::cout << "timer event\n";
+	// std::cout << "timer event\n";
 	if (!ev->udata)
 		return this->connections.closeConnection(ev->ident); // if client take too long to send full request
+															 //
+	int fd = (size_t)ev->udata;
+	Client *client = this->connections.getClient(fd);
+	if (!client)
+		return (void)(std::cout << "client has been free1\n");
+	HttpResponse *response = &client->response;
+	//
 	// else cgi take too long to process it data
-	HttpResponse *response = (HttpResponse *)ev->udata;
 	response->proc.die(); // we kill the cgi with SIGKILL
 	response->proc.state = GlobalConfig::Proc::TIMEOUT; // set the state for error TIMEOUT to response
 }
 void Event::ProcEvent(const struct kevent *ev)
 {
-	HttpResponse *response = (HttpResponse *)ev->udata;
-
+	// std::cout << "proc event happend\n";
+	int fd = (size_t)ev->udata;
+	Client *client = this->connections.getClient(fd);
+	// this->connections.
+	// here we clean process
+	int status;
+	int state;
+	waitpid(ev->ident, &status, 0); // this event only run if process has finish so witpid would not block
+	state = WIFSIGNALED(status); // check if process exist normally
+	status = WEXITSTATUS(status); // check exist state
+								  //
+	if (!client)
+		return (void)(std::cout << "client has been free2\n");
+	HttpResponse *response = &client->response;
 	if (response->proc.state != GlobalConfig::Proc::TIMEOUT)
 	{
 		struct kevent event;
 		EV_SET(&event, ev->ident, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
 		kevent(this->kqueueFd, &event, 1, NULL, 0, NULL);
 	}
-	// here we clean process
-	std::cout << "proc event happend\n";
-	int status;
-	int state;
-	waitpid(ev->ident, &status, 0); // this event only run if process has finish so witpid would not block
-	state = WIFSIGNALED(status); // check if process exist normally
-	status = WEXITSTATUS(status); // check exist state
 	if (response->proc.state == GlobalConfig::Proc::TIMEOUT)
 		response->setHttpResError(504, "Gateway Timeout");
 	else if (state || status)
 		response->setHttpResError(502, "Bad Gateway"); // this may be change to 500 server error
 	else
-		; // set some state to start parsing cgi output
+		;// set some state to start parsing cgi output
+	this->setWriteEvent(response->fd, EV_ENABLE);
 	response->proc.clean();
 }
 
@@ -419,7 +446,7 @@ void Event::eventLoop()
 
 	while (1)
 	{
-		std::cout << "Waiting for event\n";
+		// std::cout << "waiting for event" << std::endl;
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
@@ -431,7 +458,6 @@ void Event::eventLoop()
 				this->newConnection(ev->ident, connections);
 				continue;
 			}
-
 			try
 			{
 				if (ev->fflags & EV_ERROR)
@@ -497,26 +523,26 @@ Location *Event::getLocation(const Client *client)
 	return (location);
 }
 
-void Event::StartTimer(Client *client)
-{
-	int time;
-	struct kevent ev;
+// void Event::StartTimer(Client *client)
+// {
+// 	int time;
+// 	struct kevent ev;
 
-	switch (client->getTimerType()) 
-	{
-		case Client::NEW_CONNECTION:
-		case Client::KEEP_ALIVE:
-			time = this->ctx->getKeepAliveTime();
-			break;
-		case Client::READING:
-			time = this->ctx->getClientReadTime();
-			break;
-		}
-		EV_SET(&ev, client->getFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_SECONDS, time, NULL);
-	// if (kevent(this->kqueueFd, ev, 1, NULL, 1, NULL) < 0)
-	// 	throw 
- 
-}
+// 	switch (client->getTimerType()) 
+// 	{
+// 		case Client::NEW_CONNECTION:
+// 		case Client::KEEP_ALIVE:
+// 			time = this->ctx->getKeepAliveTime();
+// 			break;
+// 		case Client::READING:
+// 			time = this->ctx->getClientReadTime();
+// 			break;
+// 		}
+// 		EV_SET(&ev, client->getFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_SECONDS, time, NULL);
+// 	// if (kevent(this->kqueueFd, ev, 1, NULL, 1, NULL) < 0)
+// 	// 	throw 
+//  
+// }
 
 
 Event::EventExpection::EventExpection(const std::string &msg) throw()
@@ -528,3 +554,8 @@ const char *Event::EventExpection::what() const throw ()
 {
 	return (this->msg.data());
 }
+
+Event::EventExpection::~EventExpection() throw()
+{
+}
+

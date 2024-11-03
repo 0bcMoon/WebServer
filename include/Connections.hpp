@@ -22,6 +22,7 @@ class Connections
 		void		closeConnection(int	fd);
 		void		addConnection(int	fd, int server);
 		Client		*requestHandler(int	fd, int data);
+		Client		*getClient(int fd);
 };
 
 #endif

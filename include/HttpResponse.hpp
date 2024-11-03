@@ -30,13 +30,6 @@ enum pathType
 class HttpResponse
 {
 	private:
-		enum responseBodyType 
-		{
-			LOAD_FILE,	
-			NO_TYPE,
-			AUTO_INDEX,
-			CGI
-		};
 		enum reqMethode
 		{
 			GET  = 0b1,
@@ -69,11 +62,10 @@ class HttpResponse
 			cgiResponeState	state;
 			size_t			bodyStartIndex;
 			std::string		cgiStatusLine;
-			std::vector<std::vector<char > > lines;// gay pepole code
+			std::vector<std::vector<char > > lines;// mok li kadiro
 		};
 
 		cgiRespone							cgiRes;
-		int									fd;
 		enum reqMethode						methode;
 		std::vector<char>					body; // seperate 
 		httpError							status;	
@@ -89,6 +81,13 @@ class HttpResponse
 		std::string							errorPage;	
 		bool								isErrDef;	
 	public:
+		enum responseBodyType 
+		{
+			LOAD_FILE,	
+			NO_TYPE,
+			AUTO_INDEX,
+			CGI
+		};
 		std::vector<char>					CGIOutput;
 		GlobalConfig::Proc					proc;
 
@@ -100,6 +99,7 @@ class HttpResponse
 
 		size_t								fileSize;
 		size_t								sendSize;
+		int									fd;
 
 		class IOException : public std::exception
 		{
@@ -110,10 +110,10 @@ class HttpResponse
 		std::string getRandomName();
 		std::string							queryStr;
 		std::string											getCgiContentLenght();
-		int												parseCgiHaders(std::string str);
+		int													parseCgiHaders(std::string str);
 		std::string											strMethod;
 		std::vector<std::vector<char> >						responseBody;// INFO:cgi output
-		int													keepAlive; // bool? // bool?
+		bool												keepAlive;
 		Location											*location;
 		enum responseState									state;
 		std::string											path;
