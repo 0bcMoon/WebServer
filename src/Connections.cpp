@@ -24,21 +24,12 @@ void	Connections::closeConnection(int	fd)
 	clients.erase(fd);
 }
 
-void	Connections::addConnection(int	fd)
-{
-	clients[fd] = new Client(fd);
-}
 
 void	Connections::addConnection(int	fd, int server)
 {
 	this->clients[fd] = new Client(fd, server, ctx);
 }
 
-void		Connections::connecting(int fd)
-{
-	if (clients.find(fd) == clients.end())
-		addConnection(fd);
-}
 
 // TODO: return client object : search once
 Client		*Connections::requestHandler(int	fd, int data)

@@ -669,9 +669,7 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 			readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
 			int size = read(responseFd, buff, readbuffer);
 			if (size < 0)
-			{
 				throw IOException();
-			}
 			if (size == 0)
 				break ;
 			write2client(fd, buff, size);
@@ -843,16 +841,17 @@ std::string decimalToHex(int decimal)
 
 std::string HttpResponse::getRandomName()
 {
-	std::string rstr(24, ' ');
+	std::string rstr(48, ' ');
 	const char charset[] = {
 
 		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
 		'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
-		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+	};
 	int n = sizeof(charset) / sizeof(charset[0]);
-	for (int i = 0; i < 24; i++)
+	for (int i = 0; i < 48; i++)
 	{
 		int idx = (std::rand() % n);
 		rstr[i] = charset[idx];

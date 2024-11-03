@@ -12,8 +12,7 @@ INCD = $(shell find . -name "*.hpp" | grep -v "test")
 
 INC = include/
 
-# CFLAGS = -std=c++98 -Wall -Wextra  -g -ggdb3 
-CFLAGS = -std=c++98 -Wall -Wextra -fsanitize=address -g 
+CFLAGS = -std=c++98 -Wall -Wextra -fsanitize=address -g -ggdb3
 
 
 NAME = webserv
@@ -31,14 +30,10 @@ clean :
 	rm -rf $(OBJ_DIR)
 
 fclean : clean
-	make -f MakeTest fclean
 	rm -f $(NAME)
 
 re : fclean all
 
-test:
-	make -f MakeTest
-	@./serverTest
 run :
 	@./$(NAME)
 

@@ -40,6 +40,7 @@ class ServerContext
 	void setErrorLog(Tokens &token, Tokens &end);
 	void setAccessLog(Tokens &token, Tokens &end);
 	void setKeepAlive(Tokens &token, Tokens &end);
+	int	getKeepAliveTime() const;
 	int getCGITimeOut() const;
 	int getClientReadTime() const ;
 

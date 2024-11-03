@@ -9,7 +9,8 @@
 enum clientState
 {
 	REQUEST,
-	RESPONSE
+	RESPONSE,
+	None,
 };
 
 class Client
@@ -17,12 +18,18 @@ class Client
 	private:
 		int fd;	
 		int serverFd;
+		ServerContext *ctx;
 	public:
+		enum TimerType
+		{
+			KEEP_ALIVE,
+			READING,
+			NEW_CONNECTION
+		};
+		enum TimerType timerType;
 		enum clientState	state;
 		Location *location;
 
-		Client();
-		Client(int	fd);
 		Client(int	fd, int server, ServerContext *ctx);
 
 		HttpRequest		request;
@@ -33,6 +40,8 @@ class Client
 		const std::string	&getHost() const;	
 		const std::string	&getPath() const;
 		void				respond(size_t data);
+		int StartTimer();
+		enum TimerType getTimerType() const ;
 };
 
 #endif

@@ -254,10 +254,8 @@ int Event::setWriteEvent(int fd, uint16_t flags)
 	EV_SET(&ev, fd, EVFILT_WRITE, flags, 0, 0, NULL);
 	return kevent(this->kqueueFd, &ev, 1, NULL, 0, NULL);
 }
-
 void Event::ReadEvent(const struct kevent *ev)
 {
-
 	if (ev->flags & EV_EOF && ev->data <= 0)
 	{
 		std::cout << "client disconnected\n";
@@ -267,7 +265,6 @@ void Event::ReadEvent(const struct kevent *ev)
 	{
 		connections.requestHandler(ev->ident, ev->data);
 		ClientsIter kv = connections.clients.find(ev->ident);
-
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
@@ -288,8 +285,15 @@ void Event::RegesterNewProc(HttpResponse &response)
 	struct kevent ev[4];
 	int evSize = (response.strMethod == "POST") + 3;
 
-	EV_SET(&ev[0], proc.pid, EVFILT_PROC, EV_ADD | EV_ENABLE , NOTE_EXIT, 0, (void *)&response);
-	EV_SET(&ev[1], proc.pid, EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT , NOTE_SECONDS, this->ctx->getCGITimeOut(), (void *)&response);
+	EV_SET(&ev[0], proc.pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, (void *)&response);
+	EV_SET(
+		&ev[1],
+		proc.pid,
+		EVFILT_TIMER,
+		EV_ADD | EV_ENABLE | EV_ONESHOT,
+		NOTE_SECONDS,
+		this->ctx->getCGITimeOut(),
+		(void *)&response);
 	EV_SET(&ev[2], proc.fout, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void *)&response);
 	EV_SET(&ev[3], proc.fin, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, (void *)&response);
 	if (kevent(this->kqueueFd, ev, evSize, 0, 0, NULL) < 0)
@@ -325,7 +329,7 @@ void Event::WriteEvent(const struct kevent *ev)
 			this->RegesterNewProc(client->response);
 			if (this->setWriteEvent(client->getFd(), EV_DISABLE) < 0) // testing // unstable code
 				this->connections.closeConnection(client->getFd());
-			return ;
+			return;
 		}
 		if (client->response.state == WRITE_BODY)
 		{
@@ -348,7 +352,7 @@ void rpipe(const struct kevent *ev)
 {
 	HttpResponse *response = (HttpResponse *)ev->udata;
 	if (ev->flags & EV_EOF && !ev->data)
-		return (void)(close(ev->ident)); // set some state for start parsing 
+		return (void)(close(ev->ident)); // set some state for start parsing
 
 	size_t OldSize = response->CGIOutput.size();
 	size_t NewSize = ev->data + OldSize;
@@ -380,7 +384,7 @@ void Event::TimerEvent(const struct kevent *ev)
 	// else cgi take too long to process it data
 	HttpResponse *response = (HttpResponse *)ev->udata;
 	response->proc.die(); // we kill the cgi with SIGKILL
-	response->proc.state = GlobalConfig::Proc::TIMEOUT; // set the state for error TIMEOUT to response 
+	response->proc.state = GlobalConfig::Proc::TIMEOUT; // set the state for error TIMEOUT to response
 }
 void Event::ProcEvent(const struct kevent *ev)
 {
@@ -392,7 +396,7 @@ void Event::ProcEvent(const struct kevent *ev)
 		EV_SET(&event, ev->ident, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
 		kevent(this->kqueueFd, &event, 1, NULL, 0, NULL);
 	}
-	// here we clean process 
+	// here we clean process
 	std::cout << "proc event happend\n";
 	int status;
 	int state;
@@ -404,7 +408,7 @@ void Event::ProcEvent(const struct kevent *ev)
 	else if (state || status)
 		response->setHttpResError(502, "Bad Gateway"); // this may be change to 500 server error
 	else
-		;// set some state to start parsing cgi output
+		; // set some state to start parsing cgi output
 	response->proc.clean();
 }
 
@@ -491,4 +495,36 @@ Location *Event::getLocation(const Client *client)
 		host = *Vserver->getServerNames().begin();
 	location->setHostPort(host, port);
 	return (location);
+}
+
+void Event::StartTimer(Client *client)
+{
+	int time;
+	struct kevent ev;
+
+	switch (client->getTimerType()) 
+	{
+		case Client::NEW_CONNECTION:
+		case Client::KEEP_ALIVE:
+			time = this->ctx->getKeepAliveTime();
+			break;
+		case Client::READING:
+			time = this->ctx->getClientReadTime();
+			break;
+		}
+		EV_SET(&ev, client->getFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_SECONDS, time, NULL);
+	// if (kevent(this->kqueueFd, ev, 1, NULL, 1, NULL) < 0)
+	// 	throw 
+ 
+}
+
+
+Event::EventExpection::EventExpection(const std::string &msg) throw()
+{
+	this->msg = msg;
+}
+
+const char *Event::EventExpection::what() const throw ()
+{
+	return (this->msg.data());
 }

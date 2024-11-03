@@ -1,5 +1,6 @@
 #include "Client.hpp"
 #include <cstddef>
+#include <sys/event.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <cassert>
@@ -13,23 +14,15 @@
 
 int Client::getFd() const
 {
-	return (fd);
+	return (this->fd);
 }
 
-Client::Client() : response(-1, NULL, NULL)
-{
-	fd = -1;
-	state = REQUEST;
-}
 
-Client::Client(int fd) : fd(fd), request(fd), response(fd, NULL, NULL)
+Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), ctx(ctx), request(fd), response(fd, ctx, &request)
 {
-	state = REQUEST;
-}
-
-Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), request(fd), response(fd, ctx, &request)
-{
-	state = REQUEST;
+	state = None;
+	this->timerType = NEW_CONNECTION;
+	this->StartTimer();
 }
 
 void Client::respond(size_t data)
@@ -39,10 +32,11 @@ void Client::respond(size_t data)
 		return ;
 
 	response = request;
-	// TODO: find()
-	if ((response.headers.find("Connection") != response.headers.end() //TODO: create a function that return bool from search from file //TODO: handle connection with Cgi
-		&& (response.headers["Connection"].find("close") != std::string::npos
-			|| response.headers["Connection"].find("Close") != std::string::npos))
+	std::map<std::string, std::string>::iterator kv = response.headers.find("Connection");
+
+	if ((kv != response.headers.end()
+		&& (kv->second.find("close") != std::string::npos
+			|| kv->second.find("Close") != std::string::npos))
 		|| request.state == REQ_ERROR)
 		response.keepAlive = 0;
 	if (request.state == REQUEST_FINISH)
@@ -71,3 +65,8 @@ int Client::getServerFd() const
 	return (this->serverFd);
 }
 
+
+Client::TimerType Client::getTimerType() const 
+{
+	return (this->timerType);
+}

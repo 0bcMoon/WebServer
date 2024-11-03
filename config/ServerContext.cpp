@@ -38,7 +38,7 @@ ServerContext::ServerContext() : globalParam(0, "/tmp")
 		this->types[ext[i]] = types[i];
 	this->maxBodySize = 100 * 1024 * 1024;
 	this->maxHeaderSize = 100 * 1024 * 1024;
-	this->keepAliveTimeout = 75;
+	this->keepAliveTimeout = 75; // second
 }
 
 ServerContext::~ServerContext()
@@ -227,3 +227,7 @@ int ServerContext::getClientReadTime() const
 	return (this->ClientReadTime);
 }
 
+int	ServerContext::getKeepAliveTime() const
+{
+	return (this->keepAliveTimeout);
+}

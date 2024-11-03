@@ -1,4 +1,4 @@
-#!/Users/zkotbi/.brew/bin/python3.11
+#!/Users/hibenouk/.brew/bin/python3.11
 
 import requests
 
@@ -9,7 +9,6 @@ def main():
     try:
         # Send GET request
         response = requests.get(url)
-        print("GET Request")
         
         # Check if the request was successful
         response.raise_for_status()
@@ -18,7 +17,6 @@ def main():
         print(f"Status Code: {response.status_code}")
 
         # Print the response content
-        print("Response Content:")
         print(response.text)
 
     except requests.RequestException as e:
