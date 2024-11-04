@@ -89,7 +89,6 @@ class HttpResponse
 			CGI
 		};
 		std::vector<char>					CGIOutput;
-		GlobalConfig::Proc					proc;
 
 		enum responseBodyType				bodyType;
 		size_t								writeByte;

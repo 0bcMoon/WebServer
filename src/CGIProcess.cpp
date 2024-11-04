@@ -122,7 +122,7 @@ GlobalConfig::Proc CGIProcess::RunCGIScript(HttpResponse &response)
 
 	this->response = &response;
 	if (this->IsFileExist())
-		return proc;
+		return (proc);
 	if (pipe(this->pipeIn) < 0)
 		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	else if (pipe(this->pipeOut) < 0)
@@ -136,12 +136,11 @@ GlobalConfig::Proc CGIProcess::RunCGIScript(HttpResponse &response)
 		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	}
 	else if (proc.pid == 0)
-		child_process();
+		this->child_process();
 	close(this->pipeIn[0]);
 	close(this->pipeOut[1]);
 	proc.fout = this->pipeOut[0];
 	proc.fin = this->pipeIn[1];
-	response.proc = proc;
 	return (proc);
 }
 

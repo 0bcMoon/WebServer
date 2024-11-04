@@ -123,7 +123,7 @@ void			HttpResponse::clear()
 
 HttpResponse::~HttpResponse()
 {
-	std::cout << "Destructor has been called\n";
+	// std::cout << "Destructor has been called\n";
 	if (responseFd >= 0)
 		close(responseFd);
 }

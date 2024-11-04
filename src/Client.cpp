@@ -3,7 +3,6 @@
 #include <sys/event.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
-#include <cassert>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -73,4 +72,10 @@ int Client::getServerFd() const
 Client::TimerType Client::getTimerType() const 
 {
 	return (this->timerType);
+}
+
+Client::~Client()
+{
+	this->proc.die(); // make process clean it own shit \n
+	this->proc.clean();
 }

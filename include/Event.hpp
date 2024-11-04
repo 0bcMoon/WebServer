@@ -58,6 +58,8 @@ class Event
 		void ProcEvent(const struct kevent *ev);
 		void StartTimer(Client *client);
 
+
+		int waitProc(int pid);
 		void wpipe(const struct kevent *ev);
 		void rpipe(const struct kevent *ev);
 	class EventExpection: public std::exception

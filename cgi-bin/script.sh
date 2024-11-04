@@ -1,11 +1,9 @@
 #!/bin/bash
 
-# Output the HTTP header (required)
 echo "HTTP/1.1 200 OK"
 echo "Content-Type: text/html"
 echo "5: l"
 echo ""
-# Start HTML output
 echo "<html>"
 echo "<head><title>Simple Bash CGI Script</title></head>"
 echo "<body>"
