@@ -1,6 +1,22 @@
-
-- add logging support
-- may add include other file (if there time)
-- make some global file table save memory
+--- handel if at least one Vserver exist and each server has one location define
+--- 
+--- add logging support
 --- FIX BODY_SIZE
---- APPEND DUPLICATE HEADER VALUE
+--- LIMIT READ AND WRITE SIZE WITH KEVENT
+--- HANDLING EXCEPTION
+--- transfort file
+--- REDIRECTIONS
+--- HANDLING TIMEOUT IN CGI
+--- DELETE
+
+--- APPEND DUPLICATE HEADER VALUE //Done!!
+--- PATH_INFO
+
+Yes, the CGI (Common Gateway Interface) specification requires certain HTTP request headers to be passed to the CGI script as environment variables. Here's how headers are transformed:
+
+Standard Header Conversion:
+
+
+Headers are converted to uppercase
+Hyphens (-) are replaced with underscores (_)
+"HTTP_" prefix is added

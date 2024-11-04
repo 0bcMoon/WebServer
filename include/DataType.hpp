@@ -7,77 +7,77 @@
 
 typedef std::vector<std::string>::iterator Tokens;
 
-struct ErrorPage
-{
-  private:
-	struct Page
-	{
-		std::string		content;
-		bool			IsRedirection;
-	};
 
-  public:
-	std::map<int, Page> errorPages;
-	ErrorPage() {}
-};
 
 class GlobalConfig
 {
-  private:
-	typedef int http_method_t;
-	enum methods_e
-	{
-		GET = 0b1,
-		POST = 0b10,
-		DELETE = 0b100,
-	};
-	http_method_t						methods;
-	std::string							accessLog;
-	std::string							errorLog;
+	private:
+		std::map<std::string, std::string>  errorPages;
+		std::string							root;
+		int									autoIndex;
+		std::string							upload_file_path;
+		std::vector<std::string>			indexes;
+		bool									IsAlias;
 
-	std::string							root;
-	bool								autoIndex;
-	ErrorPage							errorPages;
-	std::map<std::string, std::string>	cgiMap;
-	std::vector<std::string>			indexes;
+	public:
+		struct Proc
+		{
+			enum State
+			{
+				TIMEOUT,
+				NONE
+			};
+			Proc();
+			void clean();
+			void die();
+			Proc &operator=(Proc &other);
+			int pid;
+			int fout;
+			int fin;
+			int woffset;
+			enum State state;
+		};
 
-  public:
-	void loadFile(Tokens &token, Tokens &end, std::string &buffer);
-	bool isValidStatusCode(std::string &str);
-	void setMethods(Tokens &token, Tokens &end);
-	bool isMethodAllowed(const std::string &method) const;
-	void validateOrFaild(Tokens &token, Tokens &end);
-	void CheckIfEnd(Tokens &token, Tokens &end);
-	std::string &consume(Tokens &token, Tokens &end);
-	GlobalConfig &operator=(const GlobalConfig &globalParam);
-	GlobalConfig();
-	~GlobalConfig();
+		bool		isValidStatusCode(std::string &str); // WARNING:t5arbi9
+		void		setMethods(Tokens &token, Tokens &end);
+		void		setAlias(Tokens &token, Tokens &end);
+		void		validateOrFaild(Tokens &token, Tokens &end);
+		void		CheckIfEnd(Tokens &token, Tokens &end);
+		std::string &consume(Tokens &token, Tokens &end);
+		GlobalConfig &operator=(const GlobalConfig &globalParam);
 
-	bool parseTokens(Tokens &token, Tokens &end);
+		//INFO:
+		bool isMethodAllowed(int method) const;
+		std::string getRoot() const;
+		bool		getAutoIndex() const;
 
-	static bool IsId(std::string &token);
+		GlobalConfig();
+		GlobalConfig(int autoIndex, const std::string &upload_file_path);
+		~GlobalConfig();
+		GlobalConfig(const GlobalConfig &other);
 
-	void setRoot(Tokens &token, Tokens &end);
+		bool parseTokens(Tokens &token, Tokens &end);
 
-	std::string getRoot() const;
+		static bool IsId(std::string &token);
 
-	void setAutoIndex(Tokens &token, Tokens &end);
-	bool getAutoIndex() const;
-
-	void setAccessLog(Tokens &token, Tokens &end);
-	std::string getAccessLog() const;
-
-	void setErrorLog(Tokens &token, Tokens &end);
-	std::string getErrorLog() const;
+		void setRoot(Tokens &token, Tokens &end);
 
 
+		void setAutoIndex(Tokens &token, Tokens &end);
 
-	void setIndexes(Tokens &token, Tokens &end);
-	// TODO Indexes getter may be with caching ??
+		void setAccessLog(Tokens &token, Tokens &end);
+		std::string getAccessLog() const;
 
-	void setCGI(Tokens &token, Tokens &end);
-	// TODO CGI getter may be with caching ??
-	void setErrorPages(Tokens &token, Tokens &end);
+		void setErrorLog(Tokens &token, Tokens &end);
+		std::string getErrorLog() const;
+
+
+		const std::vector<std::string> &getIndexes();
+		void setIndexes(Tokens &token, Tokens &end);
+		void setErrorPages(Tokens &token, Tokens &end);
+		const std::string &getErrorPage(std::string &StatusCode);
+		bool getAliasOffset() const ;
+
 };
 
 #endif

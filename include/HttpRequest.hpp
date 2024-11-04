@@ -1,24 +1,24 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
+#include <sys/event.h>
 #include <cstddef>
 #include <map>
 #include <string>
-#include <utility>
 #include <vector>
 
 #define URI_MAX		 2048
-#define REQSIZE_MAX  50000
-#define BODY_MAX	 30000
+#define REQSIZE_MAX  1000000000
+#define BODY_MAX	 1000000000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
 
 enum reqMethode
 {
-	GET,
-	POST,
-	DELETE,
-	NONE
+	GET  = 0b1,
+	POST = 0b10,
+	DELETE = 0b100,
+	NONE = 0
 };
 
 enum reqState
@@ -33,7 +33,7 @@ enum reqState
 	BODY,
 	BODY_FINISH,
 	REQUEST_FINISH,
-	ERROR,
+	REQ_ERROR,
 	DEBUG
 };
 
@@ -64,12 +64,26 @@ typedef struct methodeStr
 	
 } methodeStr;
 
+enum reqBodyType {
+	MULTI_PART,
+	TEXT_PLAIN,
+	URL_ENCODED,
+	NON
+};
 
+struct multiPart 
+{
+	std::vector<char>						body;
+	std::map<std::string, std::string>		headers;
+	std::vector<std::string>				strsHeaders;
+};
 
 class HttpRequest 
 {
 	private:
-		enum chunkState						chunkState;
+		struct kevent *ev;
+		typedef std::map<std::string, std::string> Headers;
+		 chunkState							chunkState;
 		size_t								totalChunkSize;
 		size_t								chunkSize;
 		size_t								chunkIndex;
@@ -82,24 +96,24 @@ class HttpRequest
 
 		std::map<std::string, std::string>	headers;
 		std::string							currHeaderName;
+		std::string							currHeaderVal;
 
-		std::vector<int>							body; // TODO : body  may be binary (include '\0') fix this;
+		std::vector<char>							body; // TODO : body  may be binary (include '\0') fix this;
 		int									bodySize;
-
 		int                                 reqSize;
 		size_t								reqBufferSize;
 		size_t								reqBufferIndex;
-		std::string							reqBuffer; // buffer  may be binary (include '\0') fix this;
+		std::vector<char>							reqBuffer; // buffer  may be binary (include '\0') fix this;
 
 		httpError							error;
 
 		methodeStr							methodeStr;
 		std::string							httpVersion;
 
+
 		int 		convertChunkSize();
 		void			chunkEnd();
 
-		void		readRequest();
 
 		void		parseMethod();
 		void		parsePath();
@@ -117,29 +131,39 @@ class HttpRequest
 		void		contentLengthBodyParsing();
 		void		chunkedBodyParsing();
 
-		void returnHandle();
-		void nLineHandle();
+		void		returnHandle();
+		void		nLineHandle();
+		int			checkContentType();
+
+		int			parseMuliPartBody();
+		char						buffer[1000000];
 
 	public:
+		reqBodyType									reqBody;
+		std::string									bodyBoundary;
+		std::vector<multiPart>						multiPartBodys;
 		enum reqState state;
+		bool										eof;
 
 		HttpRequest();
 		HttpRequest(int fd);
 		~HttpRequest();
 
-		void		setHttpError(int code, std::string str);
+		void		setHttpReqError(int code, std::string str);
 		void		feed();
+		void		readRequest(int data);
 
 		void		setFd(int fd);
 
 		static int	isNum(const std::string& str);
 		void		clear();
 
-		std::string							getPath() const;
-		std::map<std::string, std::string>	getHeaders() const;
-		std::vector<int>					getBody() const;
+		const std::map<std::string, std::string>	&getHeaders() const;
+		std::vector<char>					getBody() const;
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;
+		const std::string &getHost() const;
+		const std::string &getPath() const;
 };
 
 #endif

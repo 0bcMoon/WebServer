@@ -16,6 +16,43 @@
 #define BUFFER_SIZE 1024
 #define MAX_EVENTS 512
 
+void response(int fd)
+{
+	const char *http_200_response =
+		"HTTP/1.1 204 OK\r\n"
+		"Content-Type: text/html; charset=UTF-8\r\n"
+		"Connection: Close\r\n"
+		"Server: YOUR DADDY\r\n"
+		"Content-Length: 0\r\n"
+		"\r\n";
+		// "<!DOCTYPE html>\n"
+		// "<html>\n"
+		// "<head><title>200 OK</title></head>\n"
+		// "<body>\n"
+		// "<h1>200 OK</h1>\n"
+		// "<p>The request has succeeded.</p>\n"
+		// "</body>\n"
+		// "</html>";
+
+	const char *http_404_response =
+		"HTTP/1.1 404 Not Found\r\n"
+		"Content-Type: text/html; charset=UTF-8\r\n"
+		"Connection: Close\r\n"
+		"Content-Length: 175\r\n"
+		"\r\n"
+		"<!DOCTYPE html>\n"
+		"<html>\n"
+		"<head><title>404 Not Found</title></head>\n"
+		"<body>\n"
+		"<h1>404 Not Found</h1>\n"
+		"<p>The requested resource could not be found on this server.</p>\n"
+		"</body>\n"
+		"</html>";
+	// if (p != "/")
+		write(fd, http_404_response, strlen(http_404_response));
+	// else
+	// 	write(fd, http_200_response, strlen(http_200_response));
+}
 // Set a socket to non-blocking mode
 int set_non_blocking(int sockfd)
 {
@@ -155,6 +192,11 @@ int main()
 					buffer[n] = '\0'; // Null-terminate the string
 					printf("Received message: %s\n", buffer);
 				}
+			}
+			else if (ev_list[i].filter == EVFILT_READ)
+			{
+				printf("write\n");
+				response(ev_list[i].ident);
 			}
 		}
 	}

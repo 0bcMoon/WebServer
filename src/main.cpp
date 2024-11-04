@@ -1,5 +1,3 @@
-
-
 #include <unistd.h>
 #include <csignal>
 #include <cstdio>
@@ -8,6 +6,8 @@
 #include <stdexcept>
 #include "Debug.hpp"
 #include "Event.hpp"
+#include "HttpResponse.hpp"
+#include "Log.hpp"
 #include "Tokenizer.hpp"
 #ifdef __cplusplus
 extern "C"
@@ -23,10 +23,6 @@ extern "C"
 
 void atexist()
 {
-	// char buffer[100] = {0};
-	// sprintf(buffer, "lsof -p  %d", getpid());
-	// // system("leaks  webserv"); // there is no leaks
-	// system(buffer); // there is no leaks
 	system("openport"); // there is no leaks
 	sleep(1);
 }
@@ -35,15 +31,17 @@ ServerContext *LoadConfig(const char *path)
 {
 	ServerContext *ctx = NULL;
 
-	try // ugly but fix the problem
+	try
 	{
 		Tokenizer tokenizer;
 		tokenizer.readConfig(path);
 		tokenizer.CreateTokens();
 		ctx = new ServerContext();
 		tokenizer.parseConfig(ctx);
+		ctx->init();
+		Log::init();
 	}
-	catch (const Debug &e)
+	catch (const Tokenizer::ParserException &e)
 	{
 		std::cout << e.what() << std::endl;
 		delete ctx;
@@ -60,8 +58,13 @@ ServerContext *LoadConfig(const char *path)
 
 void sigpipe_handler(int signum)
 {
+	(void)signum;
 	printf("Caught SIGPIPE. Ignoring.\n");
 }
+
+/*
+ * TODO: 
+ */
 int main()
 {
 	Event *event = NULL;
@@ -70,14 +73,13 @@ int main()
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sigpipe_handler;
 	sigemptyset(&sa.sa_mask);
-
+	std::srand(std::time(NULL));
 	if (sigaction(SIGPIPE, &sa, NULL) == -1)
 	{
 		printf("Failed to set SIGPIPE handler: %s\n", strerror(errno));
 		return 1;
 	}
 	ctx = LoadConfig("config/nginx.conf");
-	// move this to a function
 	if (!ctx)
 		return 1;
 	try
@@ -97,6 +99,8 @@ int main()
 		std::cerr << e.what() << "\n";
 	}
 
+	
 	delete event;
 	delete ctx;
+	Log::close();
 }

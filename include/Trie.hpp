@@ -14,11 +14,13 @@ class Trie
 		TrieNode();
 		~TrieNode();
 	};
-
+	std::vector<Location *>	locations;
 	TrieNode *root;
   public:
 	Trie();
 	~Trie();
+
+	void init(const GlobalConfig &conf);
 
 	void deleteNode();
 	void _deleteNode(TrieNode *node);

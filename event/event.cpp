@@ -1,21 +1,43 @@
 #include "Event.hpp"
+#include <sys/_endian.h>
 #include <sys/event.h>
 #include <sys/fcntl.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <unistd.h>
+#include <algorithm>
+#include <cassert>
+#include <cctype>
 #include <cerrno>
+#include <csignal>
+#include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <new>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include "../include/Client.hpp"
+#include <vector>
+#include "CGIProcess.hpp"
+#include "Client.hpp"
 #include "Connections.hpp"
+#include "DataType.hpp"
 #include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 #include "VirtualServer.hpp"
 
-Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
+#define CGI_VAR_SIZE 11
+
+void log_file(const std::string &name)
+{
+	std::stringstream ss;
+	ss << "lsof -p " << getpid() << " > " << name;
+	system(ss.str().data());
+}
+
+Event::Event() : connections(NULL, -1), MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 {
 	this->evList = NULL;
 	this->eventChangeList = NULL;
@@ -24,7 +46,7 @@ Event::Event() : MAX_CONNECTION_QUEUE(32), MAX_EVENTS(1024)
 }
 
 Event::Event(int max_connection, int max_events, ServerContext *ctx)
-	: MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
+	: connections(ctx, -1), MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
 	this->ctx = ctx;
 	this->evList = NULL;
@@ -52,16 +74,20 @@ Event::~Event()
 
 void Event::InsertDefaultServer(VirtualServer *server, int socketFd)
 {
-	if (this->defaultServer.find(socketFd) != this->defaultServer.end())
-		throw std::runtime_error("default server already exist on this port");
+	std::map<int, VirtualServer *>::iterator dvserver = this->defaultServer.find(socketFd);
+	if (dvserver != this->defaultServer.end())
+	{
+		if (dvserver->second->getServerNames().size() == 0 && server->getServerNames().size() == 0)
+			throw std::runtime_error("conflict default server (uname server) already exist on same port");
+	}
 	this->defaultServer[socketFd] = server;
 }
 
 void Event::insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd)
 {
 	std::set<std::string> &serverNames = server->getServerNames();
-	if (serverNames.size() == 0) // if there is no server name  uname will be the default server in that port
-		this->InsertDefaultServer(server, socketFd);
+	if (serverNames.size() == 0) // if there is no server name  uname will be the
+		this->InsertDefaultServer(server, socketFd); // default server in that port
 	else
 	{
 		std::set<std::string>::iterator it = serverNames.begin();
@@ -72,6 +98,8 @@ void Event::insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *s
 			serverNameMap[*it] = server;
 		}
 	}
+	if (this->defaultServer.find(socketFd) == this->defaultServer.end())
+		this->InsertDefaultServer(server, socketFd);
 }
 
 void Event::init()
@@ -105,25 +133,6 @@ void Event::init()
 	}
 }
 
-int set_non_blocking(int sockfd) // TODO make it more oop
-{
-	int flags = fcntl(sockfd, F_GETFL, 0);
-	if (flags == -1)
-	{
-		perror("fcntl(F_GETFL)");
-		return -1;
-	}
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
-	{
-		perror("fcntl(F_SETFL)");
-		return -1;
-	}
-	flags = fcntl(sockfd, F_GETFL, 0);
-	if (flags & O_NONBLOCK)
-		printf("socket is non-blocking\n");
-	return 0;
-}
-
 int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 {
 	sockaddr_in address2;
@@ -135,6 +144,8 @@ int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 	int optval = 1;
 	setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	memset(&address2, 0, sizeof(struct sockaddr_in));
+
+	this->setNonBlockingIO(socketFd);
 
 	address2.sin_family = AF_INET;
 	address2.sin_addr.s_addr = htonl(address->host);
@@ -163,25 +174,21 @@ std::string Event::get_readable_ip(const VirtualServer::SocketAddr address)
 	return ss.str();
 }
 
-void Event::setNonBlockingIO(int sockfd)
+int Event::setNonBlockingIO(int sockfd)
 {
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1)
-		perror("fcntl(F_GETFL)"), exit(1);
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
-		perror("fcntl(F_SETFL)"), exit(1); // TODO: remove  this
+		return (-1);
+	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC) < 0)
+		return (-1);
+	return (0);
 }
 
 bool Event::Listen(int socketFd)
 {
-	// TODO: this->MAX_CONNECTION_QUEUE
-
-	if (listen(socketFd, 5) < 0)
-	{
-		perror("listen failed");
-		return false;
-	}
-	return true;
+	if (listen(socketFd, this->MAX_CONNECTION_QUEUE) < 0)
+		return (false);
+	return (true);
 }
 
 bool Event::Listen()
@@ -199,16 +206,11 @@ bool Event::Listen()
 
 void Event::CreateChangeList()
 {
-	int i = 0;
 	SockAddr_in::iterator it = this->sockAddrInMap.begin();
-	// TODO : monitor read and write
-	for (; it != this->sockAddrInMap.end(); it++)
-	{
+	// SERVER socket does not need to monitor writes
+	for (int i = 0; it != this->sockAddrInMap.end(); it++, i++)
 		EV_SET(&this->eventChangeList[i], it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-		EV_SET(&this->eventChangeList[i + this->numOfSocket], it->first, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
-		i++;
-	}
-	if (kevent(this->kqueueFd, this->eventChangeList, this->numOfSocket * 2, NULL, 0, NULL) < 0)
+	if (kevent(this->kqueueFd, this->eventChangeList, this->numOfSocket, NULL, 0, NULL) < 0)
 		throw std::runtime_error("kevent failed: could not regester server event: " + std::string(strerror(errno)));
 	delete this->eventChangeList;
 	this->eventChangeList = NULL;
@@ -217,190 +219,345 @@ void Event::CreateChangeList()
 void Event::initIOmutltiplexing()
 {
 	this->evList = new struct kevent[this->MAX_EVENTS];
-	this->eventChangeList = new struct kevent[this->numOfSocket * 2];
+	this->eventChangeList = new struct kevent[this->numOfSocket];
 	this->kqueueFd = kqueue();
 	if (this->kqueueFd < 0)
 		throw std::runtime_error("kqueue faild: " + std::string(strerror(errno)));
 	this->CreateChangeList();
 }
-// TODO:  fix me i may faild ??
+// TODO:  i need someone to speek here (logger )
 int Event::newConnection(int socketFd, Connections &connections)
 {
 	struct sockaddr_in address = this->sockAddrInMap[socketFd];
 	socklen_t size = sizeof(struct sockaddr);
-	std::cout << "waiting for new connnection to accept\n";
 	int newSocketFd = accept(socketFd, (struct sockaddr *)&address, &size);
-	if (newSocketFd < 0)
-		return -1;
+	if (newSocketFd < 0) // TODO: add logger here
+		return (std::cout << "-----accept faild--------\n", -1);
+	if (this->setNonBlockingIO(newSocketFd))
+		return (close(newSocketFd), std::cout << "-----accept faild--------\n", -1);
 
-	std::cout << "connnection accept\n";
-	this->setNonBlockingIO(newSocketFd);
-	this->RegsterClient(newSocketFd); // TODO: user udata feild to store server id;
+	struct kevent ev_set[2];
+	EV_SET(&ev_set[0], newSocketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+	EV_SET(&ev_set[1], newSocketFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
+
+	if (kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL) < 0)
+		return (close(newSocketFd)); // report faild connections
 	connections.addConnection(newSocketFd, socketFd);
-	return newSocketFd;
+
+	return (newSocketFd);
 }
 
-void read_from_client(int fd)
+// TODO: fix me may i fails
+int Event::setWriteEvent(int fd, uint16_t flags)
 {
-	char buffer[2048] = {0};
-	printf("try to read from %d", fd);
-	int r = read(fd, buffer, 254);
-	if (r <= 0)
+	struct kevent ev;
+
+	EV_SET(&ev, fd, EVFILT_WRITE, flags, 0, 0, NULL);
+	return kevent(this->kqueueFd, &ev, 1, NULL, 0, NULL);
+}
+void Event::ReadEvent(const struct kevent *ev)
+{
+	if (ev->flags & EV_EOF && ev->data <= 0)
 	{
-		if (r < 0)
-			perror("read faild");
-		close(fd);
-		printf("client %d disconnected\n", fd);
-		return;
+		// std::cout << "client disconnected\n";
+		connections.closeConnection(ev->ident);
 	}
 	else
 	{
-		buffer[r] = 0;
-		printf("new message from %d: %s\n", fd, buffer);
+		connections.requestHandler(ev->ident, ev->data);
+		ClientsIter kv = connections.clients.find(ev->ident);
+		if (kv == connections.clients.end())
+			return;
+		Client *client = kv->second;
+		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+		// 	&& client->response.state != WRITE_BODY)
+		// 	return;
+		this->setWriteEvent(client->getFd(), EV_ENABLE);
 	}
 }
 
-int Event::RemoveClient(int clientFd)
+void Event::RegisterNewProc(Client *client)
 {
-	// TODO : hendel if there is an error server should never go down
-	struct kevent ev_set;
-	EV_SET(&ev_set, clientFd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
-	EV_SET(&ev_set, clientFd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
-	close(clientFd);
-	return 0;
+	HttpResponse &response = client->response;
+	// std::cout << " a process event has been regster\n";
+	CGIProcess cgi;
+	GlobalConfig::Proc proc = cgi.RunCGIScript(response);
+	if (proc.pid == -1)
+	{
+		std::cout << "this is a error\n";
+		exit(1);
+		return;
+	}
+	struct kevent ev[4];
+	int evSize = (response.strMethod == "POST") + 3;
+	EV_SET(&ev[0], proc.pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, (void *)(size_t)client->getFd());
+	EV_SET(&ev[1], proc.pid, EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_SECONDS, this->ctx->getCGITimeOut(), (void *)(size_t)client->getFd());
+	EV_SET(&ev[2], proc.fout, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void *)(size_t)client->getFd());
+	EV_SET(&ev[3], proc.fin, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, (void *)(size_t)client->getFd());
+	if (kevent(this->kqueueFd, ev, evSize, 0, 0, NULL) < 0)
+	{
+		proc.die();
+		proc.clean();
+		response.setHttpResError(500, "Internal Server Error");
+		throw Event::EventExpection("kevent faild:" + std::string(strerror(errno)));
+	}
+	client->proc = proc;
 }
 
-int Event::RegsterClient(int clientFd)
+void Event::WriteEvent(const struct kevent *ev)
 {
-	// TODO : hendel if there is an error server should never go down
-	struct kevent ev_set;
+	if (ev->flags & EV_EOF)
+		connections.closeConnection(ev->ident);
+	else
+	{
+		ClientsIter kv = connections.clients.find(ev->ident);
+		if (kv == connections.clients.end())
+			return;
+		Client *client = kv->second;
+		// client->request.feed();
+		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+		// 	&& client->response.state != WRITE_BODY && client->response.state iCGI_EXECUTING)
+		// 	return;
+		if (client->response.state != WRITE_BODY)
+		{
+			client->response.location = this->getLocation(client);
+			client->respond(ev->data);
+		}
 
-	EV_SET(&ev_set, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
-
-	EV_SET(&ev_set, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
-	kevent(this->kqueueFd, &ev_set, 1, NULL, 0, NULL);
-	return 0;
+		if (client->response.state == CGI_EXECUTING)
+		{
+			this->RegisterNewProc(client);
+			if (this->setWriteEvent(client->getFd(), EV_DISABLE) < 0) // testing // unstable code
+				this->connections.closeConnection(client->getFd());
+			if (client->proc.pid != -1)
+				return;
+		}
+		if (client->response.state == WRITE_BODY)
+		{
+			client->response.eventByte = ev->data;
+			client->response.sendBody(-1, client->response.bodyType);
+		}
+		if (client->response.state != WRITE_BODY)
+		{
+			// if (!client->response.keepAlive)
+			// 	throw HttpResponse::IOException();
+			client->response.clear();
+			client->request.clear();
+			if (client->request.eof)
+				this->setWriteEvent(ev->ident, EV_DISABLE);
+		}
+	}
 }
 
-#define PORT 8080
-#define BUFFER_SIZE 1024
-#define MAX_EVENTS 10
-
-void response(int fd)
+void Event::rpipe(const struct kevent *ev)
 {
-	const char *http_200_response =
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Connection: keep-alive\r\n"
-		"Content-Length: 130\r\n"
-		"\r\n"
-		"<!DOCTYPE html>\n"
-		"<html>\n"
-		"<head><title>200 OK</title></head>\n"
-		"<body>\n"
-		"<h1>200 OK</h1>\n"
-		"<p>The request has succeeded.</p>\n"
-		"</body>\n"
-		"</html>";
-
-	const char *http_404_response =
-		"HTTP/1.1 404 Not Found\r\n"
-		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Connection: keep-alive\r\n"
-		"Content-Length: 175\r\n"
-		"\r\n"
-		"<!DOCTYPE html>\n"
-		"<html>\n"
-		"<head><title>404 Not Found</title></head>\n"
-		"<body>\n"
-		"<h1>404 Not Found</h1>\n"
-		"<p>The requested resource could not be found on this server.</p>\n"
-		"</body>\n"
-		"</html>";
-	// write(fd, http_404_response, strlen(http_404_response));
-	write(fd, http_200_response, strlen(http_200_response));
+	int fd = (size_t)ev->udata;
+	Client *client = this->connections.getClient(fd);
+	if (!client)
+	{
+		close(ev->ident); // testing
+		return;
+		// return (void)(std::cout << "client has been free");
+	}
+	HttpResponse *response = &client->response;
+	if (ev->flags & EV_EOF && !ev->data)
+		return (void)(close(ev->ident)); // set some state for start parsing
+	size_t OldSize = response->CGIOutput.size();
+	size_t NewSize = ev->data + OldSize;
+	response->CGIOutput.resize(NewSize);
+	// add extra logique if a internal server Error happend
+	int r = read(ev->ident, response->CGIOutput.data() + OldSize, ev->data);
+	if (r < 0)
+		throw HttpResponse::IOException();
 }
+
+void Event::wpipe(const struct kevent *ev)
+{
+	// add some writes offset that does cl
+	// std::cout << "WriteEvent pipe enter\n"; // TODO: test with post
+	int fd = (size_t)ev->udata;
+	Client *client = this->connections.getClient(fd);
+	if (!client)
+		return (void)(std::cout << "client has been free3\n");
+	HttpResponse *response = &client->response;
+	GlobalConfig::Proc &proc = client->proc;
+
+	int avdata = std::abs(proc.woffset - (int)response->getBody().size());
+	int wdata = std::min((int)ev->data, avdata);
+	proc.woffset += wdata;
+	if (write(ev->ident, response->getBody().data() + proc.woffset, wdata) < 0)
+		throw HttpResponse::IOException();
+}
+
+void Event::TimerEvent(const struct kevent *ev)
+{
+	std::cout << "timer event\n";
+	exit(3);
+	if (!ev->udata)
+		return this->connections.closeConnection(ev->ident); // if client take too long to send full request
+	std::cout << "TIMEOUT EVENT WHY\n";
+	exit(1);
+	int fd = (size_t)ev->udata;
+	Client *client = this->connections.getClient(fd);
+	if (!client)
+		return (void)(std::cout << "client has been free1\n");
+	GlobalConfig::Proc &proc = client->proc;
+	// else cgi take too long to process it data
+	proc.state = GlobalConfig::Proc::TIMEOUT; // set the state for error TIMEOUT to response
+	proc.die(); // we kill the cgi with SIGKILL
+}
+int Event::waitProc(int pid)
+{
+	int status;
+	int state;
+	waitpid(pid, &status, 0); // this event only run if process has finish so witpid would not block
+	state = WIFSIGNALED(status); // check if process exist normally
+	status = WEXITSTATUS(status); // check exist state
+	struct kevent event;
+	EV_SET(&event, pid, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
+	int r = kevent(this->kqueueFd, &event, 1, NULL, 0, NULL);
+	assert(r >= 0 && "Major error need to be fixed");
+	return (state | status);
+}
+
+void Event::ProcEvent(const struct kevent *ev)
+{
+	int state = this->waitProc(ev->ident);
+	int fd = (size_t)ev->udata;
+	Client *client = this->connections.getClient(fd);
+
+	if (state)
+		std::cout << "Process has not exist normaly and clients got delete\n";
+	if (!client)
+		return (void)(std::cerr << "client got dead before cgi process\n");
+	HttpResponse *response = &client->response;
+	GlobalConfig::Proc &proc = client->proc;
+	if (proc.state == GlobalConfig::Proc::TIMEOUT)
+		response->setHttpResError(504, "Gateway Timeout");
+	else if (state)
+		response->setHttpResError(502, "Bad Gateway"); // this may be change to 500 server error
+	this->setWriteEvent(response->fd, EV_ENABLE);
+	if (proc.fin < 0 || proc.fout < 0)
+		std::cout << "Attemps to double free fd\n";
+	proc.clean();
+}
+
 void Event::eventLoop()
 {
-	// int client_fd;
-	// int socketFd;
-	Connections connections;
-	// Event >>>>>> Connections
-	// HttpRequest *req;
-
-	// this->ctx->getMaxBodySize();
+	connections.init(this->ctx, this->kqueueFd);
+	int nev;
 	while (1)
 	{
-		std::cout << "waiting for event\n";
-		int nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
-		if (nev == -1)
+		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
+		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
 		for (int i = 0; i < nev; i++)
 		{
 			const struct kevent *ev = &this->evList[i];
 			if (this->checkNewClient(ev->ident))
+			{
 				this->newConnection(ev->ident, connections);
-			else if (ev->filter == EVFILT_READ)
-			{
-				std::cout << "READ event\n"; // Handel half close
-				connections.requestHandler(ev->ident);
+				continue;
 			}
-			else if (ev->filter == EVFILT_WRITE)
+			try
 			{
-				std::cout << "write event\n";
-				if (ev->flags & EV_EOF)
-				{
-					std::cout << "client disconnected\n";
+				if (ev->fflags & EV_ERROR)
 					connections.closeConnection(ev->ident);
-					this->RemoveClient(ev->ident);
-				}
+				else if (ev->filter == EVFILT_READ && ev->udata)
+					rpipe(ev);
+				else if (ev->filter == EVFILT_WRITE && ev->udata)
+					wpipe(ev);
+				else if (ev->filter == EVFILT_READ)
+					this->ReadEvent(ev);
+				else if (ev->filter == EVFILT_WRITE)
+					this->WriteEvent(ev);
+				else if (ev->filter == EVFILT_PROC)
+					this->ProcEvent(ev);
+				else if (ev->filter == EVFILT_TIMER)
+					this->TimerEvent(ev);
 				else
-				{
-					if (connections.clients.count(ev->ident))
-					{
-						if (connections.clients[ev->ident]->request.state == REQUEST_FINISH)
-						{
-							response(ev->ident);
-							std::cout << "response sent\n";
-						}
-						else
-							std::cout << "request not finished yet\n";
-					}
-					else
-						std::cerr << "client un exist\n";
-				}
-				std::cout << "write ended\n";
+					throw std::runtime_error("Errror unkonw event\n");
+			}
+			catch (HttpResponse::IOException &e)
+			{
+				std::cerr << e.what() << " :"<<strerror(errno) << "\n";
+				this->connections.closeConnection(ev->ident);
+			}
+			catch (Event::EventExpection &e)
+			{
+				this->connections.closeConnection(ev->ident);
+				std::cout << e.what() << "\n";
+			}
+			catch (std::bad_alloc &e)
+			{
+				this->connections.closeConnection(ev->ident);
+				std::cout << e.what() << "\n";
 			}
 		}
-		std::cout << "all  event has been process: " << nev << '\n';
 	}
 }
+
 bool Event::checkNewClient(int socketFd)
 {
 	return (this->sockAddrInMap.find(socketFd) != this->sockAddrInMap.end());
 }
 
-Location *Event::getLocation(const Event::LocationConf &locationConf)
+Location *Event::getLocation(const Client *client)
 {
-	int serverfd = locationConf.serverFd;
-	std::string &path = locationConf.path;
-	std::string &host = locationConf.host;
+	VirtualServer *Vserver;
+	int serverfd;
+	bool IsDefault = true;
 
-	// serverFd should always exist
-	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second;
+	struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
+	int port = ntohs(addr.sin_port);
+	serverfd = client->getServerFd();
+	const std::string &path = client->getPath();
+	std::string host = client->getHost();
+	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second; // always exist
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())
-		throw std::runtime_error("server does not exist"); // remove later
-
-	VirtualServer *Vserver = _Vserver->second;
+		Vserver = this->defaultServer.find(client->getServerFd())->second,
+		IsDefault = false; // plz dont fail all my hope on you
+	else
+		Vserver = _Vserver->second;
 	Location *location = Vserver->getRoute(path);
+	if (!location)
+		return (NULL);
+	else if (!IsDefault)
+		host = *Vserver->getServerNames().begin();
+	location->setHostPort(host, port);
 	return (location);
 }
 
-Event::LocationConf::LocationConf(std::string &path, std::string &host, int serverFd)
-	: path(path), host(host), serverFd(serverFd)
+// void Event::StartTimer(Client *client)
+// {
+// 	int time;
+// 	struct kevent ev;
+
+// 	switch (client->getTimerType())
+// 	{
+// 		case Client::NEW_CONNECTION:
+// 		case Client::KEEP_ALIVE:
+// 			time = this->ctx->getKeepAliveTime();
+// 			break;
+// 		case Client::READING:
+// 			time = this->ctx->getClientReadTime();
+// 			break;
+// 		}
+// 		EV_SET(&ev, client->getFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_SECONDS, time, NULL);
+// 	// if (kevent(this->kqueueFd, ev, 1, NULL, 1, NULL) < 0)
+// 	// 	throw
+//
+// }
+
+Event::EventExpection::EventExpection(const std::string &msg) throw()
 {
+	this->msg = msg;
 }
+
+const char *Event::EventExpection::what() const throw()
+{
+	return (this->msg.data());
+}
+
+Event::EventExpection::~EventExpection() throw() {}

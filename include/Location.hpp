@@ -1,6 +1,8 @@
 #ifndef Location_H
-# define Location_H
+#define Location_H
 
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include "DataType.hpp"
@@ -8,21 +10,52 @@
 class Location
 {
 	private:
-		struct Redirection // if  there 4xx or 5xx error it return error page else 3xx it redirect to url
+		typedef int http_method_t;
+		enum methods_e
 		{
-			std::string status;
-			std::string url; // will  file path if status != 3xx 
+			GET = 0b1,
+			POST = 0b10,
+			DELETE = 0b100,
 		};
-		Redirection					redirect;
-		std::string					path; // todo as redix tree
-		GlobalConfig				globalConfig;
+
+		struct Redirection
+		{
+			std::string status; //3xx
+			std::string url;
+			std::string body; // INFO: body file name;
+		};
+		Redirection redirect;
+		http_method_t methods;
+		bool isRedirection;
+		std::string path;
+		std::map<std::string, std::string> cgiMap;
+		std::string upload_file_path;
+		std::string host;
+		int port;
+		std::string alias;
+
 	public:
 		Location();
 		Location &operator=(const Location &location);
+		GlobalConfig globalConfig;
+
+		bool isMethodAllowed(int method) const;
+		void setUploadPath(Tokens &token, Tokens &end);
 		void setPath(std::string &path);
-		std::string &getPath();
+		const std::string &getPath();
 		void setRedirect(Tokens &token, Tokens &end);
 		void parseTokens(Tokens &token, Tokens &end);
 		static bool isValidStatusCode(std::string &str);
+		bool HasRedirection() const;
+		const Redirection &getRedirection() const;
+		void setMethods(Tokens &token, Tokens &end);
+
+		const std::string &getCGIPath(const std::string &ext);
+		const std::string &geCGIext();
+		void setCGI(Tokens &token, Tokens &end);
+		void setHostPort(const std::string &host, int port);
+		int getPort() const;
+		const std::string& getHost() const;
+		const std::string &getFileUploadPath();//INFO:uploded file
 };
 #endif

@@ -1,46 +1,81 @@
 #include "Client.hpp"
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
+#include <cstddef>
+#include <sys/event.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
+#include <iostream>
+#include <iterator>
+#include <string>
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
+#include "Log.hpp"
+#include "ServerContext.hpp"
 
 int Client::getFd() const
 {
-	return (fd);
-}
-
-Client::Client() : response(-1)
-{
-	fd = -1;
-	state = REQUEST;
-}
-
-Client::Client(int	fd) : fd(fd), request(fd), response(fd)
-{
-	state = REQUEST;
+	return (this->fd);
 }
 
 
-Client::Client(int	fd, int serverFd) : fd(fd), serverFd(serverFd), request(fd), response(fd)
+Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), ctx(ctx), request(fd), response(fd, ctx, &request)
 {
-	state = REQUEST;
-}
-int tmpResponse(int fd)
-{
-	std::string buffer;
-	char tmp[10000];
-
-	int resFd = open("request.req", O_RDWR, 0777);
-	read(resFd, tmp, 10000);
-	buffer = tmp;
-	write (fd, buffer.c_str(), buffer.size());
-	return (1);
+	state = None;
+	this->timerType = NEW_CONNECTION;
 }
 
-void		Client::respond()
+void Client::respond(size_t data)
 {
-	// state = RESPONSE;
+	response.eventByte = data;
+	if (request.state != REQUEST_FINISH && request.state != REQ_ERROR)
+		return ;
+
 	response = request;
-	request.clear();
-	tmpResponse(fd);
+	std::map<std::string, std::string>::iterator kv = response.headers.find("Connection");
+
+	if ((kv != response.headers.end()
+		&& (kv->second.find("close") != std::string::npos
+			|| kv->second.find("Close") != std::string::npos))
+		|| request.state == REQ_ERROR)
+		response.keepAlive = 0;
+	if (request.state == REQUEST_FINISH)
+		response.responseCooking();
+	if (response.state == CGI_EXECUTING)
+	{
+		response.bodyType = HttpResponse::CGI;
+		response.writeCgiResponse();
+	}
+	if (response.isCgi() && response.state != END_BODY
+		&& response.state != ERROR) 
+		response.state = CGI_EXECUTING;
+	if (response.state == ERROR)
+	{
+		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
+	}
+}
+
+const std::string &Client::getHost() const
+{
+	return (this->request.getHost()); 
+}
+
+const std::string &Client::getPath() const
+{
+	return (this->request.getPath());
+}
+
+int Client::getServerFd() const
+{
+	return (this->serverFd);
+}
+
+
+Client::TimerType Client::getTimerType() const 
+{
+	return (this->timerType);
+}
+
+Client::~Client()
+{
+	this->proc.die(); // make process clean it own shit \n
+	this->proc.clean();
 }

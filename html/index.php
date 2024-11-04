@@ -1,4 +1,6 @@
 <?php
-header('Content-Type: text/plain');
-header('zaid: zamal');
-echo "jdak zamal\n";
+// header('Content-Type: text/plain');
+// header('zaid: zamal');
+// echo "\n";
+// echo "Hello\n";
+?>

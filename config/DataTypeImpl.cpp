@@ -1,34 +1,67 @@
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/event.h>
+#include <sys/signal.h>
+#include <sys/stat.h>
 #include <sys/unistd.h>
 #include <unistd.h>
+#include <cassert>
+#include <csignal>
 #include <cstddef>
+#include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 #include "DataType.hpp"
-#include "Debug.hpp"
-#include "ParserException.hpp"
-#include "WebServer.hpp"
+#include <Tokenizer.hpp>
 
 GlobalConfig::GlobalConfig()
 {
-	this->autoIndex = false;
-		this->methods = GET; // default method is GET only
+	this->autoIndex = -1;
+	this->errorPages["."] = "";
+	this->IsAlias = false; // INFO: this is art Do not touch unless you have a permit.
 }
 
+
+GlobalConfig::GlobalConfig(int autoIndex, const std::string &upload_file_path)
+{
+	this->autoIndex = autoIndex;
+	this->upload_file_path = upload_file_path;
+}
+
+GlobalConfig::GlobalConfig(const GlobalConfig &other)
+{
+	*this = other;
+}
 GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 {
-	if (this != &other)
+	std::map<std::string, std::string>::const_iterator kv = other.errorPages.begin();
+	if (this == &other)
 		return *this;
-	
-	accessLog = other.accessLog;
-	errorLog = other.errorLog;
-	root = other.root;
-	autoIndex = other.autoIndex;
-	errorPages = other.errorPages;
-	cgiMap = other.cgiMap;
-	indexes = other.indexes;
+
+	if (root.empty())
+	{
+		root = other.root;
+		this->IsAlias = other.IsAlias;
+	}
+	if (upload_file_path.empty())
+		upload_file_path = other.upload_file_path;
+	if (autoIndex == -1)
+		autoIndex = other.autoIndex;
+	for (; kv != other.errorPages.end(); kv++)
+	{
+		if (this->errorPages.find(kv->first) == this->errorPages.end())
+			this->errorPages.insert(*kv);
+	}
+	for (size_t i = 0; i < other.indexes.size(); i++)
+	{
+		std::vector<std::string>::const_iterator it =
+			std::find(this->indexes.begin(), this->indexes.end(), other.indexes[i]);
+		if (it == this->indexes.end())
+			this->indexes.push_back(other.indexes[i]);
+	}
 	return *this; // Return *this to allow chained assignments
 }
 GlobalConfig::~GlobalConfig() {}
@@ -37,12 +70,14 @@ void GlobalConfig::setRoot(Tokens &token, Tokens &end)
 {
 	struct stat buf;
 
+	if (!this->root.empty())
+		throw Tokenizer::ParserException("Root directive is duplicate");
 	validateOrFaild(token, end);
 	this->root = consume(token, end);
 	if (stat(this->root.c_str(), &buf) != 0)
-		throw ParserException("Root directory does not exist");
+		throw Tokenizer::ParserException("Root directory does not exist");
 	if (S_ISDIR(buf.st_mode) == 0)
-		throw ParserException("Root is not a directory");
+		throw Tokenizer::ParserException("Root is not a directory");
 	CheckIfEnd(token, end);
 }
 
@@ -60,9 +95,8 @@ void GlobalConfig::setAutoIndex(Tokens &token, Tokens &end)
 	else if (*token == "off")
 		this->autoIndex = false;
 	else
-		throw ParserException("Invalid value for autoindex");
+		throw Tokenizer::ParserException("Invalid value for autoindex");
 	token++;
-
 	CheckIfEnd(token, end);
 }
 
@@ -71,34 +105,6 @@ bool GlobalConfig::getAutoIndex() const
 	return this->autoIndex; // Return autoIndex
 }
 
-// void GlobalConfig::setAccessLog(Tokens &token, Tokens &end)
-// {
-// 	throw ParserException("TODO");
-// 	// Empty implementation
-// }
-
-// std::string GlobalConfig::getAccessLog() const
-// {
-// 	throw ParserException("TODO");
-// 	return this->accessLog; // Return the access log path
-// }
-
-// void GlobalConfig::setErrorLog(Tokens &token, Tokens &end)
-// {
-// 	throw ParserException("TODO");
-// 	// Empty implementation
-// }
-
-// std::string GlobalConfig::getErrorLog() const
-// {
-// 	throw ParserException("TODO");
-// 	return this->errorLog; // Return the error log path
-// }
-
-
-
-
-
 void GlobalConfig::setIndexes(Tokens &token, Tokens &end)
 {
 	validateOrFaild(token, end);
@@ -106,29 +112,6 @@ void GlobalConfig::setIndexes(Tokens &token, Tokens &end)
 		this->indexes.push_back(consume(token, end));
 	CheckIfEnd(token, end);
 }
-
-void GlobalConfig::setCGI(Tokens &token, Tokens &end)
-{
-	std::string cgi_path;
-	std::string cgi_ext;
-
-	validateOrFaild(token, end);
-	cgi_ext = consume(token, end);
-	cgi_path = consume(token, end);
-	CheckIfEnd(token, end);
-	if (cgi_ext[0] != '.')
-		throw ParserException("Invalid CGI extension" + cgi_ext);
-	if (this->cgiMap.find(cgi_ext) != this->cgiMap.end())
-		throw ParserException("Duplicate CGI extension" + cgi_ext);
-	if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
-		throw ParserException("Invalid CGI path" + cgi_path);
-	this->cgiMap[cgi_ext] = cgi_path;
-}
-
-// void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
-// {
-// 	// Empty implementation
-// }
 
 bool GlobalConfig::IsId(std::string &token)
 {
@@ -139,68 +122,142 @@ void GlobalConfig::validateOrFaild(Tokens &token, Tokens &end)
 {
 	token++;
 	if (token == end || IsId(*token))
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected token: " + (token == end ? "end of file" : *token));
 }
 
 void GlobalConfig::CheckIfEnd(Tokens &token, Tokens &end)
 {
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	else if (*token != ";")
-		throw ParserException("Unexpected `;` found: " + *token);
+		throw Tokenizer::ParserException("Unexpected `;` found: " + *token);
 	token++;
 }
 
 std::string &GlobalConfig::consume(Tokens &token, Tokens &end)
 {
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	if (IsId(*token))
-		throw ParserException("Unexpected token: " + *token);
+		throw Tokenizer::ParserException("Unexpected token: " + *token);
 	return *token++;
 }
 bool GlobalConfig::parseTokens(Tokens &token, Tokens &end)
 {
 	if (token == end)
-		throw ParserException("Unexpected end of file");
+		throw Tokenizer::ParserException("Unexpected end of file");
 	else if (*token == "root")
 		this->setRoot(token, end);
 	else if (*token == "autoindex")
 		this->setAutoIndex(token, end);
 	else if (*token == "index")
 		this->setIndexes(token, end);
-	else if (*token == "cgi_path")
-		this->setCGI(token, end);
-	else if (*token == "allow")
-		this->setMethods(token, end);
-	else if (*token == "error_pages")
+	else if (*token == "error_page")
 		this->setErrorPages(token, end);
+	else if (*token == "alias")
+		this->setAlias(token, end);
 	else
-		throw ParserException("Invalid token: " + *token);
+		throw Tokenizer::ParserException("Invalid token: " + *token);
 	return (true);
-}
-void GlobalConfig::setMethods(Tokens &token, Tokens &end)
-{
-	this->validateOrFaild(token, end);
-	while (token != end && *token != ";")
-	{
-		if (*token == "GET")
-			this->methods |= GET;
-		else if (*token == "POST")
-			this->methods |= POST;
-		else if (*token == "DELETE")
-			this->methods |= DELETE;
-		else
-			throw ParserException("Invalid or un support method: " + *token);
-		token++;
-	}
-	this->CheckIfEnd(token, end);
 }
 
 void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 {
-	throw ParserException("TODO: with better implementation");
+	std::vector<std::string> vec;
+	std::string content;
 
+	std::string str;
+	this->validateOrFaild(token, end);
+	while (token != end && *token != ";")
+		vec.push_back(this->consume(token, end));
+	if (vec.size() <= 1)
+		throw Tokenizer::ParserException("Invalid error page define");
+	this->CheckIfEnd(token, end);
+	if (access(vec.back().data(), F_OK | R_OK) == -1)
+		throw Tokenizer::ParserException("file does not exist" + vec.back());
+	for (size_t i = 0; i < vec.size() - 1; i++)
+	{
+		if (!this->isValidStatusCode(vec[i]))
+			throw Tokenizer::ParserException("Invalid status Code " + vec[i]);
+		this->errorPages[vec[i]] = vec.back().data();
+	}
 }
 
+const std::vector<std::string> &GlobalConfig::getIndexes()
+{
+	return (this->indexes);
+}
+
+const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
+{
+	const std::map<std::string, std::string>::iterator &kv = this->errorPages.find(StatusCode);
+
+	// if (kv == this->errorPages.end())
+	// {
+	// 	return (this->errorPages.find(StatusCode)->second); // TODO: Error fix me i may faild 
+	// }
+	return (kv->second);
+}
+
+void GlobalConfig::setAlias(Tokens &token, Tokens &end)
+{
+	struct stat buf;
+
+	if (!this->root.empty())
+		throw Tokenizer::ParserException("Alias directive is duplicate");
+	validateOrFaild(token, end);
+	this->root = consume(token, end);
+	if (stat(this->root.c_str(), &buf) != 0)
+		throw Tokenizer::ParserException("Alias directory does not exist");
+	if (S_ISDIR(buf.st_mode) == 0)
+		throw Tokenizer::ParserException("Alias is not a directory");
+	this->IsAlias = true;
+	CheckIfEnd(token, end);
+}
+bool GlobalConfig::getAliasOffset() const 
+{
+	return (this->IsAlias);
+}
+
+GlobalConfig::Proc::Proc()
+{
+	this->fin = -1;
+	this->woffset = 0;
+	this->fout = -1;
+	this->pid = -1;
+	this->state = NONE;
+}
+
+GlobalConfig::Proc &GlobalConfig::Proc::operator=(Proc &other)
+{
+	this->pid = other.pid;
+	this->fin = other.fin;
+	this->fout = other.fout;
+	this->state = other.state;
+	return (*this);
+}
+
+void GlobalConfig::Proc::die()
+{
+	// assert(this->pid > 0 && "Major Error Need to be fix: with proc");
+
+	if (this->pid > 0)
+		::kill(this->pid, SIGKILL);
+	this->pid = -1;
+	
+}
+
+void GlobalConfig::Proc::clean()
+{
+	// assert(this->fin >= 0 && "Major Error Need to be fix");
+	// assert(this->fout >= 0 && "Major Error Need to be fix");
+	if (this->fin < 0 || this->fout < 0 )
+	{
+		return ;
+	}
+	close(this->fin);
+	close(this->fout);
+	this->fout = -1;
+	this->fin = -1;
+}
 

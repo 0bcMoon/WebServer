@@ -1,7 +1,6 @@
 #include "Tokenizer.hpp"
 #include "DataType.hpp"
 #include "ServerContext.hpp"
-#include "ParserException.hpp"
 #include "VirtualServer.hpp"
 #include <fstream>
 #include <stack>
@@ -88,7 +87,31 @@ void Tokenizer::parseConfig(ServerContext *context)
 	{
 		if (*token == "server")
 			context->pushServer(token, end);
+		else if (*token == "types")
+			context->pushTypes(token, end);
+		else if (*token == "access_log")
+			context->setAccessLog(token, end);
+		else if (*token == "error_log")
+			context->setErrorLog(token, end);
+		else if (*token == "keepalive_timeout")
+			context->setKeepAlive(token, end);
 		else
 			context->parseTokens(token, end); // TODO;
 	}
 }
+
+Tokenizer::ParserException::ParserException(std::string msg)
+{
+	message = msg;
+}
+
+
+Tokenizer::ParserException::ParserException() : message("") {}
+
+const char *Tokenizer::ParserException::what() const throw()
+{
+	return (message.c_str());
+}
+
+
+Tokenizer::ParserException::~ParserException() throw() {}
