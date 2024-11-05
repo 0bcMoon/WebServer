@@ -243,7 +243,7 @@ void GlobalConfig::Proc::die()
 
 	if (this->pid > 0)
 		::kill(this->pid, SIGKILL);
-	this->pid = -1;
+	// this->pid = -1;
 	
 }
 
