@@ -23,6 +23,7 @@ enum reqMethode
 
 enum reqState
 {
+	NEW,
 	METHODE,
 	PATH,
 	HTTP_VERSION,
@@ -78,6 +79,16 @@ struct multiPart
 	std::vector<std::string>				strsHeaders;
 };
 
+typedef struct data_s {
+	std::string                         path;
+	std::string							strMethode;
+	std::map<std::string, std::string>	headers;
+	std::vector<char>					body;
+	httpError							error;
+	enum reqState								state;
+	
+} data_t;
+
 class HttpRequest 
 {
 	private:
@@ -98,12 +109,12 @@ class HttpRequest
 		std::string							currHeaderName;
 		std::string							currHeaderVal;
 
-		std::vector<char>							body; // TODO : body  may be binary (include '\0') fix this;
+		std::vector<char>							body;
 		int									bodySize;
 		int                                 reqSize;
 		size_t								reqBufferSize;
 		size_t								reqBufferIndex;
-		std::vector<char>							reqBuffer; // buffer  may be binary (include '\0') fix this;
+		std::vector<char>					reqBuffer;
 
 		httpError							error;
 
@@ -136,13 +147,18 @@ class HttpRequest
 		int			checkContentType();
 
 		int			parseMuliPartBody();
+		void		andNew();
+		
 		char						buffer[1000000];
 
 	public:
+		std::vector<data_t *>         data;
+		void										clearData();
 		reqBodyType									reqBody;
 		std::string									bodyBoundary;
 		std::vector<multiPart>						multiPartBodys;
-		enum reqState state;
+		enum reqState								state;
+
 		bool										eof;
 
 		HttpRequest();

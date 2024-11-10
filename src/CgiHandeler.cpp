@@ -192,7 +192,7 @@ void		CgiHandler::execute(std::string cgiPath)
 		response->setHttpResError(500, "Internal Server Error");
 	close(pipefdIn[0]);
 	close(pipefdOut[1]);
-	response->loadFile(pipefdOut[0]);//INFO:Hicham
+	// response->loadFile(pipefdOut[0]);//INFO:Hicham
 	close(pipefdOut[0]);
 }
 

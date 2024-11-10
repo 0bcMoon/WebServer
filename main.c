@@ -22,8 +22,8 @@ int main()
 	const char *request =
 		"GET / HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
-		"Content-Length:0\r\n";
-		// "Connection: Keep-Alive\r\n\r\n";
+		"Transfer-Encoding: chjhjunked\r\n"
+		"Connection: Keep-Alive\r\n\r\n";
 
 	server = gethostbyname(host);
 	if (server == NULL)
@@ -52,34 +52,6 @@ int main()
 	{
 		error("Error writing to socket");
 	}
-	if (write(sockfd, request, strlen(request)) < 0)
-	{
-		error("Error writing to socket");
-	}
-	if (write(sockfd, request, strlen(request)) < 0)
-	{
-		error("Error writing to socket");
-	}
-	if (write(sockfd, request, strlen(request)) < 0)
-	{
-		error("Error writing to socket");
-	}
-	if (write(sockfd, request, strlen(request)) < 0)
-	{
-		error("Error writing to socket");
-	}
-	if (write(sockfd, request, strlen(request)) < 0)
-	{
-		error("Error writing to socket");
-	}
-	if (write(sockfd, request, strlen(request)) < 0)
-	{
-		error("Error writing to socket");
-	}
-	if (write(sockfd, request, strlen(request)) < 0)
-	{
-		error("Error writing to socket");
-	}
 
 	// if (write(sockfd, request, strlen(request)) < 0)
 	// {
@@ -98,7 +70,6 @@ int main()
 		error("Error reading from socket");
 	else if (n == 0)
 		error("client discount\n");
-	pause();
 	// Close the socket
 	close(sockfd);
 	return 0;

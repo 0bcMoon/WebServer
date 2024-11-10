@@ -19,6 +19,7 @@ Connections::~Connections()
 
 void	Connections::closeConnection(int	fd)
 {
+	// std::cout << "client disconnect\n";
 	close(fd); // after close file fd all event will be clear
 	delete clients[fd];
 	clients.erase(fd);
@@ -27,6 +28,7 @@ void	Connections::closeConnection(int	fd)
 
 void	Connections::addConnection(int	fd, int server)
 {
+	// std::cout << "new Connections\n";
 	this->clients[fd] = new Client(fd, server, ctx);
 }
 

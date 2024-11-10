@@ -190,12 +190,11 @@ const std::vector<std::string> &GlobalConfig::getIndexes()
 
 const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 {
-	const std::map<std::string, std::string>::iterator &kv = this->errorPages.find(StatusCode);
+	const static std::string  empty = "";
 
-	// if (kv == this->errorPages.end())
-	// {
-	// 	return (this->errorPages.find(StatusCode)->second); // TODO: Error fix me i may faild 
-	// }
+	const std::map<std::string, std::string>::iterator &kv = this->errorPages.find(StatusCode);
+	if (kv == this->errorPages.end())
+		return empty;
 	return (kv->second);
 }
 
@@ -236,18 +235,24 @@ GlobalConfig::Proc &GlobalConfig::Proc::operator=(Proc &other)
 	this->state = other.state;
 	return (*this);
 }
+
 void GlobalConfig::Proc::die()
 {
-	assert(this->pid > 0 && "Major Error Need to be fix");
+	// assert(this->pid > 0 && "Major Error Need to be fix: with proc");
 
-	::kill(this->pid, SIGKILL);
+	if (this->pid > 0)
+		::kill(this->pid, SIGKILL);
+	// this->pid = -1;
+	
 }
 
 void GlobalConfig::Proc::clean()
 {
-	// assert(this->fin >= 0 && "Major Error Need to be fix");
-	// assert(this->fout >= 0 && "Major Error Need to be fix");
+	if (this->fin < 0 || this->fout < 0 )
+		return ;
 	close(this->fin);
 	close(this->fout);
+	this->fout = -1;
+	this->fin = -1;
 }
 

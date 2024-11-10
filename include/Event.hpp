@@ -46,7 +46,7 @@ class Event
 		void CreateChangeList();
 		int newConnection(int socketFd, Connections &connections);
 		bool checkNewClient(int socketFd);
-		int setWriteEvent(int fd, uint16_t flags);
+		void setWriteEvent(int fd, uint16_t flags);
 		Location *getLocation(const Client *client);
 		bool IsFileExist(HttpResponse &response);
 		GlobalConfig::Proc RunCGIScript(HttpResponse &response);
@@ -58,6 +58,8 @@ class Event
 		void ProcEvent(const struct kevent *ev);
 		void StartTimer(Client *client);
 
+
+		int waitProc(int pid);
 		void wpipe(const struct kevent *ev);
 		void rpipe(const struct kevent *ev);
 	class EventExpection: public std::exception

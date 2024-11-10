@@ -26,7 +26,6 @@ enum pathType
 	DEF_INDEX
 };
 
-
 class HttpResponse
 {
 	private:
@@ -89,7 +88,6 @@ class HttpResponse
 			CGI
 		};
 		std::vector<char>					CGIOutput;
-		GlobalConfig::Proc					proc;
 
 		enum responseBodyType				bodyType;
 		size_t								writeByte;
@@ -103,7 +101,12 @@ class HttpResponse
 
 		class IOException : public std::exception
 		{
+			private:
+				std::string msg;
 			public :
+				IOException(const std::string &msg) throw();
+				IOException() throw();
+				~IOException() throw();
 				virtual const char* what() const throw();
 		};
 
@@ -112,7 +115,7 @@ class HttpResponse
 		std::string											getCgiContentLenght();
 		int													parseCgiHaders(std::string str);
 		std::string											strMethod;
-		std::vector<std::vector<char> >						responseBody;// INFO:cgi output
+		// std::vector<std::vector<char> >						responseBody;// INFO:cgi output
 		bool												keepAlive;
 		Location											*location;
 		enum responseState									state;
@@ -153,7 +156,8 @@ class HttpResponse
 		std::string						getContentLenght(enum responseBodyType type); // TYPO
 
 		int								autoIndexCooking();
-		static std::string				getExtension(std::string str);
+		std::string						getExtension(const std::string &str);
+
 		std::vector<char>				getBody() const;
 
 

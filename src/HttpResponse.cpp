@@ -1,16 +1,18 @@
 #include "HttpResponse.hpp"
 #include <dirent.h>
-#include <exception>
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/dirent.h>
+#include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include <unistd.h>
 #include <cctype>
+#include <cerrno>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <fstream>
 #include <ios>
 #include <iostream>
@@ -18,16 +20,12 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <sys/dirent.h>
-#include <sys/fcntl.h>
-#include <sys/stat.h>
-#include <sys/unistd.h>
 #include <vector>
 #include "CgiHandler.hpp"
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
-HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : fd(fd) , ctx(ctx), request(request)
+HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : ctx(ctx), request(request), fd(fd)
 {
 	keepAlive = 1;
 	location = NULL;
@@ -57,7 +55,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : f
 	errorRes.connection = "Connection: Keep-Alive\r\n";
 }
 
-void			HttpResponse::clear()
+void HttpResponse::clear()
 {
 	if (responseFd >= 0)
 		close(responseFd);
@@ -90,7 +88,7 @@ void			HttpResponse::clear()
 	sendSize = 0;
 	queryStr.clear();
 	strMethod.clear();
-	responseBody.clear();
+	// responseBody.clear();
 	state = START;
 	path.clear();
 	headers.clear();
@@ -123,7 +121,7 @@ void			HttpResponse::clear()
 
 HttpResponse::~HttpResponse()
 {
-	std::cout << "Destructor has been called\n";
+	// std::cout << "Destructor has been called\n";
 	if (responseFd >= 0)
 		close(responseFd);
 }
@@ -136,7 +134,7 @@ std::vector<char> HttpResponse::getBody() const
 std::string HttpResponse::getContentLenght()
 {
 	std::ostringstream oss;
-	struct stat               s;
+	struct stat s;
 	if (errorPage.size() && !stat(errorPage.c_str(), &s))
 	{
 		isErrDef = 0;
@@ -145,25 +143,38 @@ std::string HttpResponse::getContentLenght()
 	}
 	else
 	{
-		oss << (errorRes.bodyHead.size() + errorRes.title.size() + errorRes.body.size() + errorRes.htmlErrorId.size()
+		oss
+			<< (errorRes.bodyHead.size() + errorRes.title.size() + errorRes.body.size() + errorRes.htmlErrorId.size()
 				+ errorRes.bodyfoot.size() - 2);
 	}
 	return ("Content-Length: " + oss.str() + "\r\n");
 }
 
-void			HttpResponse::write2client(int fd, const char *str, size_t size)
+void HttpResponse::write2client(int fd, const char *str, size_t size)
 {
 	if (write(fd, str, size) < 0)
 	{
 		state = WRITE_ERROR;
-		throw  IOException();
+		throw IOException();
 	}
 	writeByte += size;
 }
 
-const char* HttpResponse::IOException::what() const throw()
+HttpResponse::IOException::~IOException() throw()
 {
-	return ("failed to write");
+}
+HttpResponse::IOException::IOException() throw()
+{
+	this->msg = "IOException: " + std::string(strerror(errno));
+}
+
+HttpResponse::IOException::IOException(const std::string &msg) throw()
+{
+	this->msg = msg;
+}
+const char *HttpResponse::IOException::what() const throw()
+{
+	return (this->msg.data());
 }
 
 std::string HttpResponse::getErrorRes()
@@ -182,23 +193,33 @@ std::string HttpResponse::getErrorRes()
 		close(responseFd);
 	this->responseFd = open(errorPage.c_str(), O_RDONLY);
 	if (!isErrDef && responseFd >= 0)
-		return (bodyType = LOAD_FILE, state = WRITE_BODY,
+		return (
+			bodyType = LOAD_FILE,
+			state = WRITE_BODY,
 			errorRes.statusLine + errorRes.headers + errorRes.connection + errorRes.contentLen + "\r\n");
 	return (
 		errorRes.statusLine + errorRes.headers + errorRes.connection + errorRes.contentLen + errorRes.bodyHead
 		+ errorRes.title + errorRes.body + errorRes.htmlErrorId + errorRes.bodyfoot);
 }
 
-HttpResponse& HttpResponse::operator=(const HttpRequest &req)
+HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 {
-	path = req.getPath();
-	headers = req.getHeaders();
-	body = req.getBody();
-	status.code = req.getStatus().code;
-	status.description = req.getStatus().description;
-	strMethod = req.getStrMethode();
-	if (req.state == REQ_ERROR)
+	path = req.data[0]->path;
+	headers = req.data[0]->headers;
+	body = req.data[0]->body;
+	status.code = req.data[0]->error.code;
+	status.description = req.data[0]->error.description;
+	strMethod = req.data[0]->strMethode;
+	if (req.data[0]->state == REQ_ERROR)
 		state = ERROR;
+	// path = req.getPath();
+	// headers = req.getHeaders();
+	// body = req.getBody();
+	// status.code = req.getStatus().code;
+	// status.description = req.getStatus().description;
+	// strMethod = req.getStrMethode();
+	// if (req.state == REQ_ERROR)
+	// 	state = ERROR;
 	// else
 	// 	state = ;
 	return (*this);
@@ -221,6 +242,7 @@ bool HttpResponse::isCgi()
 
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
+	std::cerr << "http Error has been set: " << code << "\n";
 	state = ERROR;
 	status.code = code;
 	status.description = str;
@@ -241,7 +263,7 @@ bool HttpResponse::isMethodAllowed()
 		methode = POST;
 	else if (strMethod == "DELETE")
 		methode = DELETE;
-	else 
+	else
 		methode = NONE;
 	return (this->location->isMethodAllowed(this->methode));
 	// return (setHttpResError(405, "Method Not Allowed"));
@@ -259,7 +281,8 @@ void HttpResponse::cgiCooking()
 }
 
 int HttpResponse::autoIndexCooking()
-{ std::vector<std::string> dirContent;
+{
+	std::vector<std::string> dirContent;
 	DIR *dirStream = opendir(fullPath.c_str());
 	if (dirStream == NULL)
 		return (setHttpResError(500, "Internal Server Error"), 0);
@@ -300,66 +323,66 @@ int HttpResponse::directoryHandler()
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
-			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1/* , loadFile(fullPath) */);
+			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1 /* , loadFile(fullPath) */);
 	}
 	if (location->globalConfig.getAutoIndex())
 		return (bodyType = AUTO_INDEX, autoIndexCooking());
-	// else 
+	// else
 	// 	return (bodyType = NO_TYPE, 1);
 	return (setHttpResError(404, "Not Found"), 0);
 }
 
-int HttpResponse::loadFile(const std::string &pathName)
-{
-	int _fd;
-	char buffer[fileReadingBuffer];
-	int j = 0;
+// int HttpResponse::loadFile(const std::string &pathName)
+// {
+// 	int _fd;
+// 	char buffer[fileReadingBuffer];
+// 	int j = 0;
 
-	_fd = open(pathName.c_str(), O_RDONLY);
-	if (_fd < 0)
-		return (setHttpResError(500, "Internal Server Error"), 0);
-	while (1)
-	{
-		int r = read(_fd, buffer, fileReadingBuffer);
-		if (r < 0)
-			return (close(_fd), setHttpResError(500, "Internal Server Error"), 0);
-		if (r == 0)
-			break;
-		responseBody.push_back(std::vector<char>(r));
-		for (int i = 0; i < r; i++)
-		{
-			responseBody[j][i] = buffer[i];
-		}
-		j++;
-	}
-	return (close(_fd), 1);
-}
+// 	_fd = open(pathName.c_str(), O_RDONLY);
+// 	if (_fd < 0)
+// 		return (setHttpResError(500, "Internal Server Error"), 0);
+// 	while (1)
+// 	{
+// 		int r = read(_fd, buffer, fileReadingBuffer);
+// 		if (r < 0)
+// 			return (close(_fd), setHttpResError(500, "Internal Server Error"), 0);
+// 		if (r == 0)
+// 			break;
+// 		responseBody.push_back(std::vector<char>(r));
+// 		for (int i = 0; i < r; i++)
+// 		{
+// 			responseBody[j][i] = buffer[i];
+// 		}
+// 		j++;
+// 	}
+// 	return (close(_fd), 1);
+// }
 
-int HttpResponse::loadFile(int _fd)
-{
-	char buffer[fileReadingBuffer];
-	int j = 0;
-	
-	std::cout << "CGI response: " << std::endl;
-	while (1)
-	{
-		int r = read(_fd, buffer, fileReadingBuffer);
-		buffer[r] = 0;
-		std::cout << buffer << "\n";
-		if (r < 0)
-			return (setHttpResError(500, "Internal Server Error"), 0);
-		if (r == 0)
-			break;
-		responseBody.push_back(std::vector<char>(r)); // Gay pepole code
-		for (int i = 0; i < r; i++)
-		{
-			std::cout << buffer[i];
-			responseBody[j][i] = buffer[i];
-		}
-		j++;
-	}
-	return (1);
-}
+// int HttpResponse::loadFile(int _fd)
+// {
+// 	char buffer[fileReadingBuffer];
+// 	int j = 0;
+
+// 	std::cout << "CGI response: " << std::endl;
+// 	while (1)
+// 	{
+// 		int r = read(_fd, buffer, fileReadingBuffer);
+// 		buffer[r] = 0;
+// 		std::cout << buffer << "\n";
+// 		if (r < 0)
+// 			return (setHttpResError(500, "Internal Server Error"), 0);
+// 		if (r == 0)
+// 			break;
+// 		responseBody.push_back(std::vector<char>(r)); // Gay pepole code
+// 		for (int i = 0; i < r; i++)
+// 		{
+// 			std::cout << buffer[i];
+// 			responseBody[j][i] = buffer[i];
+// 		}
+// 		j++;
+// 	}
+// 	return (1);
+// }
 // std::ifstream file(pathName.c_str());
 // unsigned char  tmp;
 // if (!file.is_open())
@@ -377,7 +400,7 @@ int HttpResponse::pathChecking()
 	if (S_ISDIR(sStat.st_mode))
 		return (directoryHandler());
 	if (access(fullPath.c_str(), F_OK) != -1)
-		return (bodyType = LOAD_FILE, 1/* loadFile(fullPath) */);
+		return (bodyType = LOAD_FILE, 1 /* loadFile(fullPath) */);
 	else
 	{
 		return (state = ERROR, setHttpResError(404, "Not Found"), 0);
@@ -468,15 +491,13 @@ static int parseCgiStatusLine(std::string line)
 
 void HttpResponse::parseCgiOutput()
 {
-	std::string	tmpHeaderName;
-	std::string	tmpHeaderVal;
-	size_t	lineIndex = 0;
+	std::string tmpHeaderName;
+	std::string tmpHeaderVal;
+	size_t lineIndex = 0;
 
 	cgiRes.state = HEADERS;
-	// std::cout << "----->" << CGIOutput.size() << std::endl;
 	if (CGIOutput.size() == 0)
 		return;
-
 
 	for (size_t j = 0; j < CGIOutput.size(); j++)
 	{
@@ -575,7 +596,7 @@ void HttpResponse::writeResponse()
 		write2client(fd, "\r\n", 2);
 	}
 	write2client(this->fd, "\r\n", 2);
-	state = WRITE_BODY;	
+	state = WRITE_BODY;
 }
 
 std::string HttpResponse::getStatusLine()
@@ -593,7 +614,7 @@ std::string HttpResponse::getConnectionState()
 	return ("Connection: Close\r\n");
 }
 
-std::string HttpResponse::getExtension(std::string str)
+std::string HttpResponse::getExtension(const std::string &str)
 {
 	std::string ext;
 	int i = str.size() - 1;
@@ -625,23 +646,23 @@ std::string HttpResponse::getDate()
 int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 {
 	state = WRITE_BODY;
-	size_t begin = 0;
-	if (type == CGI)
-	{
-		std::stringstream oss(getCgiContentLenght());
-		oss >> begin;
-		size_t size = 0;
-		for (size_t i = 0; i < responseBody.size(); i++)
-		{
-			size += responseBody[i].size();
-		}
-		begin = size - begin;
-	}
+	// size_t begin = 0;
+	// if (type == CGI)
+	// {
+	// 	std::stringstream oss(getCgiContentLenght());
+	// 	oss >> begin;
+	// 	size_t size = 0;
+	// 	for (size_t i = 0; i < responseBody.size(); i++)
+	// 	{
+	// 		size += responseBody[i].size();
+	// 	}
+	// 	begin = size - begin;
+	// }
 	// for (size_t i = 0; i < cgiRes.lines.size(); i++)
 	// {
 	// 	write(1, cgiRes.lines[i].data(), cgiRes.lines[i].size());
 	// }
-	if (/* type == LOAD_FILE ||  */type == CGI)
+	if (/* type == LOAD_FILE ||  */ type == CGI)
 	{
 		for (size_t i = cgiRes.bodyStartIndex; i < cgiRes.lines.size(); i++)
 		{
@@ -663,7 +684,7 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 	}
 	if (type == LOAD_FILE)
 	{
-		size_t		readbuffer;
+		size_t readbuffer;
 
 		while (eventByte > writeByte)
 		{
@@ -672,14 +693,14 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 			if (size < 0)
 				throw IOException();
 			if (size == 0)
-				break ;
+				break;
 			write2client(fd, buff, size);
 			this->sendSize += size;
 		}
 		if (this->sendSize == fileSize)
 			state = END_BODY;
 		writeByte = 0;
-	}	
+	}
 	else if (type == AUTO_INDEX)
 	{
 		write2client(this->fd, autoIndexBody.c_str(), autoIndexBody.size());
@@ -690,15 +711,15 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 
 std::string HttpResponse::getContentLenght(enum responseBodyType type)
 {
-	if (/* type == LOAD_FILE ||  */type == CGI)
+	if (/* type == LOAD_FILE ||  */ type == CGI)
 	{
 		std::ostringstream oss;
 
 		size_t size = 0;
-		for (size_t i = 0; i < responseBody.size(); i++)
-		{
-			size += responseBody[i].size();
-		}
+		// for (size_t i = 0; i < responseBody.size(); i++)
+		// {
+		// 	size += responseBody[i].size();
+		// }
 		oss << size;
 		return ("Content-Length: " + oss.str() + "\r\n");
 	}
@@ -762,11 +783,11 @@ void HttpResponse::splitingQuery()
 	path = path.substr(0, pos);
 }
 
-int				HttpResponse::uploadFile()
+int HttpResponse::uploadFile()
 {
 	if (request->reqBody == MULTI_PART)
 	{
-		for (size_t _i = 0; _i < request->multiPartBodys.size();_i++)
+		for (size_t _i = 0; _i < request->multiPartBodys.size(); _i++)
 		{
 			// std::cout << "file uplod " << location->getFileUploadPath() <<"\n";
 			int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
@@ -774,7 +795,7 @@ int				HttpResponse::uploadFile()
 				return (setHttpResError(500, "Internal Server Error"), 0);
 			// for (size_t __i = 0; __i < request->multiPartBodys[_i].body.size(); __i++)
 			write(__fd, request->multiPartBodys[_i].body.data(), request->multiPartBodys[_i].body.size());
-			close (__fd);
+			close(__fd);
 		}
 	}
 	if (request->reqBody == TEXT_PLAIN)
@@ -785,12 +806,12 @@ int				HttpResponse::uploadFile()
 			return (setHttpResError(500, "Internal Server Error"), 0);
 		// for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
 		write(__fd, body.data(), body.size());
-		close (__fd);
+		close(__fd);
 	}
 	return (1);
 }
 
-void			HttpResponse::responseCooking()
+void HttpResponse::responseCooking()
 {
 	decodingUrl();
 	splitingQuery();
@@ -799,11 +820,11 @@ void			HttpResponse::responseCooking()
 	else
 	{
 		if (!isMethodAllowed())
-			return 	setHttpResError(405, "Method Not Allowed");
+			return setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
-			return ;
+			return;
 		if (methode == POST && !uploadFile())
-			return ;
+			return;
 		writeResponse();
 		if (bodyType == LOAD_FILE)
 		{
@@ -849,14 +870,12 @@ std::string HttpResponse::getRandomName()
 		'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
-		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
-	};
+		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 	int n = sizeof(charset) / sizeof(charset[0]);
 	for (int i = 0; i < 48; i++)
 	{
 		int idx = (std::rand() % n);
 		rstr[i] = charset[idx];
-
 	}
 	return (rstr);
 }

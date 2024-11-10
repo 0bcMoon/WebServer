@@ -1,12 +1,13 @@
 import os
-from urllib.parse import parse_qs
 import datetime
+from urllib.parse import parse_qs
 
 # Enable debugging
 # cgitb.enable()
 
-# Print HTTP header
+    # Print HTTP header
 print("HTTP/1.1 200 OK")
+print("Content-Lenght: 10")
 print("Content-Type: text/html\r\n")
 
 # Start HTML output

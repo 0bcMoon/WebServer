@@ -3,7 +3,6 @@
 #include <sys/event.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
-#include <cassert>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -24,21 +23,26 @@ Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serv
 	this->timerType = NEW_CONNECTION;
 }
 
-void Client::respond(size_t data)
+void Client::respond(size_t data, size_t index)
 {
 	response.eventByte = data;
-	if (request.state != REQUEST_FINISH && request.state != REQ_ERROR)
+	if (request.data[index]->state != REQUEST_FINISH &&  request.data[index]->state != REQ_ERROR)
 		return ;
 
+			
 	response = request;
-	std::map<std::string, std::string>::iterator kv = response.headers.find("Connection");
+	std::cout << "ERROR: "<< response.getStatusCode() << std::endl;			
 
-	if ((kv != response.headers.end()
-		&& (kv->second.find("close") != std::string::npos
-			|| kv->second.find("Close") != std::string::npos))
-		|| request.state == REQ_ERROR)
-		response.keepAlive = 0;
-	if (request.state == REQUEST_FINISH)
+	std::cout << response.path << std::endl;
+	std::cout << response.strMethod << std::endl;
+	// std::map<std::string, std::string>::iterator kv = response.headers.find("Connection");
+
+	// if ((kv != response.headers.end()
+	// 	&& (kv->second.find("close") != std::string::npos
+	// 		|| kv->second.find("Close") != std::string::npos))
+	// 	|| request.state == REQ_ERROR)
+	// 	response.keepAlive = 0;
+	if (request.data[index]->state == REQUEST_FINISH)
 		response.responseCooking();
 	if (response.state == CGI_EXECUTING)
 	{
@@ -73,4 +77,10 @@ int Client::getServerFd() const
 Client::TimerType Client::getTimerType() const 
 {
 	return (this->timerType);
+}
+
+Client::~Client()
+{
+	this->proc.die(); // make process clean it own shit \n
+	this->proc.clean();
 }

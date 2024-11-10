@@ -1,36 +1,29 @@
-
-
+#!/usr/bin/env python3
 import cgi
-import os
-import sys
+import cgitb
 
 # Enable debugging
-import cgitb
 cgitb.enable()
 
-# Print HTTP headers
-print("Content-Type: text/html\n")
+# Get form data
+form = cgi.FieldStorage()
+name = form.getvalue("name", "Guest")
 
-# Start HTML output
-print("<html>")
-print("<head><title>Simple Python CGI POST Example</title></head>")
-print("<body>")
+# Output CGI headers
+print("Content-Type: text/html")
+print()
 
-# Get the content length (size of POST data)
-content_length = int(os.environ.get('CONTENT_LENGTH', 0))
-
-# Read the POST data from stdin
-if content_length > 0:
-    post_data = sys.stdin.read(content_length)
-    print("<h3>POST Data Received:</h3>")
-    print(f"<p>{post_data}</p>")
-
-    # Parse POST data (assuming application/x-www-form-urlencoded)
-    params = cgi.parse_qs(post_data)
-    print("<ul>")
-    for key, values in params.items():
-        for value in values:
-            print(f"<li><b>{key}</b>: {value}</li>")
-    print("</ul>")
-else:
-    print("<h3>No POST data received</h3>")
+# Output HTML content
+print(f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CGI Script Example</title>
+</head>
+<body>
+    <h1>Hello, {name}!</h1>
+    <p>Welcome to this example of a CGI script.</p>
+</body>
+</html>
+""")

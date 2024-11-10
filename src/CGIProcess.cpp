@@ -99,7 +99,8 @@ void CGIProcess::child_process()
 	this->cgi_bin = response->location->globalConfig.getRoot() + response->path.substr(offset);
 
 	this->loadEnv();
-	std::string path = response->location->getCGIPath(".py"); // INFO: make this dynamique
+	
+	std::string path = response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique
 	const char *args[3] = {path.data(), cgi_bin.data(), NULL};
 	char **argv = new char *[env.size() + 1];
 	size_t i = 0;
@@ -108,9 +109,9 @@ void CGIProcess::child_process()
 	argv[i] = NULL;
 	if (redirectPipe())
 	{
-		throw std::runtime_error("child could not be run: " + std::string(strerror(errno)));
 		closePipe(this->pipeOut);
 		closePipe(this->pipeIn);
+		throw std::runtime_error("child could not be run: " + std::string(strerror(errno))); 
 	}
 	execve(*args, (char *const *)args, argv);
 	throw std::runtime_error("child process faild: execve: " + std::string(strerror(errno)));
@@ -122,7 +123,7 @@ GlobalConfig::Proc CGIProcess::RunCGIScript(HttpResponse &response)
 
 	this->response = &response;
 	if (this->IsFileExist())
-		return proc;
+		return (proc);
 	if (pipe(this->pipeIn) < 0)
 		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	else if (pipe(this->pipeOut) < 0)
@@ -136,12 +137,11 @@ GlobalConfig::Proc CGIProcess::RunCGIScript(HttpResponse &response)
 		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	}
 	else if (proc.pid == 0)
-		child_process();
+		this->child_process();
 	close(this->pipeIn[0]);
 	close(this->pipeOut[1]);
 	proc.fout = this->pipeOut[0];
 	proc.fin = this->pipeIn[1];
-	response.proc = proc;
 	return (proc);
 }
 
