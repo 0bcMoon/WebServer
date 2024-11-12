@@ -231,11 +231,12 @@ int Event::newConnection(int socketFd, Connections &connections)
 {
 	struct sockaddr_in address = this->sockAddrInMap[socketFd];
 	socklen_t size = sizeof(struct sockaddr);
+
 	int newSocketFd = accept(socketFd, (struct sockaddr *)&address, &size);
 	if (newSocketFd < 0) // TODO: add logger here
-		return (std::cout << "-----accept faild--------\n", -1);
+		return (std::cout << "-----accept faild--------:" << strerror(errno) << "\n", -1);
 	if (this->setNonBlockingIO(newSocketFd))
-		return (close(newSocketFd), std::cout << "-----accept faild--------\n", -1);
+		return (close(newSocketFd), std::cout << "-----non blocking  faild--------\n", -1);
 
 	struct kevent ev_set[2];
 	EV_SET(&ev_set[0], newSocketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
@@ -258,11 +259,9 @@ void Event::setWriteEvent(int fd, uint16_t flags)
 }
 void Event::ReadEvent(const struct kevent *ev)
 {
+	std::cout << "read event\n";
 	if (ev->flags & EV_EOF && ev->data <= 0)
-	{
-		// std::cout << "client disconnected\n";
 		connections.closeConnection(ev->ident);
-	}
 	else
 	{
 		connections.requestHandler(ev->ident, ev->data);
@@ -275,16 +274,18 @@ void Event::ReadEvent(const struct kevent *ev)
 		// 	return;
 		this->setWriteEvent(client->getFd(), EV_ENABLE);
 	}
+
+	std::cout << "read event2\n";
 }
 
 void Event::RegisterNewProc(Client *client)
 {
+	std::cout << "A CGI request happend\n";
 	HttpResponse &response = client->response;
-	// std::cout << " a process event has been regster\n";
 	CGIProcess cgi;
 	GlobalConfig::Proc proc = cgi.RunCGIScript(response);
 	if (proc.pid == -1)
-		return;
+		return ;
 	struct kevent ev[4];
 	int evSize = (response.strMethod == "POST") + 3;
 	EV_SET(&ev[0], proc.pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, (void *)(size_t)client->getFd());
@@ -311,6 +312,7 @@ void Event::RegisterNewProc(Client *client)
 
 void Event::WriteEvent(const struct kevent *ev)
 {
+	std::cout << "A write Event happend\n";
 	if (ev->flags & EV_EOF)
 		connections.closeConnection(ev->ident);
 	else
@@ -352,7 +354,7 @@ void Event::rpipe(const struct kevent *ev)
 	int fd = (size_t)ev->udata;
 	Client *client = this->connections.getClient(fd);
 	if (!client)
-		return (void)(std::cout << "client has been free");
+		return (void)(std::cout << "pipe: read: client  disconnected");
 	HttpResponse *response = &client->response;
 	if (ev->flags & EV_EOF && !ev->data)
 		return ;
@@ -367,12 +369,10 @@ void Event::rpipe(const struct kevent *ev)
 
 void Event::wpipe(const struct kevent *ev)
 {
-	// add some writes offset that does cl
-	// std::cout << "WriteEvent pipe enter\n"; // TODO: test with post
 	int fd = (size_t)ev->udata;
 	Client *client = this->connections.getClient(fd);
 	if (!client)
-		return (void)(std::cout << "client has been free3\n");
+		return (void)(std::cout << "pipe: write: client  disconnected");
 	HttpResponse *response = &client->response;
 	GlobalConfig::Proc &proc = client->proc;
 
@@ -380,24 +380,20 @@ void Event::wpipe(const struct kevent *ev)
 	int wdata = std::min((int)ev->data, avdata);
 	proc.woffset += wdata;
 	if (write(ev->ident, response->getBody().data() + proc.woffset, wdata) < 0)
-		throw HttpResponse::IOException();
+		throw HttpResponse::IOException("pipe: write: " + std::string(strerror(errno)));
 }
 
 void Event::TimerEvent(const struct kevent *ev)
 {
-	std::cout << "timer event\n";
-	exit(3);
 	if (!ev->udata)
 		return this->connections.closeConnection(ev->ident); // if client take too long to send full request
-	exit(1);
 	int fd = (size_t)ev->udata;
 	Client *client = this->connections.getClient(fd);
 	if (!client)
 		return (void)(std::cout << "client has been free1\n");
 	GlobalConfig::Proc &proc = client->proc;
-	// else cgi take too long to process it data
 	proc.state = GlobalConfig::Proc::TIMEOUT; // set the state for error TIMEOUT to response
-	proc.die(); // we kill the cgi with SIGKILL
+	proc.die();
 }
 
 int Event::waitProc(int pid)
@@ -409,8 +405,7 @@ int Event::waitProc(int pid)
 	status = WEXITSTATUS(status); // check exist state
 	struct kevent event;
 	EV_SET(&event, pid, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
-	int r = kevent(this->kqueueFd, &event, 1, NULL, 0, NULL);
-	assert(r >= 0 && "Major error need to be fixed");
+	kevent(this->kqueueFd, &event, 1, NULL, 0, NULL);
 	return (signal | status);
 }
 
@@ -427,7 +422,7 @@ void Event::ProcEvent(const struct kevent *ev)
 	if (proc.state == GlobalConfig::Proc::TIMEOUT)
 		response->setHttpResError(504, "Gateway Timeout");
 	else if (state)
-		response->setHttpResError(503, "Bad Gateway"); // this may be change to 499 server error
+		response->setHttpResError(502, "Bad Gateway"); // this may be change to 499 server error
 	proc.clean();
 }
 void Event::eventLoop()
@@ -436,6 +431,7 @@ void Event::eventLoop()
 	int nev;
 	while (1)
 	{
+		std::cout << "waiting...\n";
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));

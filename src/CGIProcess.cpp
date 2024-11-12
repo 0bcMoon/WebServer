@@ -132,6 +132,7 @@ GlobalConfig::Proc CGIProcess::RunCGIScript(HttpResponse &response)
 	proc.pid = fork();
 	if (proc.pid < 0)
 	{
+		std::cout << "fork faild: " << strerror(errno) << "\n";
 		closePipe(this->pipeIn);
 		closePipe(this->pipeOut);
 		return (this->response->setHttpResError(500, "Internal Server Error"), proc);

@@ -49,6 +49,7 @@ void Client::respond(size_t data)
 		response.state = CGI_EXECUTING;
 	if (response.state == ERROR)
 	{
+		// std::cerr << "response with error\n";
 		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
 }
