@@ -35,6 +35,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 	isErrDef = 1;
 	// i = 0;
 	// j = 0;
+	uploadData.fileName = getRandomName();
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Server: XXXXXXXX\r\n"; // TODO:name the server;
@@ -60,6 +61,11 @@ void HttpResponse::clear()
 	if (responseFd >= 0)
 		close(responseFd);
 	isErrDef = 1;
+
+	uploadData.fileIt = 0;
+	uploadData.it = 0;
+	uploadData.fileName = getRandomName();
+
 	errorRes.statusLine.clear();
 	errorRes.headers.clear();
 	errorRes.connection.clear();
@@ -584,8 +590,13 @@ void HttpResponse::writeResponse()
 	writeByte = 0;
 	write2client(this->fd, getStatusLine().c_str(), getStatusLine().size());
 	write2client(this->fd, getConnectionState().c_str(), getConnectionState().size());
-	write2client(this->fd, getContentType().c_str(), getContentType().size());
+	// {
+	if (state != UPLOAD_FILES)
+		write2client(this->fd, getContentType().c_str(), getContentType().size());
+	else 
+		bodyType = NO_TYPE;
 	write2client(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
+	// }
 	write2client(fd, getDate().c_str(), getDate().size());
 	write2client(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
 	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
@@ -596,7 +607,13 @@ void HttpResponse::writeResponse()
 		write2client(fd, "\r\n", 2);
 	}
 	write2client(this->fd, "\r\n", 2);
-	state = WRITE_BODY;
+	if (state == UPLOAD_FILES)
+	{
+		// write2client(this->fd, "file has been created", std::strlen("file has been created"));
+		state = END_BODY;
+	}
+	else 
+		state = WRITE_BODY;
 }
 
 std::string HttpResponse::getStatusLine()
@@ -785,29 +802,44 @@ void HttpResponse::splitingQuery()
 
 int HttpResponse::uploadFile()
 {
-	if (request->reqBody == MULTI_PART)
+	std::vector<multiPart > &vec = request->data[0]->multiPartBodys;
+
+	if (request->data[0]->multiPartBodys.size() > 0)
 	{
-		for (size_t _i = 0; _i < request->multiPartBodys.size(); _i++)
+		for (size_t _i = uploadData.it ; _i < request->data[0]->multiPartBodys.size(); _i++)
 		{
-			// std::cout << "file uplod " << location->getFileUploadPath() <<"\n";
-			int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
+			int __fd = open((location->getFileUploadPath() + uploadData.fileName).c_str(), O_CREAT | O_WRONLY, 0644);
 			if (__fd < 0)
 				return (setHttpResError(500, "Internal Server Error"), 0);
-			// for (size_t __i = 0; __i < request->multiPartBodys[_i].body.size(); __i++)
-			write(__fd, request->multiPartBodys[_i].body.data(), request->multiPartBodys[_i].body.size());
+			size_t nbytes = vec[_i].body.size() - uploadData.fileIt;
+			if (nbytes > eventByte)
+				nbytes = eventByte;
+			write(__fd, &vec[_i].body.data()[uploadData.fileIt], nbytes);
+			uploadData.fileIt += nbytes;
+			eventByte -= nbytes;
+			if (!eventByte)
+			{
+				uploadData.it = _i;
+				return (close(__fd), 1);
+			}
+			if (uploadData.fileIt >= vec[_i].body.size())
+				uploadData.fileIt = 0;
+			uploadData.fileName = getRandomName();
 			close(__fd);
 		}
 	}
-	if (request->reqBody == TEXT_PLAIN)
 	// else
-	{
-		int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
-		if (__fd < 0)
-			return (setHttpResError(500, "Internal Server Error"), 0);
-		// for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
-		write(__fd, body.data(), body.size());
-		close(__fd);
-	}
+	// {
+	// 	int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);
+	// 	if (__fd < 0)
+	// 		return (setHttpResError(500, "Internal Server Error"), 0);
+	// 	// for (size_t __i = 0; __i < request->multiPartBodys[__i].body.size(); __i++)
+	// 	write(__fd, body.data(), body.size());
+	// 	close(__fd);
+	// }
+	status.code = 201;
+	status.description = "Created";
+	writeResponse();
 	return (1);
 }
 
@@ -823,9 +855,12 @@ void HttpResponse::responseCooking()
 			return setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
 			return;
-		if (methode == POST && !uploadFile())
-			return;
-		writeResponse();
+		// if (methode == POST && !uploadFile())
+			// return;
+		if (methode == POST)
+			state = UPLOAD_FILES;
+		if (methode == GET)
+			writeResponse();
 		if (bodyType == LOAD_FILE)
 		{
 			this->responseFd = open(fullPath.c_str(), O_RDONLY);

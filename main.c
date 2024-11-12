@@ -22,7 +22,6 @@ int main()
 	const char *request =
 		"GET / HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
-		"Transfer-Encoding: chjhjunked\r\n"
 		"Connection: Keep-Alive\r\n\r\n";
 
 	server = gethostbyname(host);
@@ -53,6 +52,14 @@ int main()
 		error("Error writing to socket");
 	}
 
+	if (write(sockfd, request, strlen(request)) < 0)
+	{
+		error("Error writing to socket");
+	}
+	if (write(sockfd, request, strlen(request)) < 0)
+	{
+		error("Error writing to socket");
+	}
 	// if (write(sockfd, request, strlen(request)) < 0)
 	// {
 	// 	error("Error writing to socket");

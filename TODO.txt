@@ -13,3 +13,5 @@
 --- PATH_INFO
 
 --- CGI CONTENT_LENGHT
+--- MULTI PART boudary "\r\n"
+--- POST BODY

@@ -86,12 +86,34 @@ typedef struct data_s {
 	std::vector<char>					body;
 	httpError							error;
 	enum reqState								state;
+	std::vector<multiPart>						multiPartBodys;
 	
 } data_t;
 
 class HttpRequest 
 {
 	private:
+		enum multiPartState {
+			_ERROR,
+			_NEW,
+			BORDER,
+			MULTI_PART_HEADERS,
+			BODY_CRLF,
+			MULTI_PART_HEADERS_VAL,
+			STORING,
+			FINISHED
+		};
+
+		void						handleNewBody();
+		void						handleMultiPartHeaders();
+		void						handleStoring();
+		void						parseMultiPartHeaderVal();
+		int							isBodycrlf();
+		int							isBorder();
+		int							checkMultiPartEnd();
+		void						parseBodyCrlf();
+
+		enum multiPartState							bodyState;
 		struct kevent *ev;
 		typedef std::map<std::string, std::string> Headers;
 		 chunkState							chunkState;
@@ -105,7 +127,7 @@ class HttpRequest
 
 		std::string                         path;
 
-		std::map<std::string, std::string>	headers;
+		// std::map<std::string, std::string>	headers;
 		std::string							currHeaderName;
 		std::string							currHeaderVal;
 
@@ -156,8 +178,8 @@ class HttpRequest
 		void										clearData();
 		reqBodyType									reqBody;
 		std::string									bodyBoundary;
-		std::vector<multiPart>						multiPartBodys;
 		enum reqState								state;
+		// std::vector<multiPart>						multiPartBodys;
 
 		bool										eof;
 
@@ -178,8 +200,10 @@ class HttpRequest
 		std::vector<char>					getBody() const;
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;
-		const std::string &getHost() const;
-		const std::string &getPath() const;
+		const std::string					&getHost() const;
+		const std::string					&getPath() const;
+		
+		int 								parseMultiPart();
 };
 
 #endif

@@ -32,7 +32,6 @@ void Client::respond(size_t data, size_t index)
 			
 	response = request;
 	std::cout << "ERROR: "<< response.getStatusCode() << std::endl;			
-
 	std::cout << response.path << std::endl;
 	std::cout << response.strMethod << std::endl;
 	// std::map<std::string, std::string>::iterator kv = response.headers.find("Connection");
@@ -49,13 +48,17 @@ void Client::respond(size_t data, size_t index)
 		response.bodyType = HttpResponse::CGI;
 		response.writeCgiResponse();
 	}
-	if (response.isCgi() && response.state != END_BODY
-		&& response.state != ERROR) 
+	if (response.state != ERROR && response.isCgi() && response.state != END_BODY) 
 		response.state = CGI_EXECUTING;
-	if (response.state == ERROR)
-	{
-		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
-	}
+	// if (response.state == ERROR)
+	// {
+	// 	response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
+	// }
+}
+
+void	Client::handleResError()
+{
+	response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 }
 
 const std::string &Client::getHost() const
@@ -65,7 +68,7 @@ const std::string &Client::getHost() const
 
 const std::string &Client::getPath() const
 {
-	return (this->request.getPath());
+	return (this->request.data[0]->path);
 }
 
 int Client::getServerFd() const

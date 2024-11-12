@@ -328,10 +328,18 @@ void Event::WriteEvent(const struct kevent *ev)
 		// std::cout << "-------------------------------------------------------" << std::endl;
 		// write(1, client->request.data[0]->body.data() , client->request.data[0]->body.size());
 		// std::cout << "\n-------------------------------------------------------" << std::endl;
-		if (client->response.state != WRITE_BODY)
+		if (client->request.data.size() == 0 || (client->request.data[0]->state != REQUEST_FINISH
+			&& client->request.data[0]->state != REQ_ERROR))
+			return ;
+		if (client->response.state == START)
 		{
 			client->response.location = this->getLocation(client);
 			client->respond(ev->data, 0);
+		}
+		if (client->response.state == UPLOAD_FILES)
+		{
+			client->response.eventByte = ev->data;	
+			client->response.uploadFile();
 		}
 		if (client->response.state == CGI_EXECUTING)
 			return this->RegisterNewProc(client);
@@ -340,7 +348,11 @@ void Event::WriteEvent(const struct kevent *ev)
 			client->response.eventByte = ev->data;
 			client->response.sendBody(-1, client->response.bodyType);
 		}
-		if (client->response.state != WRITE_BODY)
+		if (client->response.state == UPLOAD_FILES)
+			client->response.uploadFile();
+		if (client->response.state == ERROR)
+			client->handleResError();
+		if (client->response.state == END_BODY)
 		{
 			client->response.clear();
 			delete client->request.data[0];

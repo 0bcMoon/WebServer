@@ -16,6 +16,7 @@ enum responseState
 	ERROR,
 	CGI_EXECUTING,
 	WRITE_ERROR,
+	UPLOAD_FILES,
 	END_BODY
 };
 
@@ -80,6 +81,11 @@ class HttpResponse
 		std::string							errorPage;	
 		bool								isErrDef;	
 	public:
+		struct upload_data {
+			size_t			 it;
+			size_t		     fileIt;
+			std::string		 fileName;
+		};
 		enum responseBodyType 
 		{
 			LOAD_FILE,	
@@ -87,8 +93,9 @@ class HttpResponse
 			AUTO_INDEX,
 			CGI
 		};
-		std::vector<char>					CGIOutput;
+		struct upload_data					uploadData;
 
+		std::vector<char>					CGIOutput;
 		enum responseBodyType				bodyType;
 		size_t								writeByte;
 		size_t								eventByte;

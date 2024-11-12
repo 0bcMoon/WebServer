@@ -34,6 +34,7 @@ class Client
 		GlobalConfig::Proc	proc;
 
 
+		void							handleResError();
 
 		Client(int	fd, int server, ServerContext *ctx);
 		~Client();
