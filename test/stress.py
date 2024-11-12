@@ -5,16 +5,16 @@ import concurrent.futures
 import time
 
 # Configuration
-url = "http://localhost:8080/script.py"
-num_requests = 1000                      # Total number of requests to send
+url = "http://localhost:8080"
+num_requests = 10000                      # Total number of requests to send
 # num_requests = 100                      # Total number of requests to send
 concurrent_workers = 128                  # Number of threads to use
 
 def send_request():
     try:
         response = requests.get(url)
-        if (response.status_code > 300):
-            print(response.status_code)
+        # if (response.status_code > 300):
+        #     print(response.status_code)
         return response.status_code
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")

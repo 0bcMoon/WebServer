@@ -191,8 +191,7 @@ const std::vector<std::string> &GlobalConfig::getIndexes()
 const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 {
 	const static std::string  empty = "";
-
-	const std::map<std::string, std::string>::iterator &kv = this->errorPages.find(StatusCode);
+	std::map<std::string, std::string>::iterator kv = this->errorPages.find(StatusCode);
 	if (kv == this->errorPages.end())
 		return empty;
 	return (kv->second);

@@ -348,10 +348,10 @@ void Event::WriteEvent(const struct kevent *ev)
 			client->response.eventByte = ev->data;
 			client->response.sendBody(-1, client->response.bodyType);
 		}
-		if (client->response.state == UPLOAD_FILES)
-			client->response.uploadFile();
 		if (client->response.state == ERROR)
+		{
 			client->handleResError();
+		}
 		if (client->response.state == END_BODY)
 		{
 			client->response.clear();

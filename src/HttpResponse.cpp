@@ -58,6 +58,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 
 void HttpResponse::clear()
 {
+	std::cout << "CLEAR\n";
 	if (responseFd >= 0)
 		close(responseFd);
 	isErrDef = 1;
@@ -127,7 +128,7 @@ void HttpResponse::clear()
 
 HttpResponse::~HttpResponse()
 {
-	// std::cout << "Destructor has been called\n";
+	std::cout << "Destructor has been called\n";
 	if (responseFd >= 0)
 		close(responseFd);
 }
@@ -188,7 +189,8 @@ std::string HttpResponse::getErrorRes()
 	std::ostringstream oss;
 	oss << status.code;
 	std::string errorCode = oss.str();
-	this->errorPage = location->globalConfig.getErrorPage(errorCode);
+	if (location)
+		this->errorPage = location->globalConfig.getErrorPage(errorCode);
 	errorRes.statusLine = "HTTP/1.1 " + oss.str() + " " + status.description + "\r\n";
 	errorRes.title = oss.str() + " " + status.description;
 	errorRes.htmlErrorId = oss.str() + " " + status.description;
@@ -591,10 +593,10 @@ void HttpResponse::writeResponse()
 	write2client(this->fd, getStatusLine().c_str(), getStatusLine().size());
 	write2client(this->fd, getConnectionState().c_str(), getConnectionState().size());
 	// {
-	if (state != UPLOAD_FILES)
+	// if (state != UPLOAD_FILES)
 		write2client(this->fd, getContentType().c_str(), getContentType().size());
-	else 
-		bodyType = NO_TYPE;
+	// else 
+	// 	bodyType = NO_TYPE;
 	write2client(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
 	// }
 	write2client(fd, getDate().c_str(), getDate().size());
@@ -607,13 +609,13 @@ void HttpResponse::writeResponse()
 		write2client(fd, "\r\n", 2);
 	}
 	write2client(this->fd, "\r\n", 2);
-	if (state == UPLOAD_FILES)
-	{
+	// if (state == UPLOAD_FILES)
+	// {
 		// write2client(this->fd, "file has been created", std::strlen("file has been created"));
-		state = END_BODY;
-	}
-	else 
-		state = WRITE_BODY;
+		// state = END_BODY;
+	// }
+	// else 
+	state = WRITE_BODY;
 }
 
 std::string HttpResponse::getStatusLine()

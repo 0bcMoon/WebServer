@@ -1,5 +1,6 @@
 #include "../include/HttpRequest.hpp"
 #include <cstring>
+#include <ostream>
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <cctype>
@@ -391,6 +392,7 @@ void HttpRequest::parseMethod()
 		}
 		if (reqBuffer[reqBufferIndex] < 'A' || reqBuffer[reqBufferIndex] > 'Z')
 		{
+			std::cout << ":->" << (int)reqBuffer[reqBufferIndex] << std::endl;
 			setHttpReqError(400, "Bad Request");
 			return;
 		}
@@ -1081,9 +1083,9 @@ void				HttpRequest::parseBody()
 		return;
 	}
 	// reqBody = MULTI_PART;
-	if (data[data.size() - 1]->headers.find("Content-Length") != data[data.size() - 1]->headers.end())
+	if (data.back()->headers.find("Content-Length") != data.back()->headers.end())
 		contentLengthBodyParsing();
-	if (data[data.size() - 1]->headers.find("Transfer-Encoding") != data[data.size() - 1]->headers.end())
+	if (data.back()->headers.find("Transfer-Encoding") != data.back()->headers.end())
 		chunkedBodyParsing();
 }
 

@@ -48,7 +48,7 @@ void Client::respond(size_t data, size_t index)
 		response.bodyType = HttpResponse::CGI;
 		response.writeCgiResponse();
 	}
-	if (response.state != ERROR && response.isCgi() && response.state != END_BODY) 
+	if (response.state != ERROR && response.isCgi() && response.state != UPLOAD_FILES && response.state != END_BODY) 
 		response.state = CGI_EXECUTING;
 	// if (response.state == ERROR)
 	// {
@@ -58,7 +58,8 @@ void Client::respond(size_t data, size_t index)
 
 void	Client::handleResError()
 {
-	response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
+	std::string ErrorRes = response.getErrorRes();
+	response.write2client(fd, ErrorRes.c_str(), ErrorRes.size());
 }
 
 const std::string &Client::getHost() const
