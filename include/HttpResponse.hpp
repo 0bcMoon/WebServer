@@ -102,7 +102,12 @@ class HttpResponse
 
 		class IOException : public std::exception
 		{
+			private:
+				std::string msg;
 			public :
+				IOException(const std::string &msg) throw();
+				IOException() throw();
+				~IOException() throw();
 				virtual const char* what() const throw();
 		};
 
@@ -152,7 +157,8 @@ class HttpResponse
 		std::string						getContentLenght(enum responseBodyType type); // TYPO
 
 		int								autoIndexCooking();
-		static std::string				getExtension(std::string str);
+		std::string						getExtension(const std::string &str);
+
 		std::vector<char>				getBody() const;
 
 

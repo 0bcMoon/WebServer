@@ -18,8 +18,8 @@ extern "C"
 	return "detect_leaks=0";
 }
 
-#define MAX_EVENTS 64
-#define MAX_CONNECTIONS_QUEUE 128
+#define MAX_EVENTS 128
+#define MAX_CONNECTIONS_QUEUE 256
 
 void atexist()
 {

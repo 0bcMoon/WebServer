@@ -166,7 +166,7 @@ static std::string vec2str(std::vector<char> vec)
 	return (str);
 }
 
-static int isValidHeader(std::vector<char> vec, std::map<std::string, std::string> &map)
+static int isValidHeader(std::vector<char> &vec, std::map<std::string, std::string> &map)
 {
 	if (vec[vec.size() - 1] != '\n' || vec[vec.size() - 2] != '\r')
 		return (0);
