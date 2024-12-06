@@ -27,13 +27,13 @@ HttpRequest::HttpRequest() : fd(-1)
 	error.code = 200;
 	error.description = "OK";
 	reqBody = NON;
-	if (reqBufferIndex < reqBuffer.size())
+	if (reqBufferIndex < reqBufferSize)
 		eof = 0;
 	else
 		eof = 1;
 }
 
-HttpRequest::HttpRequest(int fd) : fd(fd)
+HttpRequest::HttpRequest(int fd) : fd(fd), reqBuffer(BUFFER_SIZE)
 {
 	// methode = NONE;
 	reqSize = 0;
@@ -47,7 +47,7 @@ HttpRequest::HttpRequest(int fd) : fd(fd)
 	chunkState = SIZE;
 	totalChunkSize = 0;
 	reqBody = NON;
-	if (reqBufferIndex < reqBuffer.size())
+	if (reqBufferIndex < reqBufferSize)
 		eof = 0;
 	else
 		eof = 1;
@@ -80,8 +80,8 @@ void HttpRequest::clear()
 	methodeStr.eqMethodeStr.clear();
 	methodeStr.tmpMethodeStr.clear();
 	httpVersion.clear();
-	// std::cout << "index: " << reqBufferIndex << ", size: " << reqBuffer.size() << std::endl;
-	if (reqBufferIndex < reqBuffer.size())
+	// std::cout << "index: " << reqBufferIndex << ", size: " << reqBufferSize << std::endl;
+	if (reqBufferIndex < reqBufferSize)
 		eof = 0;
 	else
 		eof = 1;
@@ -145,9 +145,9 @@ HttpRequest::~HttpRequest() {
 // 		return ;
 // 	else if (size > 0)
 // 	{
-// 		reqBuffer.resize(reqBuffer.size() + size);
+// 		reqBuffer.resize(reqBufferSize + size);
 // 		size_t j = 0;
-// 		for (size_t i = reqBuffer.size() - size ; i < reqBuffer.size(); i++)
+// 		for (size_t i = reqBufferSize - size ; i < reqBufferSize; i++)
 // 		{
 // 			reqBuffer[i] = buffer[j];
 // 			j++;
@@ -160,15 +160,18 @@ HttpRequest::~HttpRequest() {
 void HttpRequest::readRequest(int data)
 {
 	//add check for full payload size (payload can have multiple request)
-	size_t offset = this->reqBuffer.size();
-	this->reqBuffer.resize(offset + data); // alloc space for new comming data and take a pointer to new alloc 
+	// size_t offset = this->reqBufferSize;
+	// this->reqBuffer.resize(offset + data); // alloc space for new comming data and take a pointer to new alloc 
 										   // chunk and make read copy to it
-	int size = read(fd, this->reqBuffer.data() + offset, data);
+	int size = read(fd, this->reqBuffer.data(), BUFFER_SIZE);
 	if (size < 0)
 		throw HttpResponse::IOException();
 	if (size == 0)
 		return;
-	reqBuffer.resize(offset + size); // may read 
+	this->reqBufferSize = size;
+	// reqBuffer.resize(offset + size); // may read 
+									 //
+	// write(1, reqBuffer.data(), reqBufferSize);
 }
 
 static std::string vec2str(std::vector<char> vec)
@@ -207,74 +210,8 @@ static int isValidHeader(std::vector<char> vec, std::map<std::string, std::strin
 	return (1);
 }
 
-// int HttpRequest::parseMuliPartBody()
-// {
-// 	if (reqBody != MULTI_PART)
-// 		return (1);
-// 	std::vector<std::vector<char> > lines;
-// 	size_t lineIndex = 0;
-// 	std::vector<size_t> pos;
-
-// 	for (size_t i = 0; i < body.size(); i++)
-// 	{
-// 		if (lineIndex == lines.size())
-// 			lines.push_back(std::vector<char>());
-// 		lines[lineIndex].push_back(body[i]);
-// 		if (body[i] == '\n')
-// 			lineIndex++;
-// 	}
-// 	if (lines.size() < 3 || lines[0].size() == 0)
-// 		return (setHttpReqError(400, "Bad Request"), 0);
-// 	lineIndex = 0;
-// 	if (vec2str(lines[lineIndex]) != "--" + bodyBoundary + "\r\n")
-// 		return (setHttpReqError(400, "Bad Request"), 0);
-// 	while (lineIndex < lines.size() - 1)
-// 	{
-// 		if (vec2str(lines[lineIndex]) == "--" + bodyBoundary + "\r\n")
-// 		{
-// 			pos.push_back(lineIndex + 1);
-// 		}
-// 		lineIndex++;
-// 	}
-// 	if (vec2str(lines[lines.size() - 1]) != "--" + bodyBoundary + "--\r\n")
-// 		return (setHttpReqError(400, "Bad Request"), 0);
-// 	for (size_t i = 0; i < pos.size(); i++)
-// 	{
-// 		multiPartBodys.push_back(multiPart());
-// 		size_t it = pos[i];
-// 		if (pos[i] == lines.size() - 1)
-// 			return (setHttpReqError(400, "Bad Request"), 0);
-// 		while (it < lines.size() - 1 && (i == pos.size() - 1 || it < pos[i + 1]) && vec2str(lines[it]) != "\r\n")
-// 		{
-// 			if (!isValidHeader(lines[it], multiPartBodys[i].headers))
-// 				return (setHttpReqError(400, "Bad Request"), 0);
-// 			it++;
-// 		}
-// 		if (vec2str(lines[it]) != "\r\n")
-// 			return (setHttpReqError(400, "Bad Request"), 0);
-// 		it++;
-// 		while (it < lines.size() && (i == pos.size() - 1 || it < pos[i + 1]))
-// 		{
-// 			if (vec2str(lines[it]) == "--" + bodyBoundary + "--\r\n"
-// 				|| vec2str(lines[it]) == "--" + bodyBoundary + "\r\n")
-// 			{
-// 				if (multiPartBodys[i].body.size() >= 2)
-// 					multiPartBodys[i].body.resize(multiPartBodys[i].body.size() - 2);
-// 				it++;
-// 				continue;
-// 			}
-// 			for (size_t __i = 0; __i < lines[it].size(); __i++)
-// 			{
-// 				multiPartBodys[i].body.push_back(lines[it][__i]);
-// 			}
-// 			it++;
-// 		}
-// 	}
-// 	return (1);
-// }
-
 void		HttpRequest::andNew()
-{
+{//TODO:fix size to 5
 	data.push_back(new data_t);
 	data[data.size() - 1]->error.code = 200;
 	data[data.size() - 1]->error.description = "OK";
@@ -300,8 +237,8 @@ int		HttpRequest::checkMultiPartEnd()
 
 void	HttpRequest::feed()
 {
-	// readRequest();
-	while (reqBufferIndex < reqBuffer.size() && state != REQ_ERROR && state != DEBUG)
+	reqBufferIndex = 0;
+	while (reqBufferIndex < reqBufferSize && state != REQ_ERROR && state != DEBUG)
 	{
 		if (state == NEW)
 			andNew();
@@ -323,17 +260,16 @@ void	HttpRequest::feed()
 		{
 			parseBody();
 		}
-		if (state == BODY_FINISH && checkMultiPartEnd())
+		if (state == BODY_FINISH &&  checkMultiPartEnd())
 		{
 			state = REQUEST_FINISH;
 		}
 		if (state == REQUEST_FINISH)
-		{
+		{ 
+			std::cout << "DEBUG_8" << std::endl;
 			data[data.size() - 1]->state = state;
 			this->clear();
 		}
-		// if (state == REQ_ERROR)
-		// 	break;
 	}
 	// for (size_t i = 0; i < multiPartBodys.size();i++)
 	// {
@@ -372,12 +308,10 @@ void HttpRequest::setHttpReqError(int code, std::string str)
 
 void HttpRequest::parseMethod()
 {
-	while (reqBuffer.size() > reqBufferIndex && reqBuffer[reqBufferIndex] == '\n'
-		   && data[data.size() -1]->strMethode.size() == 0)
-	// while (reqBuffer.size() > reqBufferIndex && reqBuffer[reqBufferIndex] == '\n'
-	// 	   && methodeStr.tmpMethodeStr.size() == 0)
-		reqBufferIndex++;
-	while (reqBuffer.size() > reqBufferIndex)
+	// while (reqBufferSize > reqBufferIndex && reqBuffer[reqBufferIndex] == '\n'
+	// 	   && data[data.size() -1]->strMethode.size() == 0)
+	// 	reqBufferIndex++;
+	while (reqBufferSize > reqBufferIndex)
 	{
 		// if (reqBuffer[reqBufferIndex] == ' ' && methodeStr.tmpMethodeStr.size() == 0)
 		if (reqBuffer[reqBufferIndex] == ' ' && data[data.size() -1]->strMethode.size() == 0)
@@ -412,7 +346,7 @@ int HttpRequest::verifyUriChar(char c)
 
 void HttpRequest::parsePath()
 {
-	while (reqBufferIndex < reqBuffer.size())
+	while (reqBufferIndex < reqBufferSize)
 	{
 		// if (path.size() == 0 && reqBuffer[reqBufferIndex] == ' ')
 		if (data[data.size() -1]->path.size() == 0 && reqBuffer[reqBufferIndex] == ' ')
@@ -548,7 +482,7 @@ void HttpRequest::parseHttpVersion()
 	const std::string tmp("HTTP/");
 	int _state = 0;
 
-	while (reqBufferIndex < reqBuffer.size() - 1 && state != REQ_ERROR)
+	while (reqBufferIndex < reqBufferSize - 1 && state != REQ_ERROR)
 	{
 		if (httpVersion.size() == 0 && reqBuffer[reqBufferIndex] == ' ')
 		{
@@ -602,7 +536,7 @@ void HttpRequest::nLineHandle()
 
 void HttpRequest::crlfGetting()
 {
-	while (reqBuffer.size() > reqBufferIndex && crlfState != LNLINE)
+	while (reqBufferSize > reqBufferIndex && crlfState != LNLINE)
 	{
 		if (crlfState == READING && reqBuffer[reqBufferIndex] == ' ')
 			;
@@ -635,7 +569,7 @@ void HttpRequest::crlfGetting()
 // if (reqBuffer[reqBufferIndex] == '\n' && crlfState != '\n')
 // 	crlfState = NLINE;
 // else if (reqBuffer[reqBufferIndex] == '\n')
-// while (reqBuffer.size() > reqBufferIndex && state != E*RROR)
+// while (reqBufferSize > reqBufferIndex && state != E*RROR)
 // {
 // 	if (crlfState == READING)
 // 	{
@@ -681,7 +615,7 @@ void HttpRequest::crlfGetting()
 
 void HttpRequest::parseHeaderName()
 {
-	while (reqBuffer.size() > reqBufferIndex && state == HEADER_NAME)
+	while (reqBufferSize > reqBufferIndex && state == HEADER_NAME)
 	{
 		if ((currHeaderName.size() == 0 && !isAlpha(reqBuffer[reqBufferIndex]))
 			|| !isValidHeaderChar(reqBuffer[reqBufferIndex]))
@@ -698,7 +632,7 @@ void HttpRequest::parseHeaderName()
 		{
 			state = HEADER_VALUE;
 			reqBufferIndex++;
-			if (reqBufferIndex < reqBuffer.size() && reqBuffer[reqBufferIndex] == ' ')
+			if (reqBufferIndex < reqBufferSize && reqBuffer[reqBufferIndex] == ' ')
 				reqBufferIndex++;
 			return;
 			// headers[currHeaderName];
@@ -710,7 +644,7 @@ void HttpRequest::parseHeaderName()
 
 void HttpRequest::parseHeaderVal()
 {
-	while (reqBuffer.size() > reqBufferIndex && state == HEADER_VALUE)
+	while (reqBufferSize > reqBufferIndex && state == HEADER_VALUE)
 	{
 		if (reqBuffer[reqBufferIndex] == '\n' || reqBuffer[reqBufferIndex] == '\r')
 		{
@@ -827,13 +761,16 @@ void HttpRequest::contentLengthBodyParsing()
 			return;
 		}
 	}
-	while (reqBufferIndex < reqBuffer.size() && (size_t)bodySize > data[data.size() - 1]->body.size())
+	// data[data.size() - 1]->body.insert()
+	while (reqBufferIndex < reqBufferSize && (size_t)bodySize > data[data.size() - 1]->body.size())
 	{
 		data[data.size() - 1]->body.push_back(reqBuffer[reqBufferIndex]);
 		if (reqBody == MULTI_PART && !parseMultiPart())
 			return ;
 		reqBufferIndex++;
 	}
+	if (data.back()->body.size() > BODY_MAX)
+		return setHttpReqError(413, "Paylood too large");
 	if ((size_t)bodySize == data[data.size() - 1]->body.size())
 		state = BODY_FINISH;
 }
@@ -844,7 +781,7 @@ int HttpRequest::convertChunkSize()
 	long tmp = std::strtol(sizeStr.c_str(), &end, 16);
 	if (*end != 0 || tmp > INT_MAX || sizeStr.size() == 0)
 		return (setHttpReqError(400, "Bad Request"), 1);
-	if (tmp + data[data.size() -1]->body.size() > BODY_MAX)
+	if (tmp + data.back()->body.size() > BODY_MAX)
 		return (setHttpReqError(413, "Payload Too Large"), 1);
 	chunkSize = tmp;
 	sizeStr = "";
@@ -854,7 +791,7 @@ int HttpRequest::convertChunkSize()
 
 void HttpRequest::chunkEnd()
 {
-	if (reqBuffer.size() > reqBufferIndex)
+	if (reqBufferSize > reqBufferIndex)
 	{
 		if (reqBuffer[reqBufferIndex] == '\n')
 		{
@@ -877,7 +814,7 @@ void HttpRequest::chunkedBodyParsing()
 {
 	if (chunkState == SIZE)
 	{
-		while (reqBufferIndex < reqBuffer.size())
+		while (reqBufferIndex < reqBufferSize)
 		{
 			if (sizeStr[sizeStr.size() - 1] == '\r' && reqBuffer[reqBufferIndex] != '\n')
 			{
@@ -916,7 +853,7 @@ void HttpRequest::chunkedBodyParsing()
 			chunkEnd();
 			return;
 		}
-		while (reqBufferIndex < reqBuffer.size() && chunkSize > chunkIndex)
+		while (reqBufferIndex < reqBufferSize && chunkSize > chunkIndex)
 		{
 			data[data.size() - 1]->body.push_back(reqBuffer[reqBufferIndex]);
 			if (reqBody == MULTI_PART && !parseMultiPart())
@@ -930,7 +867,7 @@ void HttpRequest::chunkedBodyParsing()
 			chunkState = END_LINE;
 		}
 	}
-	while (chunkState == END_LINE && reqBufferIndex < reqBuffer.size())
+	while (chunkState == END_LINE && reqBufferIndex < reqBufferSize)
 	{
 		if (reqBuffer[reqBufferIndex] == '\n')
 			chunkState = SIZE;
@@ -1082,7 +1019,6 @@ void				HttpRequest::parseBody()
 	{
 		return;
 	}
-	// reqBody = MULTI_PART;
 	if (data.back()->headers.find("Content-Length") != data.back()->headers.end())
 		contentLengthBodyParsing();
 	if (data.back()->headers.find("Transfer-Encoding") != data.back()->headers.end())

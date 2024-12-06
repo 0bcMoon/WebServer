@@ -1,4 +1,5 @@
 #include "HttpResponse.hpp"
+#include <cstdio>
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -36,6 +37,9 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 	// i = 0;
 	// j = 0;
 	uploadData.fileName = getRandomName();
+	uploadData.fileIt = 0;
+	uploadData.it = 0;
+	uploadData.__fd = -1;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Server: XXXXXXXX\r\n"; // TODO:name the server;
@@ -66,6 +70,7 @@ void HttpResponse::clear()
 	uploadData.fileIt = 0;
 	uploadData.it = 0;
 	uploadData.fileName = getRandomName();
+	uploadData.__fd = -1;
 
 	errorRes.statusLine.clear();
 	errorRes.headers.clear();
@@ -802,6 +807,36 @@ void HttpResponse::splitingQuery()
 	path = path.substr(0, pos);
 }
 
+// void		HttpResponse::multiPartParse()
+// {
+// 	std::stringstream     ss(body.data());
+// 	std::string			  line;
+// 	std::string			  boundary("--" + request->bodyBoundary + "\r\n");
+// 	std::string			  fileName;
+// 	size_t				  pos;
+// 	int					  uploadFd;
+
+// 	while (1)
+// 	{
+// 		line.clear();
+// 		std::getline(ss, line);
+// 		if (line != boundary)
+// 			return setHttpResError(400, "Bad Request");
+// 		std::getline(ss, line);
+
+// 		pos = line.find("; filename=\"");
+// 		if (pos == std::string::npos || std::string::npos == line.find("\"", pos +1))
+// 			continue;
+// 	    fileName = line.substr(pos, line.find("\"", pos +1) - pos);
+// 		while (std::getline(ss, line) && line != "\r\n")
+// 			;
+// 		uploadFd = open((location->getFileUploadPath() + fileName).c_str(), O_CREAT | O_RDONLY, 0644);
+// 		if (uploadFd < 0)
+// 			return setHttpResError(500, "Internal Server Error");
+// 		// while (std::getline(ss, ))
+// 	}
+// }
+
 int HttpResponse::uploadFile()
 {
 	std::vector<multiPart > &vec = request->data[0]->multiPartBodys;
@@ -810,24 +845,34 @@ int HttpResponse::uploadFile()
 	{
 		for (size_t _i = uploadData.it ; _i < request->data[0]->multiPartBodys.size(); _i++)
 		{
-			int __fd = open((location->getFileUploadPath() + uploadData.fileName).c_str(), O_CREAT | O_WRONLY, 0644);
-			if (__fd < 0)
+			if (uploadData.__fd < 0)
+				uploadData.__fd = open((location->getFileUploadPath() + uploadData.fileName).c_str(), O_CREAT | O_WRONLY, 0644);
+			if (uploadData.__fd < 0)
 				return (setHttpResError(500, "Internal Server Error"), 0);
 			size_t nbytes = vec[_i].body.size() - uploadData.fileIt;
 			if (nbytes > eventByte)
 				nbytes = eventByte;
-			write(__fd, &vec[_i].body.data()[uploadData.fileIt], nbytes);
+			write(uploadData.__fd, &vec[_i].body.data()[uploadData.fileIt], nbytes);
 			uploadData.fileIt += nbytes;
 			eventByte -= nbytes;
-			if (!eventByte)
+			if (eventByte <= 0)
 			{
 				uploadData.it = _i;
-				return (close(__fd), 1);
+				return (1);
 			}
+			std::cout << "Debug: " << vec[_i].body.size() << ", " << uploadData.fileIt << std::endl;
 			if (uploadData.fileIt >= vec[_i].body.size())
+			{
 				uploadData.fileIt = 0;
-			uploadData.fileName = getRandomName();
-			close(__fd);
+				uploadData.it++;
+				uploadData.fileName = getRandomName();
+				close(uploadData.__fd);
+				uploadData.__fd = -1;
+			}
+			// else 
+			// 	return (close(uploadData.__fd), 1);
+			// close(uploadData.__fd);
+			// std::cout << "Debug: " << uploadData.it << std::endl;
 		}
 	}
 	// else

@@ -85,6 +85,7 @@ class HttpResponse
 			size_t			 it;
 			size_t		     fileIt;
 			std::string		 fileName;
+			int				 __fd;
 		};
 		enum responseBodyType 
 		{
@@ -174,6 +175,7 @@ class HttpResponse
 		void							decodingUrl();
 		void							splitingQuery();
 		int								uploadFile();
+		void								multiPartParse();
 };
 
 std::string			decimalToHex(int	decimal);
