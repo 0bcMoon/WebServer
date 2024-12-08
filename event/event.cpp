@@ -308,31 +308,36 @@ void Event::RegisterNewProc(Client *client)
 	client->proc = proc;
 	this->setWriteEvent(client->getFd(), EV_DISABLE);
 }
-
+std::string statusToString(int status) {
+    switch (status) {
+        case START: return "START";
+        case WRITE_BODY: return "WRITE_BODY";
+        case ERROR: return "ERROR";
+        case CGI_EXECUTING: return "CGI_EXECUTING";
+        // case WRITE_ERROR: return "WRITE_ERROR";
+        case UPLOAD_FILES: return "UPLOAD_FILES";
+        case END_BODY: return "END_BODY";
+        default: return "UNKNOWN_STATUS";
+    }
+}
 void Event::WriteEvent(const struct kevent *ev)
 {
-	if (ev->flags & EV_EOF)
-		connections.closeConnection(ev->ident);
-	else
+	if (ev->flags & EV_EOF && ev->data == 0)
 	{
+		connections.closeConnection(ev->ident);
+		return ;
+	}
+	// else
+	// {
 		ClientsIter kv = connections.clients.find(ev->ident);
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
-		// client->request.feed();
-		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
-		// 	&& client->response.state != WRITE_BODY && client->response.state iCGI_EXECUTING)
-		// 	return;
-		// std::cout << "path: " << client->request.data[0]->path << std::endl;
-		// std::cout << "strMethode: " << client->request.data[0]->strMethode << std::endl;
-		// std::cout << "-------------------------------------------------------" << std::endl;
-		// write(1, client->request.data[0]->body.data() , client->request.data[0]->body.size());
-		// std::cout << "\n-------------------------------------------------------" << std::endl;
 		if (client->request.data.size() == 0 || (client->request.data[0]->state != REQUEST_FINISH
 			&& client->request.data[0]->state != REQ_ERROR))
 			return ;
 		if (client->response.state == START)
-		{
+		{ 
 			client->response.location = this->getLocation(client);
 			client->respond(ev->data, 0);
 		}
@@ -360,7 +365,8 @@ void Event::WriteEvent(const struct kevent *ev)
 			if (client->request.data.size() == 0)
 				this->setWriteEvent(ev->ident, EV_DISABLE);
 		}
-	}
+	// }
+		std::cout << statusToString(client->response.state) << "\n";
 }
 
 void Event::rpipe(const struct kevent *ev)

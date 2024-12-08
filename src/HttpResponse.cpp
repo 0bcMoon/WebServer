@@ -1,5 +1,4 @@
 #include "HttpResponse.hpp"
-#include <cstdio>
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -11,6 +10,7 @@
 #include <cctype>
 #include <cerrno>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -32,6 +32,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 	location = NULL;
 	isCgiBool = false;
 	bodyType = NO_TYPE;
+	state = START;
 	responseFd = -1;
 	isErrDef = 1;
 	// i = 0;
@@ -165,16 +166,11 @@ std::string HttpResponse::getContentLenght()
 void HttpResponse::write2client(int fd, const char *str, size_t size)
 {
 	if (write(fd, str, size) < 0)
-	{
-		state = WRITE_ERROR;
-		throw IOException();
-	}
+		throw IOException("Error: could not write");
 	writeByte += size;
 }
 
-HttpResponse::IOException::~IOException() throw()
-{
-}
+HttpResponse::IOException::~IOException() throw() {}
 HttpResponse::IOException::IOException() throw()
 {
 	this->msg = "IOException: " + std::string(strerror(errno));
@@ -599,8 +595,8 @@ void HttpResponse::writeResponse()
 	write2client(this->fd, getConnectionState().c_str(), getConnectionState().size());
 	// {
 	// if (state != UPLOAD_FILES)
-		write2client(this->fd, getContentType().c_str(), getContentType().size());
-	// else 
+	write2client(this->fd, getContentType().c_str(), getContentType().size());
+	// else
 	// 	bodyType = NO_TYPE;
 	write2client(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
 	// }
@@ -616,10 +612,10 @@ void HttpResponse::writeResponse()
 	write2client(this->fd, "\r\n", 2);
 	// if (state == UPLOAD_FILES)
 	// {
-		// write2client(this->fd, "file has been created", std::strlen("file has been created"));
-		// state = END_BODY;
+	// write2client(this->fd, "file has been created", std::strlen("file has been created"));
+	// state = END_BODY;
 	// }
-	// else 
+	// else
 	state = WRITE_BODY;
 }
 
@@ -670,6 +666,7 @@ std::string HttpResponse::getDate()
 int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 {
 	state = WRITE_BODY;
+
 	// size_t begin = 0;
 	// if (type == CGI)
 	// {
@@ -710,18 +707,18 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 	{
 		size_t readbuffer;
 
-		while (eventByte > writeByte)
-		{
-			readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
-			int size = read(responseFd, buff, readbuffer);
-			if (size < 0)
-				throw IOException();
-			if (size == 0)
-				break;
-			write2client(fd, buff, size);
-			this->sendSize += size;
-		}
-		if (this->sendSize == fileSize)
+		// while (eventByte > writeByte)
+		// {
+		readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
+		int size = read(responseFd, buff, readbuffer);
+		if (size < 0)
+			throw IOException("Read : ");
+		// if (size == 0)
+		// 	break;
+		write2client(fd, buff, size);
+		this->sendSize += size;
+		// }
+		if (this->sendSize >= fileSize)
 			state = END_BODY;
 		writeByte = 0;
 	}
@@ -839,14 +836,15 @@ void HttpResponse::splitingQuery()
 
 int HttpResponse::uploadFile()
 {
-	std::vector<multiPart > &vec = request->data[0]->multiPartBodys;
+	std::vector<multiPart> &vec = request->data[0]->multiPartBodys;
 
 	if (request->data[0]->multiPartBodys.size() > 0)
 	{
-		for (size_t _i = uploadData.it ; _i < request->data[0]->multiPartBodys.size(); _i++)
+		for (size_t _i = uploadData.it; _i < request->data[0]->multiPartBodys.size(); _i++)
 		{
 			if (uploadData.__fd < 0)
-				uploadData.__fd = open((location->getFileUploadPath() + uploadData.fileName).c_str(), O_CREAT | O_WRONLY, 0644);
+				uploadData.__fd =
+					open((location->getFileUploadPath() + uploadData.fileName).c_str(), O_CREAT | O_WRONLY, 0644);
 			if (uploadData.__fd < 0)
 				return (setHttpResError(500, "Internal Server Error"), 0);
 			size_t nbytes = vec[_i].body.size() - uploadData.fileIt;
@@ -869,7 +867,7 @@ int HttpResponse::uploadFile()
 				close(uploadData.__fd);
 				uploadData.__fd = -1;
 			}
-			// else 
+			// else
 			// 	return (close(uploadData.__fd), 1);
 			// close(uploadData.__fd);
 			// std::cout << "Debug: " << uploadData.it << std::endl;
@@ -903,7 +901,7 @@ void HttpResponse::responseCooking()
 		if (!pathChecking())
 			return;
 		// if (methode == POST && !uploadFile())
-			// return;
+		// return;
 		if (methode == POST)
 			state = UPLOAD_FILES;
 		if (methode == GET)

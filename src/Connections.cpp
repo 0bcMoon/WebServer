@@ -19,10 +19,11 @@ Connections::~Connections()
 
 void	Connections::closeConnection(int	fd)
 {
-	// std::cout << "client disconnect\n";
+	std::cout << "client disconnect\n";
 	close(fd); // after close file fd all event will be clear
 	delete clients[fd];
 	clients.erase(fd);
+	std::cout <<"number of client is " <<clients.size() << "\n";
 }
 
 
