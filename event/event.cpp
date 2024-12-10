@@ -182,6 +182,13 @@ int Event::setNonBlockingIO(int sockfd)
 		return (-1);
 	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC) < 0)
 		return (-1);
+	int rcvbuf_size = BUFFER_SIZE;
+	int result = setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf_size, sizeof(rcvbuf_size));
+	if (result < 0)
+	{
+		std::cout << "faild cause -- "<<strerror(errno) << "\n";
+		return (-1);
+	}
 	return (0);
 }
 
