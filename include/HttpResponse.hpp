@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <string>
 
-#define BUFFER_SIZE 1000000
 enum responseState 
 {
 	START,

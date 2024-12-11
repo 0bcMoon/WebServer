@@ -9,7 +9,7 @@
 
 #define URI_MAX		 2048
 #define REQSIZE_MAX  1024*10240
-#define BUFFER_SIZE  1024*10240
+#define BUFFER_SIZE  5 * 1024*1024
 #define BODY_MAX	 1024*1024000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
@@ -53,6 +53,7 @@ enum crlfState {
 	LRETURN
 };
 
+
 typedef struct httpError 
 {
 	int         code;
@@ -78,18 +79,42 @@ struct multiPart
 	std::vector<char>						body;
 	int										fd;
 	std::map<std::string, std::string>		headers;
-	std::vector<std::string>				strsHeaders;
+	// std::vector<std::string>				strsHeaders;
+};
+
+struct bodyHandler {
+	bodyHandler();
+	~bodyHandler();	
+	void								clear();
+	void								push2body(char c);
+	int									push2fileBody(char c, const std::string &boundary);
+	int									upload2file(std::string &boundary);
+	int									openNewFile();
+	int									writeBody();
+
+	std::map<std::string, std::string>	headers;
+
+	int									bodyFd;
+	size_t								bodyIt;
+	std::vector<char>					body;//raw body;
+	size_t								bodySize;
+
+	int									currFd;
+	size_t								fileBodyIt;
+	size_t								borderIt;
+	std::vector<char>				    fileBody;
 };
 
 typedef struct data_s {
 	std::string                         path;
 	std::string							strMethode;
 	std::map<std::string, std::string>	headers;
-	std::vector<char>					body;
+	// std::vector<char>					body;
 	httpError							error;
 	enum reqState								state;
-	std::vector<multiPart>						multiPartBodys;
-	
+
+	// std::vector<multiPart>						multiPartBodys;
+	bodyHandler									bodyHandler;
 } data_t;
 
 class HttpRequest 

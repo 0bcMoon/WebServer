@@ -215,7 +215,7 @@ HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 {
 	path = req.data[0]->path;
 	headers = req.data[0]->headers;
-	body = req.data[0]->body;
+	// body = req.data[0]->body;
 	status.code = req.data[0]->error.code;
 	status.description = req.data[0]->error.description;
 	strMethod = req.data[0]->strMethode;
@@ -836,43 +836,43 @@ void HttpResponse::splitingQuery()
 
 int HttpResponse::uploadFile()
 {
-	std::vector<multiPart> &vec = request->data[0]->multiPartBodys;
+	// std::vector<multiPart> &vec = request->data[0]->multiPartBodys;
 
-	if (request->data[0]->multiPartBodys.size() > 0)
-	{
-		for (size_t _i = uploadData.it; _i < request->data[0]->multiPartBodys.size(); _i++)
-		{
-			if (uploadData.__fd < 0)
-				uploadData.__fd =
-					open((location->getFileUploadPath() + uploadData.fileName).c_str(), O_CREAT | O_WRONLY, 0644);
-			if (uploadData.__fd < 0)
-				return (setHttpResError(500, "Internal Server Error"), 0);
-			size_t nbytes = vec[_i].body.size() - uploadData.fileIt;
-			if (nbytes > eventByte)
-				nbytes = eventByte;
-			write(uploadData.__fd, &vec[_i].body.data()[uploadData.fileIt], nbytes);
-			uploadData.fileIt += nbytes;
-			eventByte -= nbytes;
-			if (eventByte <= 0)
-			{
-				uploadData.it = _i;
-				return (1);
-			}
-			std::cout << "Debug: " << vec[_i].body.size() << ", " << uploadData.fileIt << std::endl;
-			if (uploadData.fileIt >= vec[_i].body.size())
-			{
-				uploadData.fileIt = 0;
-				uploadData.it++;
-				uploadData.fileName = getRandomName();
-				close(uploadData.__fd);
-				uploadData.__fd = -1;
-			}
-			// else
-			// 	return (close(uploadData.__fd), 1);
-			// close(uploadData.__fd);
-			// std::cout << "Debug: " << uploadData.it << std::endl;
-		}
-	}
+	// if (request->data[0]->multiPartBodys.size() > 0)
+	// {
+	// 	for (size_t _i = uploadData.it; _i < request->data[0]->multiPartBodys.size(); _i++)
+	// 	{
+	// 		if (uploadData.__fd < 0)
+	// 			uploadData.__fd =
+	// 				open((location->getFileUploadPath() + uploadData.fileName).c_str(), O_CREAT | O_WRONLY, 0644);
+	// 		if (uploadData.__fd < 0)
+	// 			return (setHttpResError(500, "Internal Server Error"), 0);
+	// 		size_t nbytes = vec[_i].body.size() - uploadData.fileIt;
+	// 		if (nbytes > eventByte)
+	// 			nbytes = eventByte;
+	// 		write(uploadData.__fd, &vec[_i].body.data()[uploadData.fileIt], nbytes);
+	// 		uploadData.fileIt += nbytes;
+	// 		eventByte -= nbytes;
+	// 		if (eventByte <= 0)
+	// 		{
+	// 			uploadData.it = _i;
+	// 			return (1);
+	// 		}
+	// 		std::cout << "Debug: " << vec[_i].body.size() << ", " << uploadData.fileIt << std::endl;
+	// 		if (uploadData.fileIt >= vec[_i].body.size())
+	// 		{
+	// 			uploadData.fileIt = 0;
+	// 			uploadData.it++;
+	// 			uploadData.fileName = getRandomName();
+	// 			close(uploadData.__fd);
+	// 			uploadData.__fd = -1;
+	// 		}
+	// 		// else
+	// 		// 	return (close(uploadData.__fd), 1);
+	// 		// close(uploadData.__fd);
+	// 		// std::cout << "Debug: " << uploadData.it << std::endl;
+	// 	}
+	// }
 	// else
 	// {
 	// 	int __fd = open((location->getFileUploadPath() + getRandomName()).c_str(), O_CREAT | O_WRONLY, 0644);

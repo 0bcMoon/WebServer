@@ -17,7 +17,7 @@ class GlobalConfig
 		int									autoIndex;
 		std::string							upload_file_path;
 		std::vector<std::string>			indexes;
-		bool									IsAlias;
+		int									IsAlias;
 
 	public:
 		struct Proc
