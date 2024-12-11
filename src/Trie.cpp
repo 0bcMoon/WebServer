@@ -6,7 +6,7 @@
 /*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/29 16:45:56 by hicham            #+#    #+#             */
-/*   Updated: 2024/11/02 20:00:39 by hibenouk         ###   ########.fr       */
+/*   Updated: 2024/12/11 20:52:42 by hibenouk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ Trie::Trie()
 
 void Trie::deleteNode()
 {
-	this->_deleteNode(root); // fuck destructor
+	this->_deleteNode(root);
 }
 
 void Trie::_deleteNode(TrieNode *node)
