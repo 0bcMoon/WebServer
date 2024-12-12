@@ -1,6 +1,7 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
+#include "Location.hpp"
 #include <sys/event.h>
 #include <cstddef>
 #include <map>
@@ -8,8 +9,9 @@
 #include <vector>
 
 #define URI_MAX		 2048
-#define REQSIZE_MAX  1000000000
-#define BODY_MAX	 1000000000
+#define REQSIZE_MAX  1024*10240
+#define BUFFER_SIZE  5 * 1024*1024
+#define BODY_MAX	 1024*10240000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
 
@@ -23,6 +25,7 @@ enum reqMethode
 
 enum reqState
 {
+	NEW,
 	METHODE,
 	PATH,
 	HTTP_VERSION,
@@ -51,6 +54,7 @@ enum crlfState {
 	LRETURN
 };
 
+
 typedef struct httpError 
 {
 	int         code;
@@ -74,13 +78,74 @@ enum reqBodyType {
 struct multiPart 
 {
 	std::vector<char>						body;
+	int										fd;
 	std::map<std::string, std::string>		headers;
-	std::vector<std::string>				strsHeaders;
+	// std::vector<std::string>				strsHeaders;
 };
+
+struct bodyHandler {
+	bodyHandler();
+	~bodyHandler();	
+	void								clear();
+	void								push2body(char c);
+	int									push2fileBody(char c, const std::string &boundary);
+	int									upload2file(std::string &boundary);
+	int									openNewFile();
+	int									writeBody();
+	bool								isCgi;
+
+	std::map<std::string, std::string>	headers;
+
+	int									bodyFd;
+	size_t								bodyIt;
+	std::vector<char>					body;//raw body;
+	size_t								bodySize;
+
+	std::string							header;
+	std::string							tmpBorder;
+
+	int									currFd;
+	size_t								fileBodyIt;
+	size_t								borderIt;
+	std::vector<char>				    fileBody;
+};
+
+typedef struct data_s {
+	std::string                         path;
+	std::string							strMethode;
+	std::map<std::string, std::string>	headers;
+	// std::vector<char>					body;
+	httpError							error;
+	enum reqState								state;
+
+	// std::vector<multiPart>						multiPartBodys;
+	bodyHandler									bodyHandler;
+} data_t;
 
 class HttpRequest 
 {
 	private:
+		enum multiPartState {
+			_ERROR,
+			_NEW,
+			BORDER,
+			MULTI_PART_HEADERS,
+			BODY_CRLF,
+			MULTI_PART_HEADERS_VAL,
+			STORING,
+			FINISHED
+		};
+
+		void						handleNewBody();
+		void						handleMultiPartHeaders();
+		void						handleStoring();
+		void						parseMultiPartHeaderVal();
+		int							isBodycrlf();
+		int							isBorder();
+		int							checkMultiPartEnd();
+		void						parseBodyCrlf();
+
+		enum multiPartState							bodyState;
 		struct kevent *ev;
 		typedef std::map<std::string, std::string> Headers;
 		 chunkState							chunkState;
@@ -94,16 +159,16 @@ class HttpRequest
 
 		std::string                         path;
 
-		std::map<std::string, std::string>	headers;
+		// std::map<std::string, std::string>	headers;
 		std::string							currHeaderName;
 		std::string							currHeaderVal;
 
-		std::vector<char>							body; // TODO : body  may be binary (include '\0') fix this;
-		int									bodySize;
+		std::vector<char>							body;
+		long long									bodySize;
 		int                                 reqSize;
 		size_t								reqBufferSize;
 		size_t								reqBufferIndex;
-		std::vector<char>							reqBuffer; // buffer  may be binary (include '\0') fix this;
+		std::vector<char>					reqBuffer;
 
 		httpError							error;
 
@@ -136,13 +201,18 @@ class HttpRequest
 		int			checkContentType();
 
 		int			parseMuliPartBody();
+		void		andNew();
+		
 		char						buffer[1000000];
 
 	public:
+		std::vector<data_t *>         data;
+		void										clearData();
 		reqBodyType									reqBody;
 		std::string									bodyBoundary;
-		std::vector<multiPart>						multiPartBodys;
-		enum reqState state;
+		enum reqState								state;
+		// std::vector<multiPart>						multiPartBodys;
+		Location									*location;
 		bool										eof;
 
 		HttpRequest();
@@ -162,8 +232,10 @@ class HttpRequest
 		std::vector<char>					getBody() const;
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;
-		const std::string &getHost() const;
-		const std::string &getPath() const;
+		const std::string					&getHost() const;
+		const std::string					&getPath() const;
+		
+		int 								parseMultiPart();
 };
 
 #endif

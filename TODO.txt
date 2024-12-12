@@ -12,11 +12,6 @@
 --- APPEND DUPLICATE HEADER VALUE //Done!!
 --- PATH_INFO
 
-Yes, the CGI (Common Gateway Interface) specification requires certain HTTP request headers to be passed to the CGI script as environment variables. Here's how headers are transformed:
-
-Standard Header Conversion:
-
-
-Headers are converted to uppercase
-Hyphens (-) are replaced with underscores (_)
-"HTTP_" prefix is added
+--- CGI CONTENT_LENGHT
+--- MULTI PART boudary "\r\n"
+--- POST BODY

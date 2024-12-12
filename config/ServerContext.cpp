@@ -19,6 +19,7 @@ ServerContext::ServerContext() : globalParam(0, "/tmp")
 		"image/jpeg",
 		"image/jpeg",
 		"application/javascript",
+		"video/mp4",
 	};
 
 	const std::string ext[] = {
@@ -33,6 +34,7 @@ ServerContext::ServerContext() : globalParam(0, "/tmp")
 		"jpeg",
 		"jpg",
 		"js",
+		"mp4",
 	};
 	for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); i++)
 		this->types[ext[i]] = types[i];

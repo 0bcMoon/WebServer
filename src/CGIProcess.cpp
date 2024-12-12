@@ -1,4 +1,3 @@
-
 #include "CGIProcess.hpp"
 #include <sys/unistd.h>
 #include <unistd.h>

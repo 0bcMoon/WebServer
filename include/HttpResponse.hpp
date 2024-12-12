@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <string>
 
-#define BUFFER_SIZE 1000000
 enum responseState 
 {
 	START,
@@ -16,6 +15,7 @@ enum responseState
 	ERROR,
 	CGI_EXECUTING,
 	WRITE_ERROR,
+	UPLOAD_FILES,
 	END_BODY
 };
 
@@ -25,7 +25,6 @@ enum pathType
 	INDEX,
 	DEF_INDEX
 };
-
 
 class HttpResponse
 {
@@ -81,6 +80,12 @@ class HttpResponse
 		std::string							errorPage;	
 		bool								isErrDef;	
 	public:
+		struct upload_data {
+			size_t			 it;
+			size_t		     fileIt;
+			std::string		 fileName;
+			int				 __fd;
+		};
 		enum responseBodyType 
 		{
 			LOAD_FILE,	
@@ -116,7 +121,7 @@ class HttpResponse
 		std::string											getCgiContentLenght();
 		int													parseCgiHaders(std::string str);
 		std::string											strMethod;
-		std::vector<std::vector<char> >						responseBody;// INFO:cgi output
+		// std::vector<std::vector<char> >						responseBody;// INFO:cgi output
 		bool												keepAlive;
 		Location											*location;
 		enum responseState									state;
@@ -157,7 +162,7 @@ class HttpResponse
 		std::string						getContentLenght(enum responseBodyType type); // TYPO
 
 		int								autoIndexCooking();
-		std::string						getExtension(const std::string &str);
+		static std::string						getExtension(const std::string &str);
 
 		std::vector<char>				getBody() const;
 
@@ -168,6 +173,7 @@ class HttpResponse
 		void							decodingUrl();
 		void							splitingQuery();
 		int								uploadFile();
+		void								multiPartParse();
 };
 
 std::string			decimalToHex(int	decimal);

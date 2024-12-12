@@ -186,6 +186,13 @@ int Event::setNonBlockingIO(int sockfd)
 		return (-1);
 	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC) < 0)
 		return (-1);
+	int rcvbuf_size = BUFFER_SIZE;
+	int result = setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf_size, sizeof(rcvbuf_size));
+	if (result < 0)
+	{
+		std::cout << "faild cause -- "<<strerror(errno) << "\n";
+		return (-1);
+	}
 	return (0);
 }
 
@@ -203,8 +210,8 @@ bool Event::Listen()
 	for (; it != this->socketMap.end(); it++)
 	{
 		if (!this->Listen(it->second))
-			throw std::runtime_error("could not listen: " + it->first.host + ":" + it->first.host + " " + strerror(errno));
-		std::cout << "server listen on " << it->first.host + ":" + it->first.host << std::endl;
+			throw std::runtime_error("could not listen: " + it->first.host + ":" + it->first.port + " " + strerror(errno));
+		std::cout << "server listen on " << it->first.host + ":" + it->first.port << std::endl;
 	}
 	return true;
 }
@@ -264,17 +271,15 @@ void Event::ReadEvent(const struct kevent *ev)
 {
 	if (ev->flags & EV_EOF && ev->data <= 0)
 	{
-		// std::cout << "client disconnected\n";
 		connections.closeConnection(ev->ident);
 	}
 	else
 	{
-		connections.requestHandler(ev->ident, ev->data);
-		ClientsIter kv = connections.clients.find(ev->ident);
-		if (kv == connections.clients.end())
-			return;
-		Client *client = kv->second;
-		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+		Client *client = connections.requestHandler(ev->ident, ev->data);
+		if (!client)
+			return ;
+		client->request.location = this->getLocation(client);
+		client->request.feed();
 		// 	&& client->response.state != WRITE_BODY)
 		// 	return;
 		this->setWriteEvent(client->getFd(), EV_ENABLE);
@@ -312,25 +317,33 @@ void Event::RegisterNewProc(Client *client)
 	client->proc = proc;
 	this->setWriteEvent(client->getFd(), EV_DISABLE);
 }
-
 void Event::WriteEvent(const struct kevent *ev)
 {
-	if (ev->flags & EV_EOF)
-		connections.closeConnection(ev->ident);
-	else
+	if (ev->flags & EV_EOF && ev->data == 0)
 	{
+		connections.closeConnection(ev->ident);
+		return ;
+	}
+	// else
+	// {
+	//
+	//
 		ClientsIter kv = connections.clients.find(ev->ident);
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
-		// client->request.feed();
-		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
-		// 	&& client->response.state != WRITE_BODY && client->response.state iCGI_EXECUTING)
-		// 	return;
-		if (client->response.state != WRITE_BODY)
-		{
+		if (client->request.data.size() == 0 || (client->request.data[0]->state != REQUEST_FINISH
+			&& client->request.data[0]->state != REQ_ERROR))
+			return ;
+		if (client->response.state == START)
+		{ 
 			client->response.location = this->getLocation(client);
-			client->respond(ev->data);
+			client->respond(ev->data, 0);
+		}
+		if (client->response.state == UPLOAD_FILES)
+		{
+			client->response.eventByte = ev->data;	
+			client->response.uploadFile();
 		}
 		if (client->response.state == CGI_EXECUTING)
 			return this->RegisterNewProc(client);
@@ -339,16 +352,18 @@ void Event::WriteEvent(const struct kevent *ev)
 			client->response.eventByte = ev->data;
 			client->response.sendBody(-1, client->response.bodyType);
 		}
-		if (client->response.state != WRITE_BODY)
+		if (client->response.state == ERROR)
 		{
-			// if (!client->response.keepAlive)
-			// 	throw HttpResponse::IOException();
+			client->handleResError();
+		}
+		if (client->response.state == END_BODY)
+		{
 			client->response.clear();
-			client->request.clear();
-			if (client->request.eof)
+			delete client->request.data[0];
+			client->request.data.erase(client->request.data.begin());
+			if (client->request.data.size() == 0)
 				this->setWriteEvent(ev->ident, EV_DISABLE);
 		}
-	}
 }
 
 void Event::rpipe(const struct kevent *ev)
@@ -511,7 +526,7 @@ Location *Event::getLocation(const Client *client)
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())
 		Vserver = this->defaultServer.find(client->getServerFd())->second,
-		IsDefault = false; // plz dont fail all my hope on you
+		IsDefault = false; // plz dont fail all my hope on you // crying like a little bitch, write a proper code like men WARNING
 	else
 		Vserver = _Vserver->second;
 	Location *location = Vserver->getRoute(path);

@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 
     # Print HTTP header
 print("HTTP/1.1 200 OK")
+print("Content-Lenght: 10")
 print("Content-Type: text/html\r\n")
 
 # Start HTML output

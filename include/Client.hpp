@@ -34,6 +34,7 @@ class Client
 		GlobalConfig::Proc	proc;
 
 
+		void							handleResError();
 
 		Client(int	fd, int server, ServerContext *ctx);
 		~Client();
@@ -41,7 +42,7 @@ class Client
 		int					getServerFd() const;
 		const std::string	&getHost() const;	
 		const std::string	&getPath() const;
-		void				respond(size_t data);
+		void				respond(size_t data, size_t index);
 		enum TimerType		getTimerType() const ;
 };
 

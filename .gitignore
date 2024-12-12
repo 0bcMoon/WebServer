@@ -1,7 +1,7 @@
 # Prerequisites
 *.d
 main
-
+log
 # Compiled Object files
 *.slo
 *.lo

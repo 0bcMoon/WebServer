@@ -113,7 +113,7 @@ void Location::setCGI(Tokens &token, Tokens &end)
 const std::string &Location::getCGIPath(const std::string &ext)
 {
 	std::map<std::string, std::string>::iterator	kv;
-	kv = this->cgiMap.find(ext);
+	kv = this->cgiMap.find(ext);//
 	if (kv == this->cgiMap.end())
 		return (this->cgiMap.find(".")->second);
 	return (kv->second);
