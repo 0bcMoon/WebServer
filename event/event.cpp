@@ -1,4 +1,5 @@
 #include "Event.hpp"
+#include <netdb.h>
 #include <sys/_endian.h>
 #include <sys/event.h>
 #include <sys/fcntl.h>
@@ -136,44 +137,47 @@ void Event::init()
 
 int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 {
-	sockaddr_in address2;
-
-	int socketFd = socket(AF_INET, SOCK_STREAM, 0);
-	if (socketFd < 0)
-		throw std::runtime_error("socket creation failed: " + std::string(strerror(errno)));
-	this->setNonBlockingIO(socketFd);
 	int optval = 1;
-	setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-	memset(&address2, 0, sizeof(struct sockaddr_in));
 
-	this->setNonBlockingIO(socketFd);
+	struct addrinfo *result, hints;
+	hints.ai_family = AF_INET;     // Allow IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM; // TCP socket
+    hints.ai_flags = AI_PASSIVE;     // For binding
+    hints.ai_protocol = IPPROTO_TCP;           // Any protocol
+    hints.ai_canonname = NULL;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
+	int r = getaddrinfo(address->host.data(), address->port.data(), &hints, &result);
+	if (r != 0) 
+		throw std::runtime_error("Error :getaddrinfo: "  + std::string(gai_strerror(r)));
 
-	address2.sin_family = AF_INET;
-	address2.sin_addr.s_addr = htonl(address->host);
-	address2.sin_port = htons(address->port);
-	if (bind(socketFd, (struct sockaddr *)&address2, sizeof(address2)) < 0)
+	int socket_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+	if (socket_fd < 0)
 	{
-		close(socketFd);
-		throw std::runtime_error("bind failed: " + std::string(strerror(errno)));
+		freeaddrinfo(result);
+		throw std::runtime_error("Error create socket: " + std::string(strerror(errno)));
+	}
+	if (this->setNonBlockingIO(socket_fd) < 0)
+	{
+		freeaddrinfo(result);
+		throw std::runtime_error("Error could not set setNonBlockingIO: " + std::string(strerror(errno)));
+	}
+	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)))
+	{
+		freeaddrinfo(result);
+		throw std::runtime_error("Error could not set socket option: " + std::string(strerror(errno)));
+	}
+	if (bind(socket_fd, result->ai_addr, result->ai_addrlen) < 0)
+	{
+		freeaddrinfo(result);
+		throw std::runtime_error("Error could not bind socket: " + std::string(strerror(errno)));
 	}
 	this->numOfSocket++;
-	this->sockAddrInMap[socketFd] = address2;
-	return (socketFd);
+	this->sockAddrInMap[socket_fd] = *result->ai_addr;
+	freeaddrinfo(result);
+	return (socket_fd);
 }
 
-std::string Event::get_readable_ip(const VirtualServer::SocketAddr address)
-{
-	uint32_t ip = address.host;
-	int port = address.port;
-	std::stringstream ss;
-
-	int a = ip & 0xFF;
-	int b = (ip >> 8) & 0xFF;
-	int c = (ip >> 16) & 0xFF;
-	int d = (ip >> 24) & 0xFF;
-	ss << d << "." << c << "." << b << "." << a << ":" << port;
-	return ss.str();
-}
 
 int Event::setNonBlockingIO(int sockfd)
 {
@@ -199,8 +203,8 @@ bool Event::Listen()
 	for (; it != this->socketMap.end(); it++)
 	{
 		if (!this->Listen(it->second))
-			throw std::runtime_error("could not listen: " + get_readable_ip(it->first) + " " + strerror(errno));
-		std::cout << "server listen on " << this->get_readable_ip(it->first) << std::endl;
+			throw std::runtime_error("could not listen: " + it->first.host + ":" + it->first.host + " " + strerror(errno));
+		std::cout << "server listen on " << it->first.host + ":" + it->first.host << std::endl;
 	}
 	return true;
 }
@@ -229,9 +233,9 @@ void Event::initIOmutltiplexing()
 // TODO:  i need someone to speek here (logger )
 int Event::newConnection(int socketFd, Connections &connections)
 {
-	struct sockaddr_in address = this->sockAddrInMap[socketFd];
+	struct sockaddr address = this->sockAddrInMap[socketFd];
 	socklen_t size = sizeof(struct sockaddr);
-	int newSocketFd = accept(socketFd, (struct sockaddr *)&address, &size);
+	int newSocketFd = accept(socketFd, &address, &size);
 	if (newSocketFd < 0) // TODO: add logger here
 		return (std::cout << "-----accept faild--------\n", -1);
 	if (this->setNonBlockingIO(newSocketFd))
@@ -497,8 +501,9 @@ Location *Event::getLocation(const Client *client)
 	int serverfd;
 	bool IsDefault = true;
 
-	struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
-	int port = ntohs(addr.sin_port);
+	// TODO add for cgi
+	// struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
+	// int port = ntohs(addr.sin_port);
 	serverfd = client->getServerFd();
 	const std::string &path = client->getPath();
 	std::string host = client->getHost();
@@ -514,7 +519,7 @@ Location *Event::getLocation(const Client *client)
 		return (NULL);
 	else if (!IsDefault)
 		host = *Vserver->getServerNames().begin();
-	location->setHostPort(host, port);
+	// location->setHostPort(host, port);
 	return (location);
 }
 

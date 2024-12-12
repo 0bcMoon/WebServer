@@ -25,7 +25,7 @@ class Event
 		typedef std::map<std::string, VirtualServer *> ServerNameMap_t;
 		typedef std::map<int, ServerNameMap_t> VirtualServerMap_t;
 		typedef std::map<VirtualServer::SocketAddr, int> SocketMap_t;
-		typedef std::map<int, struct sockaddr_in> SockAddr_in;
+		typedef std::map<int, struct sockaddr> SockAddr_in;
 		typedef std::set<VirtualServer::SocketAddr> SocketAddrSet_t;
 
 		VirtualServerMap_t virtuaServers;
@@ -40,7 +40,6 @@ class Event
 		int CreateSocket(SocketAddrSet_t::iterator &address);
 		int setNonBlockingIO(int serverFd);
 		bool Listen(int serverFd);
-		std::string get_readable_ip(VirtualServer::SocketAddr address);
 		void insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd);
 		void InsertDefaultServer(VirtualServer *server, int socketFd);
 		void CreateChangeList();
