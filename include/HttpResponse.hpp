@@ -163,7 +163,7 @@ class HttpResponse
 		std::string						getContentLenght(enum responseBodyType type); // TYPO
 
 		int								autoIndexCooking();
-		std::string						getExtension(const std::string &str);
+		static std::string						getExtension(const std::string &str);
 
 		std::vector<char>				getBody() const;
 

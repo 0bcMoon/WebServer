@@ -267,7 +267,6 @@ void Event::ReadEvent(const struct kevent *ev)
 {
 	if (ev->flags & EV_EOF && ev->data <= 0)
 	{
-		// std::cout << "client disconnected\n";
 		connections.closeConnection(ev->ident);
 	}
 	else
@@ -277,7 +276,8 @@ void Event::ReadEvent(const struct kevent *ev)
 		if (kv == connections.clients.end())
 			return;
 		Client *client = kv->second;
-		// if (client->request.state != REQUEST_FINISH && client->request.state != REQ_ERROR
+		client->request.location = this->getLocation(client);
+		client->request.feed();
 		// 	&& client->response.state != WRITE_BODY)
 		// 	return;
 		this->setWriteEvent(client->getFd(), EV_ENABLE);

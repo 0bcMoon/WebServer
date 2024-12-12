@@ -1,6 +1,7 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
+#include "Location.hpp"
 #include <sys/event.h>
 #include <cstddef>
 #include <map>
@@ -10,7 +11,7 @@
 #define URI_MAX		 2048
 #define REQSIZE_MAX  1024*10240
 #define BUFFER_SIZE  5 * 1024*1024
-#define BODY_MAX	 1024*1024000
+#define BODY_MAX	 1024*10240000
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
 
@@ -91,6 +92,7 @@ struct bodyHandler {
 	int									upload2file(std::string &boundary);
 	int									openNewFile();
 	int									writeBody();
+	bool								isCgi;
 
 	std::map<std::string, std::string>	headers;
 
@@ -98,6 +100,9 @@ struct bodyHandler {
 	size_t								bodyIt;
 	std::vector<char>					body;//raw body;
 	size_t								bodySize;
+
+	std::string							header;
+	std::string							tmpBorder;
 
 	int									currFd;
 	size_t								fileBodyIt;
@@ -159,7 +164,7 @@ class HttpRequest
 		std::string							currHeaderVal;
 
 		std::vector<char>							body;
-		int									bodySize;
+		long long									bodySize;
 		int                                 reqSize;
 		size_t								reqBufferSize;
 		size_t								reqBufferIndex;
@@ -207,7 +212,7 @@ class HttpRequest
 		std::string									bodyBoundary;
 		enum reqState								state;
 		// std::vector<multiPart>						multiPartBodys;
-
+		Location									*location;
 		bool										eof;
 
 		HttpRequest();
