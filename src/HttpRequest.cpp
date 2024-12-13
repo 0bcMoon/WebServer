@@ -192,10 +192,10 @@ int HttpRequest::checkMultiPartEnd() {
 	return (1);
 }
 
-void HttpRequest::feed() 
+void HttpRequest::feed()
 {
 	while ((reqBufferIndex < reqBufferSize && state != REQ_ERROR &&
-			state != DEBUG) || state == BODY) {
+			state != DEBUG)) {
 		if (state == NEW)
 			andNew();
 		if (state == METHODE)
@@ -205,7 +205,11 @@ void HttpRequest::feed()
 		if (state == HTTP_VERSION)
 			parseHttpVersion();
 		if (state == REQUEST_LINE_FINISH)
+		{
 			crlfGetting();
+			if (state == HEADER_NAME)
+				break;
+		}
 		if (state == HEADER_NAME)
 			parseHeaderName();
 		if (state == HEADER_VALUE)
@@ -213,8 +217,6 @@ void HttpRequest::feed()
 		if (state == HEADER_FINISH)
 		{
 			crlfGetting();
-			if (state == BODY)
-				break;
 		}
 		if (state == BODY) {
 			parseBody();
