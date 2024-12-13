@@ -66,6 +66,7 @@ void HttpResponse::clear()
 	std::cout << "CLEAR\n";
 	if (responseFd >= 0)
 		close(responseFd);
+	responseFd = -1;
 	isErrDef = 1;
 
 	uploadData.fileIt = 0;
