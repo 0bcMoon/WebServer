@@ -22,10 +22,11 @@ class Proc
 		std::vector<char> read_buffer;
 		std::vector<char> buffer;
 		Proc();
+		Proc(const Proc &other);
 		void clean();
 		void die();
 		int writeBody(const char *ptr, int size);
-		Proc &operator=(Proc &other);
+		Proc &operator=(const Proc &other);
 		int pid;
 		int client;
 		int fout;

@@ -32,14 +32,16 @@ int CGIProcess::redirectPipe()
 {
 	std::cout << "warning: make cgi input file dynamique";
 	close(this->pipeOut[0]);
+	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
+		return (-1);
+	close(this->pipeOut[1]);
+	if (response->strMethod != "POST")
+		return (0);
 	int body_fd = open("/tmp/body", O_RDONLY);
 	if (body_fd < 0)
 		return (-1);
 	if (dup2(body_fd, STDIN_FILENO) < 0)
 		return (close(body_fd), -1);
-	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
-		return (close(body_fd), -1);
-	close(this->pipeOut[1]);
 	close(body_fd);
 	return (0);
 }
@@ -100,7 +102,7 @@ void CGIProcess::child_process()
 																	  : 0; // offset for alais
 	this->cgi_bin = response->location->globalConfig.getRoot() + response->path.substr(offset);
 
-	// this->loadEnv(); // INFO: handel this
+	this->loadEnv(); // INFO: handel this
 
 	std::string path =
 		response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique

@@ -233,7 +233,11 @@ void HttpRequest::feed()
 		if (state == HTTP_VERSION)
 			parseHttpVersion();
 		if (state == REQUEST_LINE_FINISH)
+		{
 			crlfGetting();
+			if (state == HEADER_NAME)
+				break;
+		}
 		if (state == HEADER_NAME)
 			parseHeaderName();
 		if (state == HEADER_VALUE)
@@ -241,8 +245,6 @@ void HttpRequest::feed()
 		if (state == HEADER_FINISH)
 		{
 			crlfGetting();
-			if (state == BODY)
-				break;
 		}
 		if (state == BODY)
 		{
@@ -759,7 +761,7 @@ int HttpRequest::firstHeadersCheck()
 		&& data[data.size() - 1]->headers["Content-Type"].find(",") != std::string::npos)
 		return (setHttpReqError(400, "Bad Request"), 1);
 	if (location == NULL)
-		return (setHttpReqError(404, "Bad Request"), 0);
+		return (setHttpReqError(404, "Bad Request"), 1);
 	data.back()->bodyHandler.isCgi = location->getCGIPath("." + HttpResponse::getExtension(path)).size();
 	return (checkContentType());
 }
@@ -806,8 +808,8 @@ void HttpRequest::contentLengthBodyParsing()
 	}
 	else if (reqBody == MULTI_PART)
 		parseMultiPart();
-	if ((size_t)bodySize == data.back()->bodyHandler.bodySize)
-	{
+	if ((size_t)bodySize <= data.back()->bodyHandler.bodySize) {
+		std::cout << "DEBUG_7" << std::endl;
 		state = BODY_FINISH;
 	}
 	// else if (reqBody == MULTI_PART && bodyHandler.bodySize + body.size() >= (size_t)bodySize - bodyBoundary.size() -

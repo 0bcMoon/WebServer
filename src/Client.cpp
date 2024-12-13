@@ -43,7 +43,7 @@ void Client::respond(size_t data, size_t index)
 	// 	response.keepAlive = 0;
 	if (request.data[index]->state == REQUEST_FINISH)
 		response.responseCooking();
-	if (response.state == CGI_EXECUTING)
+	if (response.state == START_CGI_RESPONSE)
 	{
 		response.bodyType = HttpResponse::CGI;
 		response.writeCgiResponse();

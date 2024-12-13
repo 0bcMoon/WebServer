@@ -227,11 +227,20 @@ Proc::Proc() : read_buffer(CGI_BUFFER_SIZE)
 	this->state = NONE;
 }
 
-Proc &Proc::operator=(Proc &other)
+Proc::Proc(const Proc &other)
 {
+	*this = other;
+}
+Proc &Proc::operator=(const Proc &other)
+{
+	if (this == &other)
+		return (*this);
 	this->pid = other.pid;
 	this->fout = other.fout;
 	this->state = other.state;
+	this->client = other.client;
+	this->outToFile = other.outToFile;
+	// this->input
 	return (*this);
 }
 
@@ -256,7 +265,7 @@ int Proc::writeBody(const char *ptr, int size)
 {
 	std::cout << "Error make: change file location\n";
 	if (this->output_fd == -1)
-		this->output_fd = open("/tmp/cgi_out", O_WRONLY | O_CREAT, 0644);
+		this->output_fd = open("/tmp/cgi_out", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (this->output_fd < 0)
 		return (-1);
 	return (write(this->output_fd, ptr, size));

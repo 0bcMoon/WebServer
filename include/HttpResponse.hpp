@@ -16,7 +16,8 @@ enum responseState
 	CGI_EXECUTING,
 	WRITE_ERROR,
 	UPLOAD_FILES,
-	END_BODY
+	END_BODY,
+	START_CGI_RESPONSE
 };
 
 enum pathType
