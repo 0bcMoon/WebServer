@@ -1,17 +1,18 @@
 #include "CGIProcess.hpp"
+#include <sys/fcntl.h>
 #include <sys/unistd.h>
 #include <unistd.h>
 #include <cerrno>
 #include <cstring>
-#include <sstream>
 #include <iostream>
+#include <sstream>
 #include "DataType.hpp"
 #include "Event.hpp"
 
 bool CGIProcess::IsFileExist()
 {
-	size_t offset =
-		response->location->globalConfig.getAliasOffset() ? response->location->getPath().size() : 0; // offset for alais
+	size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size()
+																	  : 0; // offset for alais
 	std::string scriptPath = response->location->globalConfig.getRoot() + response->path.substr(offset);
 
 	if (access(scriptPath.c_str(), F_OK) == -1)
@@ -29,15 +30,17 @@ void CGIProcess::closePipe(int fd[2])
 
 int CGIProcess::redirectPipe()
 {
-	close(this->pipeIn[1]);
+	std::cout << "warning: make cgi input file dynamique";
 	close(this->pipeOut[0]);
-
-	if (dup2(this->pipeOut[1], STDOUT_FILENO) < 0)
+	int body_fd = open("/tmp/body", O_RDONLY);
+	if (body_fd < 0)
 		return (-1);
-	if (dup2(this->pipeIn[0], STDIN_FILENO) < 0)
-		return (-1);
+	if (dup2(body_fd, STDIN_FILENO) < 0)
+		return (close(body_fd), -1);
+	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
+		return (close(body_fd), -1);
 	close(this->pipeOut[1]);
-	close(this->pipeIn[0]);
+	close(body_fd);
 	return (0);
 }
 
@@ -84,7 +87,7 @@ void CGIProcess::loadEnv()
 		env["CONTENT_LENGTH"] = ss.str();
 	}
 	else
-		env["CONTENT_LENGTH"] = "0"; // -1 ??
+		env["CONTENT_LENGTH"] = "0";
 
 	it = env.begin();
 	for (int i = 0; it != env.end(); it++, i++)
@@ -93,13 +96,14 @@ void CGIProcess::loadEnv()
 
 void CGIProcess::child_process()
 {
-	size_t offset =
-		response->location->globalConfig.getAliasOffset() ? response->location->getPath().size() : 0; // offset for alais
+	size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size()
+																	  : 0; // offset for alais
 	this->cgi_bin = response->location->globalConfig.getRoot() + response->path.substr(offset);
 
-	this->loadEnv();
-	
-	std::string path = response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique
+	// this->loadEnv(); // INFO: handel this
+
+	std::string path =
+		response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique
 	const char *args[3] = {path.data(), cgi_bin.data(), NULL};
 	char **argv = new char *[env.size() + 1];
 	size_t i = 0;
@@ -109,38 +113,31 @@ void CGIProcess::child_process()
 	if (redirectPipe())
 	{
 		closePipe(this->pipeOut);
-		closePipe(this->pipeIn);
-		throw std::runtime_error("child could not be run: " + std::string(strerror(errno))); 
+		throw std::runtime_error("child could not be run: " + std::string(strerror(errno)));
 	}
 	execve(*args, (char *const *)args, argv);
 	throw std::runtime_error("child process faild: execve: " + std::string(strerror(errno)));
 }
 
-GlobalConfig::Proc CGIProcess::RunCGIScript(HttpResponse &response)
+Proc CGIProcess::RunCGIScript(HttpResponse &response)
 {
-	GlobalConfig::Proc proc;
+	Proc proc;
 
 	this->response = &response;
 	if (this->IsFileExist())
 		return (proc);
-	if (pipe(this->pipeIn) < 0)
-		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	else if (pipe(this->pipeOut) < 0)
-		return (closePipe(this->pipeIn), this->response->setHttpResError(500, "Internal Server Error"), proc);
+		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 
 	proc.pid = fork();
 	if (proc.pid < 0)
 	{
-		closePipe(this->pipeIn);
 		closePipe(this->pipeOut);
 		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	}
 	else if (proc.pid == 0)
 		this->child_process();
-	close(this->pipeIn[0]);
 	close(this->pipeOut[1]);
 	proc.fout = this->pipeOut[0];
-	proc.fin = this->pipeIn[1];
 	return (proc);
 }
-

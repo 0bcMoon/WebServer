@@ -6,50 +6,56 @@
 #include <vector>
 
 typedef std::vector<std::string>::iterator Tokens;
+#define CGI_BUFFER_SIZE 64L * 1024L
 
-
+class Proc
+{
+	public:
+		enum State
+		{
+			TIMEOUT,
+			NONE
+		};
+		std::string output;
+		std::string input;
+		int			output_fd;
+		std::vector<char> read_buffer;
+		std::vector<char> buffer;
+		Proc();
+		void clean();
+		void die();
+		int writeBody(const char *ptr, int size);
+		Proc &operator=(Proc &other);
+		int pid;
+		int client;
+		int fout;
+		bool outToFile;
+		enum State state;
+};
 
 class GlobalConfig
 {
 	private:
-		std::map<std::string, std::string>  errorPages;
-		std::string							root;
-		int									autoIndex;
-		std::string							upload_file_path;
-		std::vector<std::string>			indexes;
-		int									IsAlias;
+		std::map<std::string, std::string> errorPages;
+		std::string root;
+		int autoIndex;
+		std::string upload_file_path;
+		std::vector<std::string> indexes;
+		bool IsAlias;
 
 	public:
-		struct Proc
-		{
-			enum State
-			{
-				TIMEOUT,
-				NONE
-			};
-			Proc();
-			void clean();
-			void die();
-			Proc &operator=(Proc &other);
-			int pid;
-			int fout;
-			int fin;
-			int woffset;
-			enum State state;
-		};
-
-		bool		isValidStatusCode(std::string &str); // WARNING:t5arbi9
-		void		setMethods(Tokens &token, Tokens &end);
-		void		setAlias(Tokens &token, Tokens &end);
-		void		validateOrFaild(Tokens &token, Tokens &end);
-		void		CheckIfEnd(Tokens &token, Tokens &end);
+		bool isValidStatusCode(std::string &str); // WARNING:t5arbi9
+		void setMethods(Tokens &token, Tokens &end);
+		void setAlias(Tokens &token, Tokens &end);
+		void validateOrFaild(Tokens &token, Tokens &end);
+		void CheckIfEnd(Tokens &token, Tokens &end);
 		std::string &consume(Tokens &token, Tokens &end);
 		GlobalConfig &operator=(const GlobalConfig &globalParam);
 
-		//INFO:
+		// INFO:
 		bool isMethodAllowed(int method) const;
 		std::string getRoot() const;
-		bool		getAutoIndex() const;
+		bool getAutoIndex() const;
 
 		GlobalConfig();
 		GlobalConfig(int autoIndex, const std::string &upload_file_path);
@@ -62,7 +68,6 @@ class GlobalConfig
 
 		void setRoot(Tokens &token, Tokens &end);
 
-
 		void setAutoIndex(Tokens &token, Tokens &end);
 
 		void setAccessLog(Tokens &token, Tokens &end);
@@ -71,13 +76,11 @@ class GlobalConfig
 		void setErrorLog(Tokens &token, Tokens &end);
 		std::string getErrorLog() const;
 
-
 		const std::vector<std::string> &getIndexes();
 		void setIndexes(Tokens &token, Tokens &end);
 		void setErrorPages(Tokens &token, Tokens &end);
 		const std::string &getErrorPage(std::string &StatusCode);
-		bool getAliasOffset() const ;
-
+		bool getAliasOffset() const;
 };
 
 #endif

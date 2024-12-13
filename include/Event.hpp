@@ -2,10 +2,12 @@
 #define Event_HPP
 #include <sys/event.h>
 #include <exception>
+#include <vector>
 #include "Connections.hpp"
 #include "DataType.hpp"
 #include "ServerContext.hpp"
 #include "VirtualServer.hpp"
+
 
 class Event
 {
@@ -27,9 +29,12 @@ class Event
 		typedef std::map<VirtualServer::SocketAddr, int> SocketMap_t;
 		typedef std::map<int, struct sockaddr> SockAddr_in;
 		typedef std::set<VirtualServer::SocketAddr> SocketAddrSet_t;
+		typedef std::map<int, Proc> ProcMap_t;
 
+		// typedef std::map<int, > SockAddr_in;
 		VirtualServerMap_t virtuaServers;
 		SocketMap_t socketMap;
+		ProcMap_t procs;
 		std::map<int, VirtualServer *> defaultServer;
 		SockAddr_in sockAddrInMap;
 		struct kevent *eventChangeList;
@@ -48,7 +53,7 @@ class Event
 		void setWriteEvent(int fd, uint16_t flags);
 		Location *getLocation(const Client *client);
 		bool IsFileExist(HttpResponse &response);
-		GlobalConfig::Proc RunCGIScript(HttpResponse &response);
+		Proc RunCGIScript(HttpResponse &response);
 
 		void ReadEvent(const struct kevent *ev);
 		void WriteEvent(const struct kevent *ev);
@@ -73,7 +78,6 @@ class Event
 
 	public:
 		void initIOmutltiplexing();
-		Event();
 		~Event();
 		Event(int max_connection, int max_events, ServerContext *ctx);
 		void init();

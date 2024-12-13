@@ -56,7 +56,7 @@ void Client::respond(size_t data, size_t index)
 	// }
 }
 
-void	Client::handleResError()
+void	Client::handleResponseError()
 {
 	std::string ErrorRes = response.getErrorRes();
 	response.write2client(fd, ErrorRes.c_str(), ErrorRes.size());
@@ -85,6 +85,6 @@ Client::TimerType Client::getTimerType() const
 
 Client::~Client()
 {
-	this->proc.die(); // make process clean it own shit \n
-	this->proc.clean();
+	// this->proc.die(); // make process clean it own shit \n
+	// this->proc.clean();
 }

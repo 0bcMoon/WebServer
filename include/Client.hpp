@@ -31,10 +31,10 @@ class Client
 		Location			*location;
 		HttpRequest			request;
 		HttpResponse		response;
-		GlobalConfig::Proc	proc;
+		int					cgi_pid;
 
 
-		void							handleResError();
+		void							handleResponseError();
 
 		Client(int	fd, int server, ServerContext *ctx);
 		~Client();

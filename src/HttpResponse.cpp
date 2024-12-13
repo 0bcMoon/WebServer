@@ -627,7 +627,6 @@ std::string HttpResponse::getConnectionState()
 
 std::string HttpResponse::getExtension(const std::string &str)
 {
-	std::string ext;
 	int i = str.size() - 1;
 	while (i >= 0)
 	{

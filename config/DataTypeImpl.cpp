@@ -1,5 +1,7 @@
+#include <Tokenizer.hpp>
 #include <fcntl.h>
 #include <sys/event.h>
+#include <sys/fcntl.h>
 #include <sys/signal.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
@@ -15,7 +17,6 @@
 #include <string>
 #include <vector>
 #include "DataType.hpp"
-#include <Tokenizer.hpp>
 
 GlobalConfig::GlobalConfig()
 {
@@ -23,7 +24,6 @@ GlobalConfig::GlobalConfig()
 	this->errorPages["."] = "";
 	this->IsAlias = false; // INFO: this is art Do not touch unless you have a permit.
 }
-
 
 GlobalConfig::GlobalConfig(int autoIndex, const std::string &upload_file_path)
 {
@@ -190,7 +190,7 @@ const std::vector<std::string> &GlobalConfig::getIndexes()
 
 const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
 {
-	const static std::string  empty = "";
+	const static std::string empty = "";
 
 	const std::map<std::string, std::string>::iterator &kv = this->errorPages.find(StatusCode);
 	if (kv == this->errorPages.end())
@@ -213,46 +213,51 @@ void GlobalConfig::setAlias(Tokens &token, Tokens &end)
 	this->IsAlias = true;
 	CheckIfEnd(token, end);
 }
-bool GlobalConfig::getAliasOffset() const 
+bool GlobalConfig::getAliasOffset() const
 {
 	return (this->IsAlias);
 }
 
-GlobalConfig::Proc::Proc()
+Proc::Proc() : read_buffer(CGI_BUFFER_SIZE)
 {
-	this->fin = -1;
-	this->woffset = 0;
+	this->output_fd = -1;
+	this->outToFile = false;
 	this->fout = -1;
 	this->pid = -1;
 	this->state = NONE;
 }
 
-GlobalConfig::Proc &GlobalConfig::Proc::operator=(Proc &other)
+Proc &Proc::operator=(Proc &other)
 {
 	this->pid = other.pid;
-	this->fin = other.fin;
 	this->fout = other.fout;
 	this->state = other.state;
 	return (*this);
 }
 
-void GlobalConfig::Proc::die()
+void Proc::die()
 {
 	// assert(this->pid > 0 && "Major Error Need to be fix: with proc");
 
 	if (this->pid > 0)
 		::kill(this->pid, SIGKILL);
 	// this->pid = -1;
-	
 }
 
-void GlobalConfig::Proc::clean()
+void Proc::clean()
 {
-	if (this->fin < 0 || this->fout < 0 )
-		return ;
-	close(this->fin);
+	if (this->fout < 0)
+		return;
 	close(this->fout);
 	this->fout = -1;
-	this->fin = -1;
 }
 
+int Proc::writeBody(const char *ptr, int size)
+{
+	std::cout << "Error make: change file location\n";
+	if (this->output_fd == -1)
+		this->output_fd = open("/tmp/cgi_out", O_WRONLY | O_CREAT, 0644);
+	if (this->output_fd < 0)
+		return (-1);
+	return (write(this->output_fd, ptr, size));
+}
