@@ -203,7 +203,6 @@ class HttpRequest
 		int			parseMuliPartBody();
 		void		andNew();
 		
-		char						buffer[1000000];
 
 	public:
 		std::vector<data_t *>         data;

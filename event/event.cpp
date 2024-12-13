@@ -278,8 +278,6 @@ void Event::ReadEvent(const struct kevent *ev)
 		Client *client = kv->second;
 		client->request.location = this->getLocation(client);
 		client->request.feed();
-		// 	&& client->response.state != WRITE_BODY)
-		// 	return;
 		this->setWriteEvent(client->getFd(), EV_ENABLE);
 	}
 }

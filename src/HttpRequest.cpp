@@ -194,8 +194,8 @@ int HttpRequest::checkMultiPartEnd() {
 
 void HttpRequest::feed() 
 {
-	while (reqBufferIndex < reqBufferSize && state != REQ_ERROR &&
-			state != DEBUG) {
+	while ((reqBufferIndex < reqBufferSize && state != REQ_ERROR &&
+			state != DEBUG) || state == BODY) {
 		if (state == NEW)
 			andNew();
 		if (state == METHODE)
@@ -690,7 +690,7 @@ int HttpRequest::firstHeadersCheck() {
 			std::string::npos)
 		return (setHttpReqError(400, "Bad Request"), 1);
 	if (location == NULL)
-		return (setHttpReqError(404, "Bad Request"), 0);
+		return (setHttpReqError(404, "Bad Request"), 1);
 	data.back()->bodyHandler.isCgi = location->getCGIPath("." + HttpResponse::getExtension(path)).size();
 	return (checkContentType());
 }
@@ -728,7 +728,8 @@ void HttpRequest::contentLengthBodyParsing() {
 	}
 	else if (reqBody == MULTI_PART)
 		parseMultiPart();
-	if ((size_t)bodySize == data.back()->bodyHandler.bodySize) {
+	if ((size_t)bodySize <= data.back()->bodyHandler.bodySize) {
+		std::cout << "DEBUG_7" << std::endl;
 		state = BODY_FINISH;
 	}
 	// else if (reqBody == MULTI_PART && bodyHandler.bodySize + body.size() >= (size_t)bodySize - bodyBoundary.size() - 8)
