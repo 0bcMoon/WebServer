@@ -15,7 +15,6 @@ VirtualServer::~VirtualServer()
 	
 }
 
-VirtualServer::SocketAddr::SocketAddr(int port, int host) : port(port), host(host) {}
 VirtualServer::SocketAddr::SocketAddr() {};
 
 void VirtualServer::pushLocation(Tokens &token, Tokens &end)
@@ -57,39 +56,8 @@ int parseNumber(std::string &str)
 	return (number);
 }
 
-//art
-int parseHost(std::string s_host)
-{
-	std::vector<std::string> octets;
-	size_t pos;
-	int addr = 0;
-	size_t offset = 0;
-	int octet;
-
-	if (s_host.empty())
-		return (0);
-	while ((pos = s_host.find('.')) != std::string::npos)
-	{
-		const std::string &token = s_host.substr(offset, pos);
-		octets.push_back(token);
-		s_host.erase(0, pos + 1); // not nice but is working  (plz don't throw a expcetion)
-	}
-	octets.push_back(s_host);
-	if (octets.size() != 4)
-		return (-1);
-	for (int i = 0; i < 4; i++)
-	{
-		octet = parseNumber(octets[i]);
-		if (octet < 0 || octet > 255)
-			throw Tokenizer::ParserException("Invalid host" + s_host);
-		addr |= (octet << ((3 - i) * 8)); // TODO : make  right bytes order
-	}
-	return (addr);
-}
 void VirtualServer::setListen(Tokens &token, Tokens &end)
 {
-	std::string host;
-	std::string port;
 	SocketAddr socketAddr;
 
 	this->globalConfig.validateOrFaild(token, end);
@@ -97,17 +65,12 @@ void VirtualServer::setListen(Tokens &token, Tokens &end)
 	if (pos == 0 || pos == token->size() - 1)
 		throw Tokenizer::ParserException("Unvalid [host:]port " + *token);
 
+	socketAddr.host = "0.0.0.0"; 
 	if (pos != std::string::npos)
-		host = token->substr(0, pos);
+		socketAddr.host = token->substr(0, pos);
 	else
 		pos = 0;
-	port = token->substr(pos + (pos != 0), token->size() - pos);
-	socketAddr.port = parseNumber(port);
-	if (socketAddr.port <= 0)
-		throw Tokenizer::ParserException("Invlaid Port number " + port);
-	socketAddr.host = parseHost(host);
-	if (listen.find(socketAddr) != listen.end())
-		throw Tokenizer::ParserException("dublicate listen: " + host + ":" + port);
+	socketAddr.port = token->substr(pos + (pos != 0), token->size() - pos);
 	listen.insert(socketAddr);
 	token++;
 	this->globalConfig.CheckIfEnd(token, end);

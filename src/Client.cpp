@@ -43,7 +43,7 @@ void Client::respond(size_t data, size_t index)
 	// 	response.keepAlive = 0;
 	if (request.data[index]->state == REQUEST_FINISH)
 		response.responseCooking();
-	if (response.state == CGI_EXECUTING)
+	if (response.state == START_CGI_RESPONSE)
 	{
 		response.bodyType = HttpResponse::CGI;
 		response.writeCgiResponse();
@@ -56,7 +56,7 @@ void Client::respond(size_t data, size_t index)
 	// }
 }
 
-void	Client::handleResError()
+void	Client::handleResponseError()
 {
 	std::string ErrorRes = response.getErrorRes();
 	response.write2client(fd, ErrorRes.c_str(), ErrorRes.size());
@@ -85,6 +85,6 @@ Client::TimerType Client::getTimerType() const
 
 Client::~Client()
 {
-	this->proc.die(); // make process clean it own shit \n
-	this->proc.clean();
+	// this->proc.die(); // make process clean it own shit \n
+	// this->proc.clean();
 }

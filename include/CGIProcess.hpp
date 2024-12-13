@@ -20,10 +20,9 @@ class CGIProcess
 	  void loadEnv();
 	  bool IsFileExist();
 
-	  int pipeIn[2];
 	  int pipeOut[2];
   public:
-	  GlobalConfig::Proc RunCGIScript(HttpResponse &response);
+	  Proc RunCGIScript(HttpResponse &response);
 };
 
 #endif

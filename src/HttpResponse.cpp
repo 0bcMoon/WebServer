@@ -37,10 +37,6 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 	isErrDef = 1;
 	// i = 0;
 	// j = 0;
-	uploadData.fileName = getRandomName();
-	uploadData.fileIt = 0;
-	uploadData.it = 0;
-	uploadData.__fd = -1;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Server: XXXXXXXX\r\n"; // TODO:name the server;
@@ -69,10 +65,6 @@ void HttpResponse::clear()
 	responseFd = -1;
 	isErrDef = 1;
 
-	uploadData.fileIt = 0;
-	uploadData.it = 0;
-	uploadData.fileName = getRandomName();
-	uploadData.__fd = -1;
 
 	errorRes.statusLine.clear();
 	errorRes.headers.clear();
@@ -135,7 +127,7 @@ void HttpResponse::clear()
 
 HttpResponse::~HttpResponse()
 {
-	std::cout << "Destructor has been called\n";
+	// std::cout << "Destructor has been called\n";
 	if (responseFd >= 0)
 		close(responseFd);
 }
@@ -167,11 +159,16 @@ std::string HttpResponse::getContentLenght()
 void HttpResponse::write2client(int fd, const char *str, size_t size)
 {
 	if (write(fd, str, size) < 0)
-		throw IOException("Error: could not write");
+	{
+		state = WRITE_ERROR;
+		throw IOException();
+	}
 	writeByte += size;
 }
 
-HttpResponse::IOException::~IOException() throw() {}
+HttpResponse::IOException::~IOException() throw()
+{
+}
 HttpResponse::IOException::IOException() throw()
 {
 	this->msg = "IOException: " + std::string(strerror(errno));
@@ -611,12 +608,6 @@ void HttpResponse::writeResponse()
 		write2client(fd, "\r\n", 2);
 	}
 	write2client(this->fd, "\r\n", 2);
-	// if (state == UPLOAD_FILES)
-	// {
-	// write2client(this->fd, "file has been created", std::strlen("file has been created"));
-	// state = END_BODY;
-	// }
-	// else
 	state = WRITE_BODY;
 }
 
@@ -637,7 +628,6 @@ std::string HttpResponse::getConnectionState()
 
 std::string HttpResponse::getExtension(const std::string &str)
 {
-	std::string ext;
 	int i = str.size() - 1;
 	while (i >= 0)
 	{

@@ -14,9 +14,10 @@ enum responseState
 	WRITE_BODY,
 	ERROR,
 	CGI_EXECUTING,
-	// WRITE_ERROR,
+	WRITE_ERROR,
 	UPLOAD_FILES,
-	END_BODY
+	END_BODY,
+	START_CGI_RESPONSE
 };
 
 enum pathType
@@ -93,9 +94,8 @@ class HttpResponse
 			AUTO_INDEX,
 			CGI
 		};
-		struct upload_data					uploadData;
-
 		std::vector<char>					CGIOutput;
+
 		enum responseBodyType				bodyType;
 		size_t								writeByte;
 		size_t								eventByte;
