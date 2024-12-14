@@ -136,6 +136,7 @@ class HttpRequest
 			FINISHED
 		};
 
+		bool isCGI();
 		void						handleNewBody();
 		void						handleMultiPartHeaders();
 		void						handleStoring();
@@ -144,6 +145,7 @@ class HttpRequest
 		int							isBorder();
 		int							checkMultiPartEnd();
 		void						parseBodyCrlf();
+		bool						isMethodAllowed();
 
 		enum multiPartState							bodyState;
 		struct kevent *ev;
@@ -233,6 +235,7 @@ class HttpRequest
 		std::string							getStrMethode() const;
 		const std::string					&getHost() const;
 		const std::string					&getPath() const;
+		bool						validateRequestLine();
 		
 		int 								parseMultiPart();
 };

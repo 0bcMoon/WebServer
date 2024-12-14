@@ -272,6 +272,7 @@ void Event::ReadEvent(const struct kevent *ev)
 		if (!client)
 			return;
 		client->request.location = this->getLocation(client);
+		client->request.validateRequestLine();
 		client->request.feed();
 		this->setWriteEvent(client->getFd(), EV_ENABLE);
 	}
@@ -279,6 +280,7 @@ void Event::ReadEvent(const struct kevent *ev)
 
 void Event::RegisterNewProc(Client *client)
 {
+	std::cout << "new cgi has been run\n";
 	HttpResponse &response = client->response;
 	CGIProcess cgi;
 	Proc proc = cgi.RunCGIScript(response);

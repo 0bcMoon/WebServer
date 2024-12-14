@@ -210,6 +210,7 @@ std::string HttpResponse::getErrorRes()
 
 HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 {
+	this->isCgiBool = req.data.front()->bodyHandler.isCgi;
 	path = req.data[0]->path;
 	headers = req.data[0]->headers;
 	// body = req.data[0]->body;
@@ -243,7 +244,7 @@ std::string HttpResponse::getStatusDescr() const
 
 bool HttpResponse::isCgi()
 {
-	return (location->getCGIPath("." + getExtension(path)).size());
+	return (this->isCgiBool);
 }
 
 void HttpResponse::setHttpResError(int code, const std::string &str)

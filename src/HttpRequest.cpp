@@ -741,6 +741,43 @@ int HttpRequest::checkContentType()
 	return (0);
 }
 
+
+// bool HttpRequest::isCGI()
+// {
+// 	size_t pos = this->path.rfind(".");
+// 	if (pos == std::string::npos)
+// 		return (false);
+// 	for (size_t j = pos;pos < this->path.size();j++)
+// 	{
+
+// 	}
+
+
+bool HttpRequest::isMethodAllowed()
+{
+	int methode = 0;
+
+	if (data.back()->strMethode == "GET")
+		methode = GET;
+	else if (data.back()->strMethode == "POST")
+		methode = POST;
+	else if (data.back()->strMethode == "DELETE")
+		methode = DELETE;
+	else
+		methode = NONE;
+	return (this->location->isMethodAllowed(methode));
+}
+
+bool	HttpRequest::validateRequestLine()
+{
+	if (location == NULL)
+		return (setHttpReqError(404, "Not Found"), 0);
+	if (!this->isMethodAllowed())
+		return (setHttpReqError(405, "Method Not Allowed"), 0);
+	data.back()->bodyHandler.isCgi = location->getCGIPath("." + HttpResponse::getExtension(path)).size();
+	return (1);
+}
+
 int HttpRequest::firstHeadersCheck()
 {
 	if (data[data.size() - 1]->headers.find("Host") == data[data.size() - 1]->headers.end())
@@ -760,10 +797,11 @@ int HttpRequest::firstHeadersCheck()
 	if (data[data.size() - 1]->headers.find("Content-Type") != data[data.size() - 1]->headers.end()
 		&& data[data.size() - 1]->headers["Content-Type"].find(",") != std::string::npos)
 		return (setHttpReqError(400, "Bad Request"), 1);
-	if (location == NULL)
-		return (setHttpReqError(404, "Bad Request"), 1);
-	data.back()->bodyHandler.isCgi = location->getCGIPath("." + HttpResponse::getExtension(path)).size();
+
+	std::cout <<"CGI state --- " <<data.front()->bodyHandler.isCgi << "\n";
+
 	return (checkContentType());
+	// this->isCGI();
 }
 
 void HttpRequest::contentLengthBodyParsing()
@@ -1204,6 +1242,7 @@ int HttpRequest::parseMultiPart()
 
 void HttpRequest::parseBody()
 {
+
 	if (!(data.back()->bodyHandler.bodySize) && firstHeadersCheck())
 		return;
 	if (data.back()->headers.find("Content-Length") != data.back()->headers.end())
