@@ -22,9 +22,9 @@ class Location
 		{
 			std::string status; //3xx
 			std::string url;
-			std::string body; // INFO: body file name;
 		};
 		Redirection redirect;
+
 		http_method_t methods;
 		bool isRedirection;
 		std::string path;

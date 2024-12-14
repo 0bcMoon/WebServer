@@ -19,7 +19,6 @@ class Proc
 		std::string output;
 		std::string input;
 		int			output_fd;
-		std::vector<char> read_buffer;
 		std::vector<char> buffer;
 		Proc();
 		Proc(const Proc &other);
@@ -31,6 +30,7 @@ class Proc
 		int client;
 		int fout;
 		bool outToFile;
+		int		offset;
 		enum State state;
 };
 

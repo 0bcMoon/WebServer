@@ -92,7 +92,7 @@ int main()
 	}
 	catch (const std::runtime_error &e)
 	{
-		std::cerr << e.what() << "\n";
+		std::cerr << "runtime_error -- "<<e.what() << "\n";
 	}
 	catch (const std::bad_alloc &e)
 	{

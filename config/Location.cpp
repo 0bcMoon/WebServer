@@ -54,28 +54,31 @@ bool GlobalConfig::isValidStatusCode(std::string &str)
 
 void Location::setRedirect(Tokens &token, Tokens &end)
 {
-	std::vector<std::string> vec;
-	this->globalConfig.validateOrFaild(token, end);
-	while (token != end && *token != ";")
-		vec.push_back(this->globalConfig.consume(token, end));
-	this->globalConfig.CheckIfEnd(token, end);
-	if (vec.size() != 3)
-		throw Tokenizer::ParserException("invalid redirects argument: usage return status url|None Body|None");
-	redirect.body = vec[2];
-	redirect.url = vec[1];
-	redirect.status = vec[0];
-	if (redirect.body == "None" && redirect.url == "None")
-		throw Tokenizer::ParserException("Body or redirection url most be define in redirection");
-	else if (redirect.body != "None" && access(redirect.body.data(), F_OK | R_OK) != 0)
-		throw Tokenizer::ParserException("invalid file in Redirection: " + redirect.body + " " + std::string(strerror(errno)));
-	else if (!this->globalConfig.isValidStatusCode(redirect.status) || redirect.status[0] != '3')
-		throw Tokenizer::ParserException("Invalid Redirection Status Code: " + *token);
-	if (redirect.body == "None")
-		redirect.body.clear();
-	if (redirect.url == "None")
-		redirect.url.clear();
+	(void)end;
+	(void)token;
+	throw Tokenizer::ParserException("TODO: re impl");
+	// std::vector<std::string> vec;
+	// this->globalConfig.validateOrFaild(token, end);
+	// while (token != end && *token != ";")
+	// 	vec.push_back(this->globalConfig.consume(token, end));
+	// this->globalConfig.CheckIfEnd(token, end);
+	// if (vec.size() != 3)
+	// 	throw Tokenizer::ParserException("invalid redirects argument: usage return status url|None Body|None");
+	// // redirect.body = vec[2];
+	// redirect.url = vec[1];
+	// redirect.status = vec[0];
+	// // if (redirect.body == "None" && redirect.url == "None")
+	// // 	throw Tokenizer::ParserException("Body or redirection url most be define in redirection");
+	// else if (redirect.body != "None" && access(redirect.body.data(), F_OK | R_OK) != 0)
+	// 	throw Tokenizer::ParserException("invalid file in Redirection: " + redirect.body + " " + std::string(strerror(errno)));
+	// else if (!this->globalConfig.isValidStatusCode(redirect.status) || redirect.status[0] != '3')
+	// 	throw Tokenizer::ParserException("Invalid Redirection Status Code: " + *token);
+	// if (redirect.body == "None")
+	// 	redirect.body.clear();
+	// if (redirect.url == "None")
+	// 	redirect.url.clear();
 
-	this->isRedirection = true;
+	// this->isRedirection = true;
 }
 
 

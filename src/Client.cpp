@@ -31,9 +31,9 @@ void Client::respond(size_t data, size_t index)
 
 			
 	response = request;
-	std::cout << "ERROR: "<< response.getStatusCode() << std::endl;			
-	std::cout << response.path << std::endl;
-	std::cout << response.strMethod << std::endl;
+	// std::cout << "ERROR: "<< response.getStatusCode() << std::endl;			
+	// std::cout << response.path << std::endl;
+	// std::cout << response.strMethod << std::endl;
 	// std::map<std::string, std::string>::iterator kv = response.headers.find("Connection");
 
 	// if ((kv != response.headers.end()
