@@ -362,20 +362,16 @@ void HttpRequest::parsePath()
 {
 	while (reqBufferIndex < reqBufferSize)
 	{
-		// if (path.size() == 0 && reqBuffer[reqBufferIndex] == ' ')
 		if (data[data.size() - 1]->path.size() == 0 && reqBuffer[reqBufferIndex] == ' ')
 		{
 			reqBufferIndex++;
 			continue;
 		}
-		// if (path.size() != 0 && reqBuffer[reqBufferIndex] == ' ')
 		if (data[data.size() - 1]->path.size() != 0 && reqBuffer[reqBufferIndex] == ' ')
 		{
 			state = HTTP_VERSION;
 			return;
 		}
-		// if (!verifyUriChar(reqBuffer[reqBufferIndex]) || (path.size() == 0 &&
-		// reqBuffer[reqBufferIndex] != '/'))
 		if (!verifyUriChar(reqBuffer[reqBufferIndex])
 			|| (data[data.size() - 1]->path.size() == 0 && reqBuffer[reqBufferIndex] != '/'))
 		{
@@ -383,9 +379,7 @@ void HttpRequest::parsePath()
 			return;
 		}
 		data[data.size() - 1]->path.push_back(reqBuffer[reqBufferIndex]);
-		// path.push_back(reqBuffer[reqBufferIndex]);
 		reqBufferIndex++;
-		// if (path.size() > URI_MAX)
 		if (data[data.size() - 1]->path.size() > URI_MAX)
 		{
 			setHttpReqError(414, "URI Too Long");
@@ -774,7 +768,7 @@ bool	HttpRequest::validateRequestLine()
 		return (setHttpReqError(404, "Not Found"), 0);
 	if (!this->isMethodAllowed())
 		return (setHttpReqError(405, "Method Not Allowed"), 0);
-	data.back()->bodyHandler.isCgi = location->getCGIPath("." + HttpResponse::getExtension(path)).size();
+	data.back()->bodyHandler.isCgi = location->getCGIPath("." + HttpResponse::getExtension(data.back()->path)).size();
 	return (1);
 }
 
@@ -797,9 +791,6 @@ int HttpRequest::firstHeadersCheck()
 	if (data[data.size() - 1]->headers.find("Content-Type") != data[data.size() - 1]->headers.end()
 		&& data[data.size() - 1]->headers["Content-Type"].find(",") != std::string::npos)
 		return (setHttpReqError(400, "Bad Request"), 1);
-
-	std::cout <<"CGI state --- " <<data.front()->bodyHandler.isCgi << "\n";
-
 	return (checkContentType());
 	// this->isCGI();
 }
