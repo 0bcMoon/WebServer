@@ -30,32 +30,19 @@ void Client::respond(size_t data, size_t index)
 	response.eventByte = data;
 	if (request.data[index]->state != REQUEST_FINISH &&  request.data[index]->state != REQ_ERROR)
 		return ;
-
 			
 	response = request;
-	// std::cout << "ERROR: "<< response.getStatusCode() << std::endl;			
-	// std::cout << response.path << std::endl;
-	// std::cout << response.strMethod << std::endl;
-	// std::map<std::string, std::string>::iterator kv = response.headers.find("Connection");
 
-	// if ((kv != response.headers.end()
-	// 	&& (kv->second.find("close") != std::string::npos
-	// 		|| kv->second.find("Close") != std::string::npos))
-	// 	|| request.state == REQ_ERROR)
-	// 	response.keepAlive = 0;
 	if (request.data[index]->state == REQUEST_FINISH)
 		response.responseCooking();
 	if (response.state == START_CGI_RESPONSE)
 	{
 		response.bodyType = HttpResponse::CGI;
 		response.writeCgiResponse();
+		return ;
 	}
 	if (response.state != ERROR && response.isCgi() && response.state != UPLOAD_FILES && response.state != END_BODY) 
 		response.state = CGI_EXECUTING;
-	// if (response.state == ERROR)
-	// {
-	// 	response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
-	// }
 }
 
 void	Client::handleResponseError()

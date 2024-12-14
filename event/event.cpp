@@ -323,7 +323,7 @@ void Event::WriteEvent(const struct kevent *ev)
 		return;
 	Client *client = kv->second;
 	if (client->request.data.size() == 0
-		|| (client->request.data[0]->state != REQUEST_FINISH && client->request.data[0]->state != REQ_ERROR))
+			|| (client->request.data[0]->state != REQUEST_FINISH && client->request.data[0]->state != REQ_ERROR))
 		return;
 	if (client->response.state == START)
 	{
@@ -481,6 +481,7 @@ void Event::ProcEvent(const struct kevent *ev)
 	if (fd < 0)
 		return client->response.setHttpResError(500, "Internal Server Error");
 	client->response.responseFd = fd;
+	client->response.cgiOutFile = "/tmp/cgi_out"; // TODO: generate a Random file name
 	proc.clean();
 	this->procs.erase(ev->ident); // simple clean
 }

@@ -270,7 +270,7 @@ int Proc::writeBody(const char *ptr, int size)
 {
 	std::cout << "Error make: change file location\n";
 	if (this->output_fd == -1)
-		this->output_fd = open("/tmp/cgi_out", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		this->output_fd = open("/tmp/cgi_out", O_WRONLY | O_CREAT, 0644);
 	if (this->output_fd < 0)
 		return (-1);
 	return (write(this->output_fd, ptr, size));
