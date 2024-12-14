@@ -218,8 +218,9 @@ bool GlobalConfig::getAliasOffset() const
 	return (this->IsAlias);
 }
 
-Proc::Proc() : read_buffer(CGI_BUFFER_SIZE)
+Proc::Proc() : buffer(CGI_BUFFER_SIZE + 3)
 {
+	this->offset = 0;
 	this->output_fd = -1;
 	this->outToFile = false;
 	this->fout = -1;
@@ -240,6 +241,7 @@ Proc &Proc::operator=(const Proc &other)
 	this->state = other.state;
 	this->client = other.client;
 	this->outToFile = other.outToFile;
+	this->offset = other.offset;
 	// this->input
 	return (*this);
 }
@@ -255,10 +257,13 @@ void Proc::die()
 
 void Proc::clean()
 {
+	// TODO: remove request body
 	if (this->fout < 0)
-		return;
-	close(this->fout);
+		close(this->fout);
+	if (this->output_fd >= 0)
+		close(this->output_fd);
 	this->fout = -1;
+	this->output_fd = -1;
 }
 
 int Proc::writeBody(const char *ptr, int size)

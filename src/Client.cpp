@@ -1,4 +1,5 @@
 #include "Client.hpp"
+#include <csignal>
 #include <cstddef>
 #include <sys/event.h>
 #include <sys/fcntl.h>
@@ -19,6 +20,7 @@ int Client::getFd() const
 
 Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), ctx(ctx), request(fd), response(fd, ctx, &request)
 {
+	this->cgi_pid  = -1;
 	state = None;
 	this->timerType = NEW_CONNECTION;
 }
@@ -33,7 +35,6 @@ void Client::respond(size_t data, size_t index)
 
 	if (request.data[index]->state == REQUEST_FINISH)
 		response.responseCooking();
-
 	if (response.state == START_CGI_RESPONSE)
 	{
 		response.bodyType = HttpResponse::CGI;
@@ -72,6 +73,6 @@ Client::TimerType Client::getTimerType() const
 
 Client::~Client()
 {
-	// this->proc.die(); // make process clean it own shit \n
-	// this->proc.clean();
+	if (this->cgi_pid > 0)
+		::kill(this->cgi_pid, SIGKILL);
 }

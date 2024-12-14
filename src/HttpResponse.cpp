@@ -429,25 +429,18 @@ int HttpResponse::parseCgiHaders(std::string str)
 	if (str.size() < 3)
 		return (1);
 	if (pos == std::string::npos || pos == 0 || str.back() != '\n')
-	{
-		std::cout << "|" << str << "|" << std::endl;
-		exit(9);
 		return (setHttpResError(502, "Bad Gateway"), 0);
-	}
 	tmpHeaderName = str.substr(0, pos);
 	for (size_t i = 0; i < tmpHeaderName.size(); i++)
 	{
 		if (!isValidHeaderChar(tmpHeaderName[i]))
 		{
-			std::cout << "|" << str << "|" << std::endl;
-			std::cout << "---- " << (int )tmpHeaderName[i] << std::endl;
-			exit(10);
 			return (setHttpResError(502, "Bad Gateway"), 0);
 		}
 	}
 	tmpHeaderVal = str.substr(pos + 1);
 	if (tmpHeaderVal.size() < 3 || tmpHeaderVal[0] != ' ')
-		return (exit(10), setHttpResError(502, "Bad Gateway"), 0);
+		return (setHttpResError(502, "Bad Gateway"), 0);
 	resHeaders[tmpHeaderName] = tmpHeaderVal.substr(0, tmpHeaderVal.size() - 1);
 	return (1);
 }
@@ -475,26 +468,6 @@ static std::string vec2str(std::vector<char> vec)
 	return (str);
 }
 
-static int parseCgiStatusLine(std::string line)
-{
-	for (size_t i = 8; i < line.size(); i++)
-	{
-		if (i == 8 && line[i] != ' ')
-			break;
-		if (i == 9 && (line[i] < '1' || line[i] > '5'))
-			break;
-		if ((i == 10 || i == 11) && !isdigit(line[i]))
-			break;
-		if (i == 12 && line[i] != ' ')
-			break;
-		// if (i > 12 && line[i] != '\n' && line[i] != '\r')
-		// 	break;
-		if (line[i] == '\n' && i > 13)
-			return (1);
-	}
-	return (0);
-}
-
 void HttpResponse::parseCgiOutput()
 {
 	std::string headers(CGIOutput.data(), CGIOutput.size());
@@ -502,20 +475,18 @@ void HttpResponse::parseCgiOutput()
 	size_t strIt = 0;
 
 	cgiRes.state = HEADERS;
-	if (CGIOutput.size() == 0)
+	if (CGIOutput.size() == 0 || headers.find("\r\n\r\n") == std::string::npos)
 		return setHttpResError(502, "Bad Gateway");
-
 	while (pos != std::string::npos)
 	{
 		if (!parseCgiHaders(headers.substr(strIt, (pos -strIt + 1))))
-		{
 			return ;
-
-		}
 		strIt = pos + 1;
 		pos = headers.find("\n", strIt);
 	}
-	if (strIt >= headers.size())
+	if (strIt < headers.size())
+		setHttpResError(502, "Bad Gateway");
+	if (this->resHeaders.find("Status") == resHeaders.end())
 		setHttpResError(502, "Bad Gateway");
 }
 

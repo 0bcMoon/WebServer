@@ -3,6 +3,7 @@
 #include <sys/unistd.h>
 #include <unistd.h>
 #include <cerrno>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <sstream>
@@ -30,19 +31,21 @@ void CGIProcess::closePipe(int fd[2])
 
 int CGIProcess::redirectPipe()
 {
-	std::cout << "warning: make cgi input file dynamique";
+	std::cout << "warning: make cgi input file dynamique\n";
 	close(this->pipeOut[0]);
 	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
 		return (-1);
 	close(this->pipeOut[1]);
-	if (response->strMethod != "POST")
+	if (this->response->strMethod != "POST")
 		return (0);
-	int body_fd = open("/tmp/body", O_RDONLY);
-	if (body_fd < 0)
-		return (-1);
-	if (dup2(body_fd, STDIN_FILENO) < 0)
-		return (close(body_fd), -1);
-	close(body_fd);
+	// int body_fd = open("/tmp/body", O_RDONLY);
+	// if (body_fd < 0)
+	// 	return (-1);
+	// if (dup2(body_fd, STDIN_FILENO) < 0)
+	// 	return (close(body_fd), -1);
+	// close(body_fd);
+	//
+	std::cout << "--------------run the cgi\n";
 	return (0);
 }
 
@@ -70,7 +73,8 @@ void CGIProcess::loadEnv()
 	for (int i = 0; it != response->headers.end(); it++, i++)
 		this->env.push_back(ToEnv(it));
 	ss << response->location->getPort();
-	env["SERVER_SOFTWARE"] = "macOS";
+	env["SERVER_SOFTWARE"] = "42webserv";
+	env["REDIRECT_STATUS"] = "";
 	env["GATEWAY_INTERFACE"] = "CGI/1.1";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
 	env["SERVER_PORT"] = ss.str();
@@ -78,10 +82,10 @@ void CGIProcess::loadEnv()
 	env["REQUEST_METHOD"] = response->strMethod;
 	env["SCRIPT_NAME"] = response->path;
 	env["QUERY_STRING"] = response->queryStr;
-	env["REMOTE_ADDR"] = ""; // TODO:
-	env["PATH_INFO"] = "/cgi";
+	env["PATH_INFO"] = "/"; //TODO: edit path algo
 	env["HTTP_HOST"] = response->headers["Host"];
 	env["CONTENT_TYPE"] = response->headers["Content-type"];
+	env["SCRIPT_FILENAME"] = this->cgi_bin;
 	if (response->strMethod == "POST")
 	{
 		ss.clear();
@@ -107,17 +111,17 @@ void CGIProcess::child_process()
 	std::string path =
 		response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique
 	const char *args[3] = {path.data(), cgi_bin.data(), NULL};
-	char **argv = new char *[env.size() + 1];
+	char **envp = new char *[env.size() + 1];
 	size_t i = 0;
 	for (; i < env.size(); i++)
-		argv[i] = (char *)this->env[i].data();
-	argv[i] = NULL;
+		envp[i] = (char *)this->env[i].data();
+	envp[i] = NULL;
 	if (redirectPipe())
 	{
 		closePipe(this->pipeOut);
 		throw std::runtime_error("child could not be run: " + std::string(strerror(errno)));
 	}
-	execve(*args, (char *const *)args, argv);
+	execve(*args, (char *const *)args, envp);
 	throw std::runtime_error("child process faild: execve: " + std::string(strerror(errno)));
 }
 

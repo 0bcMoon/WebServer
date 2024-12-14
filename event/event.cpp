@@ -372,41 +372,43 @@ void Event::rpipe(const struct kevent *ev)
 	HttpResponse *response = &client->response;
 	// response->responseFd = -1; // Body to set
 	int read_size = std::min(ev->data, CGI_BUFFER_SIZE);
-	int r = read(ev->ident, proc.read_buffer.data(), read_size); // create a event buffer
+	int r = read(ev->ident, proc.buffer.data() + proc.offset, read_size); // create a event buffer
 	if (r < 0)
 		return response->setHttpResError(500, "Internal server Error"); // kill cgi
 	else if (r == 0)
 		return;
 	assert(r == read_size && "this should't happend");
-	std::cout << "read from cgi " << r << "\n";
-	response->CGIOutput.insert(response->CGIOutput.end(), proc.read_buffer.begin(), proc.read_buffer.end());
-	return ;
+	read_size += proc.offset;
+	proc.offset = 0;
 	if (proc.outToFile)
 	{
-		if (proc.writeBody(proc.read_buffer.data(), read_size) < 0)
+		if (proc.writeBody(proc.buffer.data(), read_size) < 0)
 			return response->setHttpResError(500, "Internal server Error"); // kill cgi
 		return;
 	}
-	// std::vector<char> &buffer = proc.read_buffer;
-	// std::vector<char>::iterator it = std::search(buffer.begin(), buffer.begin() + read_size, seq, seq + 4);
-	// if (it != (buffer.begin() + read_size) && it != buffer.begin())
-	// {
-	// 	response->CGIOutput.insert(response->CGIOutput.end(), buffer.begin(), it); // the size of header gonna be small
-	// 	it += 4;
-	// 	if (proc.writeBody(&(*it), buffer.end() - it) < 0)
-	// 		return response->setHttpResError(500, "Internal server Error"); // kill cgi
-	// 	proc.outToFile = true;
-	// }
-	// else
-	// {
-	// 	if (read_size <= 3)
-	// 	{
-	// 		proc.buffer.insert(proc.buffer.begin(), buffer.begin(), buffer.end());
-	// 		return;
-	// 	}
-	// 	response->CGIOutput.insert(response->CGIOutput.end(), buffer.begin(), buffer.end() - 3);
-	// 	proc.buffer.insert(proc.buffer.begin(), buffer.end() - 3, buffer.end());
-	// }
+	else if (read_size < 4)
+	{
+		proc.offset = read_size;
+		return;
+	}
+	std::vector<char> &buffer = proc.buffer;
+	std::vector<char>::iterator it = std::search(buffer.begin(), buffer.begin() + read_size, seq, seq + 4);
+	if (it != (buffer.begin() + read_size))
+	{
+		it = it + 4;
+		response->CGIOutput.insert(response->CGIOutput.end(), buffer.begin(), it); // the size of header gonna be small
+		if (proc.writeBody(&(*it), buffer.end() - it) < 0)
+			return response->setHttpResError(500, "Internal server Error"); // kill cgi
+		proc.outToFile = true;
+	}
+	else
+	{
+		response->CGIOutput.insert(response->CGIOutput.end(), buffer.begin(), buffer.begin() + read_size - 3);
+		int j = 0;
+		for (int i = read_size - 3; i < read_size; i++)
+			proc.buffer[j++] = proc.buffer[i];
+		proc.offset = 3;
+	}
 }
 
 // void Event::wpipe(const struct kevent *ev)
@@ -448,18 +450,18 @@ int Event::waitProc(int pid)
 {
 	int status;
 	int signal;
+
 	waitpid(pid, &status, 0); // this event only run if process has finish so witpid would not block
 	signal = WIFSIGNALED(status); // check if process exist normally
 	status = WEXITSTATUS(status); // check exist state
 	struct kevent event;
 	EV_SET(&event, pid, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
 	kevent(this->kqueueFd, &event, 1, NULL, 0, NULL); // an edge case where timer already in user land
-	return (signal | status);
+	return (signal || status);
 }
 
 void Event::ProcEvent(const struct kevent *ev)
 {
-	std::cout <<"process " <<ev->ident << "\n";
 	int status = this->waitProc(ev->ident);
 	ProcMap_t::iterator p = this->procs.find(ev->ident);
 	if (p == this->procs.end()) // should always exist
@@ -467,12 +469,17 @@ void Event::ProcEvent(const struct kevent *ev)
 	Proc &proc = p->second;
 	Client *client = this->connections.getClient(proc.client);
 	if (!client)
-		return (void)(std::cout << "client has run away << " << proc.client << "\n"); // DO a cleanUp 
+		return (void)(std::cout << "client has run away << " << proc.client << "\n"); // DO a cleanUp
 	this->setWriteEvent(client->getFd(), EV_ENABLE);
 	if (status)
-		return (client->response.setHttpResError(502, "Bad Gateway"));
+		return (client->response.setHttpResError(503, "Bad Gateway"));
 	client->response.state = START_CGI_RESPONSE;
-	std::cout << "state has been set\n";
+	proc.clean();
+	int fd = open("/tmp/cgi_out", O_RDONLY); // TODO: generate a Random file name
+	if (fd < 0)
+		return client->response.setHttpResError(500, "Internal Server Error");
+	client->response.responseFd = fd;
+	proc.clean();
 	this->procs.erase(ev->ident); // simple clean
 }
 
@@ -481,12 +488,13 @@ void Event::eventLoop()
 	connections.init(this->ctx, this->kqueueFd);
 	int nev;
 	std::cout << "TODO: add default index.html\n";
+	std::cout << "TODO: edit path algo : handel path info\n";
+	std::cout << "TODO: edit method how to find if it a cgi or not\n";
 	while (1)
 	{
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
-		std::cout << "event loop " << nev << "\n";
 		for (int i = 0; i < nev; i++)
 		{
 			const struct kevent *ev = &this->evList[i];
