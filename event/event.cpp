@@ -395,8 +395,8 @@ void Event::rpipe(const struct kevent *ev)
 	std::vector<char>::iterator it = std::search(buffer.begin(), buffer.begin() + read_size, seq, seq + 4);
 	if (it != (buffer.begin() + read_size))
 	{
-		response->CGIOutput.insert(response->CGIOutput.end(), buffer.begin(), it); // the size of header gonna be small
 		it = it + 4;
+		response->CGIOutput.insert(response->CGIOutput.end(), buffer.begin(), it); // the size of header gonna be small
 		if (proc.writeBody(&(*it), buffer.end() - it) < 0)
 			return response->setHttpResError(500, "Internal server Error"); // kill cgi
 		proc.outToFile = true;
