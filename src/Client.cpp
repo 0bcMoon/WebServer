@@ -39,6 +39,7 @@ void Client::respond(size_t data, size_t index)
 	{
 		response.bodyType = HttpResponse::CGI;
 		response.writeCgiResponse();
+		return ;
 	}
 	if (response.state != ERROR && response.isCgi() && response.state != UPLOAD_FILES && response.state != END_BODY) 
 		response.state = CGI_EXECUTING;

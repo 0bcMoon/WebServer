@@ -64,7 +64,7 @@ class HttpResponse
 			std::string		cgiStatusLine;
 			std::vector<std::vector<char > > lines;// mok li kadiro
 		};
-
+		
 		cgiRespone							cgiRes;
 		enum reqMethode						methode;
 		std::vector<char>					body; // seperate 
@@ -80,6 +80,7 @@ class HttpResponse
 		char								buff[BUFFER_SIZE]; // TODO: make me 
 		std::string							errorPage;	
 		bool								isErrDef;	
+		int									parseCgistatus();
 	public:
 		struct upload_data {
 			size_t			 it;
@@ -105,6 +106,7 @@ class HttpResponse
 		size_t								fileSize;
 		size_t								sendSize;
 		int									fd;
+		std::string							cgiOutFile;
 
 		class IOException : public std::exception
 		{

@@ -479,6 +479,7 @@ void Event::ProcEvent(const struct kevent *ev)
 	if (fd < 0)
 		return client->response.setHttpResError(500, "Internal Server Error");
 	client->response.responseFd = fd;
+	client->response.cgiOutFile = "/tmp/cgi_out"; // TODO: generate a Random file name
 	proc.clean();
 	this->procs.erase(ev->ident); // simple clean
 }
