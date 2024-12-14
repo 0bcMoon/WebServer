@@ -321,7 +321,7 @@ void Event::WriteEvent(const struct kevent *ev)
 		return;
 	Client *client = kv->second;
 	if (client->request.data.size() == 0
-		|| (client->request.data[0]->state != REQUEST_FINISH && client->request.data[0]->state != REQ_ERROR))
+			|| (client->request.data[0]->state != REQUEST_FINISH && client->request.data[0]->state != REQ_ERROR))
 		return;
 	if (client->response.state == START)
 	{

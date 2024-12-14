@@ -415,21 +415,9 @@ int HttpResponse::pathChecking()
 	return (1);
 }
 
-static int isAlpha(char c)
-{
-	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
-}
-
 static int isValidHeaderChar(char c)
 {
-	return (isAlpha(c) || (c >= '1' && c <= '9') || c == '-' || c == ':');
-}
-
-static int isStatusLine(std::vector<char> vec)
-{
-	return (
-		vec[0] == 'H' && vec[1] == 'T' && vec[2] == 'T' && vec[3] == 'P' && vec[4] == '/' && vec[5] == '1'
-		&& vec[6] == '.' && vec[7] == '1');
+	return (std::isalpha(c) || std::isdigit(c) || c == '-' || c == ':');
 }
 
 int HttpResponse::parseCgiHaders(std::string str)
@@ -438,17 +426,28 @@ int HttpResponse::parseCgiHaders(std::string str)
 	std::string tmpHeaderName;
 	std::string tmpHeaderVal;
 
-	if (pos == std::string::npos || pos == 0 || str[str.size() - 1] != '\n')
+	if (str.size() < 3)
+		return (1);
+	if (pos == std::string::npos || pos == 0 || str.back() != '\n')
+	{
+		std::cout << "|" << str << "|" << std::endl;
+		exit(9);
 		return (setHttpResError(502, "Bad Gateway"), 0);
+	}
 	tmpHeaderName = str.substr(0, pos);
 	for (size_t i = 0; i < tmpHeaderName.size(); i++)
 	{
 		if (!isValidHeaderChar(tmpHeaderName[i]))
+		{
+			std::cout << "|" << str << "|" << std::endl;
+			std::cout << "---- " << (int )tmpHeaderName[i] << std::endl;
+			exit(10);
 			return (setHttpResError(502, "Bad Gateway"), 0);
+		}
 	}
 	tmpHeaderVal = str.substr(pos + 1);
 	if (tmpHeaderVal.size() < 3 || tmpHeaderVal[0] != ' ')
-		return (setHttpResError(502, "Bad Gateway"), 0);
+		return (exit(10), setHttpResError(502, "Bad Gateway"), 0);
 	resHeaders[tmpHeaderName] = tmpHeaderVal.substr(0, tmpHeaderVal.size() - 1);
 	return (1);
 }
@@ -498,50 +497,26 @@ static int parseCgiStatusLine(std::string line)
 
 void HttpResponse::parseCgiOutput()
 {
-	std::string tmpHeaderName;
-	std::string tmpHeaderVal;
-	size_t lineIndex = 0;
+	std::string headers(CGIOutput.data(), CGIOutput.size());
+	size_t pos = headers.find("\n");
+	size_t strIt = 0;
 
 	cgiRes.state = HEADERS;
 	if (CGIOutput.size() == 0)
-		return;
+		return setHttpResError(502, "Bad Gateway");
 
-	for (size_t j = 0; j < CGIOutput.size(); j++)
+	while (pos != std::string::npos)
 	{
-		if (lineIndex == cgiRes.lines.size())
-			cgiRes.lines.push_back(std::vector<char>());
-		cgiRes.lines[lineIndex].push_back(CGIOutput[j]);
-		if (CGIOutput[j] == '\n')
-			lineIndex++;
-	}
+		if (!parseCgiHaders(headers.substr(strIt, (pos -strIt + 1))))
+		{
+			return ;
 
-	// for (size_t i = 0; i < cgiRes.lines.size(); i++)
-	// {
-	// 	write(1, cgiRes.lines[i].data(), cgiRes.lines[i].size());
-	// }
-	for (size_t i = 0; i < cgiRes.lines.size(); i++)
-	{
-		if (isLineCrlf(cgiRes.lines[i]))
-		{
-			cgiRes.bodyStartIndex = i + 1;
-			return;
 		}
-		if (i == 0 && cgiRes.lines[i].size() > 8 && isStatusLine(cgiRes.lines[i]))
-		{
-			if (!parseCgiStatusLine(vec2str(cgiRes.lines[i])))
-			{
-				setHttpResError(502, "Bad Gateway");
-				return;
-			}
-			cgiRes.cgiStatusLine = vec2str(cgiRes.lines[i]);
-		}
-		else
-		{
-			if (!parseCgiHaders(vec2str(cgiRes.lines[i])))
-				return;
-		}
+		strIt = pos + 1;
+		pos = headers.find("\n", strIt);
 	}
-	setHttpResError(502, "Bad Gateway");
+	if (strIt >= headers.size())
+		setHttpResError(502, "Bad Gateway");
 }
 
 std::string HttpResponse::getCgiContentLenght()
@@ -553,20 +528,17 @@ std::string HttpResponse::getCgiContentLenght()
 	}
 	std::ostringstream oss;
 	oss << len;
-	// std::cout << "--->" << oss.str() << std::endl;
 	return (oss.str());
 }
 
 void HttpResponse::writeCgiResponse()
 {
-	// return ("Connection: keep-alive\r\n");
 	if (keepAlive)
 		resHeaders["Connection"] = "keep-alive";
 	else
 		resHeaders["Connection"] = "Close";
 	resHeaders["Content-Type"] = "text/plain";
 	parseCgiOutput();
-	// std::cout << "ERROR" << std::endl;
 	if (state == ERROR)
 		return;
 	if (cgiRes.cgiStatusLine.size() == 0)
@@ -583,7 +555,7 @@ void HttpResponse::writeCgiResponse()
 		write(fd, "\r\n", 2);
 	}
 	write(this->fd, "\r\n", 2);
-	sendBody(-1, CGI);
+	state = WRITE_BODY;
 }
 
 void HttpResponse::writeResponse()
@@ -591,13 +563,8 @@ void HttpResponse::writeResponse()
 	writeByte = 0;
 	write2client(this->fd, getStatusLine().c_str(), getStatusLine().size());
 	write2client(this->fd, getConnectionState().c_str(), getConnectionState().size());
-	// {
-	// if (state != UPLOAD_FILES)
 	write2client(this->fd, getContentType().c_str(), getContentType().size());
-	// else
-	// 	bodyType = NO_TYPE;
 	write2client(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
-	// }
 	write2client(fd, getDate().c_str(), getDate().size());
 	write2client(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
 	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
