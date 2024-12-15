@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 #include "DataType.hpp"
+#include "HttpResponse.hpp"
 
 GlobalConfig::GlobalConfig()
 {
@@ -242,17 +243,16 @@ Proc &Proc::operator=(const Proc &other)
 	this->client = other.client;
 	this->outToFile = other.outToFile;
 	this->offset = other.offset;
-	// this->input
+	this->input = other.input;
+	this->output = other.output;
 	return (*this);
 }
 
 void Proc::die()
 {
-	// assert(this->pid > 0 && "Major Error Need to be fix: with proc");
-
 	if (this->pid > 0)
 		::kill(this->pid, SIGKILL);
-	// this->pid = -1;
+	this->pid = -1;
 }
 
 void Proc::clean()
@@ -266,11 +266,42 @@ void Proc::clean()
 	this->output_fd = -1;
 }
 
+std::string mktmpfile()
+{
+	std::stringstream ss;
+	time_t now = std::time(0);
+	struct tm *tstruct = std::localtime(&now);
+
+	ss << "_" << tstruct->tm_year + 1900 << "_";
+	ss << tstruct->tm_mon << "_";
+	ss << tstruct->tm_mday << "_";
+	ss << tstruct->tm_hour << "_";
+	ss << tstruct->tm_min << "_";
+	ss << tstruct->tm_sec;
+	std::string rstr(24, ' ');
+	const char charset[] = {
+
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+		'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
+		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+	int n = sizeof(charset) / sizeof(charset[0]);
+	for (int i = 0; i < 24; i++)
+	{
+		int idx = (std::rand() % n);
+		rstr[i] = charset[idx];
+	}
+	return ("/tmp/" + rstr + ss.str());
+}
 int Proc::writeBody(const char *ptr, int size)
 {
 	std::cout << "Error make: change file location\n";
 	if (this->output_fd == -1)
-		this->output_fd = open("/tmp/cgi_out", O_WRONLY | O_CREAT, 0644);
+	{
+		this->output = mktmpfile();
+		this->output_fd = open(this->output.data(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	}
 	if (this->output_fd < 0)
 		return (-1);
 	return (write(this->output_fd, ptr, size));

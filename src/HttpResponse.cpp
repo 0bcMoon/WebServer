@@ -65,7 +65,6 @@ void HttpResponse::clear()
 	responseFd = -1;
 	isErrDef = 1;
 
-
 	errorRes.statusLine.clear();
 	errorRes.headers.clear();
 	errorRes.connection.clear();
@@ -166,9 +165,7 @@ void HttpResponse::write2client(int fd, const char *str, size_t size)
 	writeByte += size;
 }
 
-HttpResponse::IOException::~IOException() throw()
-{
-}
+HttpResponse::IOException::~IOException() throw() {}
 HttpResponse::IOException::IOException() throw()
 {
 	this->msg = "IOException: " + std::string(strerror(errno));
@@ -469,7 +466,7 @@ static std::string vec2str(std::vector<char> vec)
 	return (str);
 }
 
-int		HttpResponse::parseCgistatus()
+int HttpResponse::parseCgistatus()
 {
 	map_it it = resHeaders.find("Status");
 	std::stringstream ss;
@@ -497,8 +494,8 @@ void HttpResponse::parseCgiOutput()
 		return setHttpResError(502, "Bad Gateway");
 	while (pos != std::string::npos)
 	{
-		if (!parseCgiHaders(headers.substr(strIt, (pos -strIt + 1))))
-			return ;
+		if (!parseCgiHaders(headers.substr(strIt, (pos - strIt + 1))))
+			return;
 		strIt = pos + 1;
 		pos = headers.find("\n", strIt);
 	}
@@ -842,7 +839,17 @@ std::string decimalToHex(int decimal)
 
 std::string HttpResponse::getRandomName()
 {
-	std::string rstr(48, ' ');
+	std::stringstream ss;
+	time_t now = std::time(0);
+	struct tm *tstruct = std::localtime(&now);
+
+	ss << "_" << tstruct->tm_year + 1900 << "_";
+	ss << tstruct->tm_mon << "_";
+	ss << tstruct->tm_mday << "_";
+	ss << tstruct->tm_hour << "_";
+	ss << tstruct->tm_min << "_";
+	ss << tstruct->tm_sec;
+	std::string rstr(24, ' ');
 	const char charset[] = {
 
 		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
@@ -851,10 +858,10 @@ std::string HttpResponse::getRandomName()
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
 		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 	int n = sizeof(charset) / sizeof(charset[0]);
-	for (int i = 0; i < 48; i++)
+	for (int i = 0; i < 24; i++)
 	{
 		int idx = (std::rand() % n);
 		rstr[i] = charset[idx];
 	}
-	return (rstr);
+	return (rstr + ss.str());
 }

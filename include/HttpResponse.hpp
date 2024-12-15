@@ -119,7 +119,7 @@ class HttpResponse
 				virtual const char* what() const throw();
 		};
 
-		std::string getRandomName();
+		static std::string getRandomName();
 		std::string							queryStr;
 		std::string											getCgiContentLenght();
 		int													parseCgiHaders(std::string str);

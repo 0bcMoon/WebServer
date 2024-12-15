@@ -735,7 +735,6 @@ int HttpRequest::checkContentType()
 	return (0);
 }
 
-
 // bool HttpRequest::isCGI()
 // {
 // 	size_t pos = this->path.rfind(".");
@@ -745,7 +744,6 @@ int HttpRequest::checkContentType()
 // 	{
 
 // 	}
-
 
 bool HttpRequest::isMethodAllowed()
 {
@@ -762,12 +760,36 @@ bool HttpRequest::isMethodAllowed()
 	return (this->location->isMethodAllowed(methode));
 }
 
-bool	HttpRequest::validateRequestLine()
+bool HttpRequest::isCGI()
+{
+	std::string &path = this->data.back()->path;
+	size_t pos = path.rfind('.');
+	if (pos == std::string::npos)
+		return (false);
+	size_t j = pos;
+	for (; j < path.size(); j++)
+	{
+		if (path[j] == '?')
+			break;
+		if (path[j] == '/')
+			break;
+	}
+	std::string ext = path.substr(pos, j - pos);
+	if (this->location->getCGIPath(ext).empty())
+		return (false);
+	//TODO: check here if cgi is not excutable or not exist or if request file does not exist
+	if (path[j] == '/')
+		this->data.back()->path_info = path.substr(j);
+	return (true);
+}
+
+bool HttpRequest::validateRequestLine()
 {
 	if (location == NULL)
 		return (setHttpReqError(404, "Not Found"), 0);
 	if (!this->isMethodAllowed())
 		return (setHttpReqError(405, "Method Not Allowed"), 0);
+
 	data.back()->bodyHandler.isCgi = location->getCGIPath("." + HttpResponse::getExtension(data.back()->path)).size();
 	return (1);
 }
@@ -792,7 +814,7 @@ int HttpRequest::firstHeadersCheck()
 		&& data[data.size() - 1]->headers["Content-Type"].find(",") != std::string::npos)
 		return (setHttpReqError(400, "Bad Request"), 1);
 	return (checkContentType());
-	// this->isCGI();
+	this->isCGI();
 }
 
 void HttpRequest::contentLengthBodyParsing()
@@ -837,7 +859,8 @@ void HttpRequest::contentLengthBodyParsing()
 	}
 	else if (reqBody == MULTI_PART)
 		parseMultiPart();
-	if ((size_t)bodySize <= data.back()->bodyHandler.bodySize) {
+	if ((size_t)bodySize <= data.back()->bodyHandler.bodySize)
+	{
 		std::cout << "DEBUG_7" << std::endl;
 		state = BODY_FINISH;
 	}
@@ -1233,7 +1256,6 @@ int HttpRequest::parseMultiPart()
 
 void HttpRequest::parseBody()
 {
-
 	if (!(data.back()->bodyHandler.bodySize) && firstHeadersCheck())
 		return;
 	if (data.back()->headers.find("Content-Length") != data.back()->headers.end())

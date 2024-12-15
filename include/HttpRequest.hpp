@@ -1,23 +1,23 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
-#include "Location.hpp"
 #include <sys/event.h>
 #include <cstddef>
 #include <map>
 #include <string>
 #include <vector>
+#include "Location.hpp"
 
-#define URI_MAX		 2048
-#define REQSIZE_MAX  1024*10240
-#define BUFFER_SIZE  5 * 1024*1024
-#define BODY_MAX	 1024*10240000
+#define URI_MAX 2048
+#define REQSIZE_MAX 1024 * 10240
+#define BUFFER_SIZE 5 * 1024 * 1024
+#define BODY_MAX 1024 * 10240000L
 
-typedef std::map<std::string, std::string>::iterator map_it; // WARNING 
+typedef std::map<std::string, std::string>::iterator map_it; // WARNING
 
 enum reqMethode
 {
-	GET  = 0b1,
+	GET = 0b1,
 	POST = 0b10,
 	DELETE = 0b100,
 	NONE = 0
@@ -40,13 +40,15 @@ enum reqState
 	DEBUG
 };
 
-enum chunkState {
+enum chunkState
+{
 	SIZE,
 	LINE,
 	END_LINE
 };
 
-enum crlfState {
+enum crlfState
+{
 	READING,
 	NLINE,
 	RETURN,
@@ -54,190 +56,188 @@ enum crlfState {
 	LRETURN
 };
 
-
-typedef struct httpError 
+typedef struct httpError
 {
-	int         code;
+	int code;
 	std::string description;
 } httpError;
 
 typedef struct methodeStr
 {
-	std::string							tmpMethodeStr;
-	std::string							eqMethodeStr;
-	
+	std::string tmpMethodeStr;
+	std::string eqMethodeStr;
+
 } methodeStr;
 
-enum reqBodyType {
+enum reqBodyType
+{
 	MULTI_PART,
 	TEXT_PLAIN,
 	URL_ENCODED,
 	NON
 };
 
-struct multiPart 
+struct multiPart
 {
-	std::vector<char>						body;
-	int										fd;
-	std::map<std::string, std::string>		headers;
+	std::vector<char> body;
+	int fd;
+	std::map<std::string, std::string> headers;
 	// std::vector<std::string>				strsHeaders;
 };
 
-struct bodyHandler {
+struct bodyHandler
+{
 	bodyHandler();
-	~bodyHandler();	
-	void								clear();
-	void								push2body(char c);
-	int									push2fileBody(char c, const std::string &boundary);
-	int									upload2file(std::string &boundary);
-	int									openNewFile();
-	int									writeBody();
-	bool								isCgi;
+	~bodyHandler();
+	void clear();
+	void push2body(char c);
+	int push2fileBody(char c, const std::string &boundary);
+	int upload2file(std::string &boundary);
+	int openNewFile();
+	int writeBody();
+	bool isCgi;
 
-	std::map<std::string, std::string>	headers;
+	std::map<std::string, std::string> headers;
 
-	int									bodyFd;
-	size_t								bodyIt;
-	std::vector<char>					body;//raw body;
-	size_t								bodySize;
+	int bodyFd;
+	size_t bodyIt;
+	std::vector<char> body; // raw body;
+	size_t bodySize;
 
-	std::string							header;
-	std::string							tmpBorder;
+	std::string header;
+	std::string tmpBorder;
 
-	int									currFd;
-	size_t								fileBodyIt;
-	size_t								borderIt;
-	std::vector<char>				    fileBody;
+	int currFd;
+	size_t fileBodyIt;
+	size_t borderIt;
+	std::vector<char> fileBody;
 };
 
-typedef struct data_s {
-	std::string                         path;
-	std::string							strMethode;
-	std::map<std::string, std::string>	headers;
-	// std::vector<char>					body;
-	httpError							error;
-	enum reqState								state;
-
-	// std::vector<multiPart>						multiPartBodys;
-	bodyHandler									bodyHandler;
+typedef struct data_s
+{
+	std::string path;
+	std::string path_info;
+	std::string strMethode;
+	std::map<std::string, std::string> headers;
+	httpError error;
+	enum reqState state;
+	bodyHandler bodyHandler;
 } data_t;
 
-class HttpRequest 
+class HttpRequest
 {
-	private:
-		enum multiPartState {
-			_ERROR,
-			_NEW,
-			BORDER,
-			MULTI_PART_HEADERS,
-			BODY_CRLF,
-			MULTI_PART_HEADERS_VAL,
-			STORING,
-			FINISHED
-		};
+  private:
+	enum multiPartState
+	{
+		_ERROR,
+		_NEW,
+		BORDER,
+		MULTI_PART_HEADERS,
+		BODY_CRLF,
+		MULTI_PART_HEADERS_VAL,
+		STORING,
+		FINISHED
+	};
 
-		bool isCGI();
-		void						handleNewBody();
-		void						handleMultiPartHeaders();
-		void						handleStoring();
-		void						parseMultiPartHeaderVal();
-		int							isBodycrlf();
-		int							isBorder();
-		int							checkMultiPartEnd();
-		void						parseBodyCrlf();
-		bool						isMethodAllowed();
+	bool isCGI();
+	void handleNewBody();
+	void handleMultiPartHeaders();
+	void handleStoring();
+	void parseMultiPartHeaderVal();
+	int isBodycrlf();
+	int isBorder();
+	int checkMultiPartEnd();
+	void parseBodyCrlf();
+	bool isMethodAllowed();
 
-		enum multiPartState							bodyState;
-		struct kevent *ev;
-		typedef std::map<std::string, std::string> Headers;
-		 chunkState							chunkState;
-		size_t								totalChunkSize;
-		size_t								chunkSize;
-		size_t								chunkIndex;
-		std::string							sizeStr;
+	enum multiPartState bodyState;
+	struct kevent *ev;
+	typedef std::map<std::string, std::string> Headers;
+	chunkState chunkState;
+	size_t totalChunkSize;
+	size_t chunkSize;
+	size_t chunkIndex;
+	std::string sizeStr;
 
-		const int							fd;
-		enum crlfState						crlfState;
+	const int fd;
+	enum crlfState crlfState;
 
-		std::string                         path;
+	std::string path;
 
-		// std::map<std::string, std::string>	headers;
-		std::string							currHeaderName;
-		std::string							currHeaderVal;
+	// std::map<std::string, std::string>	headers;
+	std::string currHeaderName;
+	std::string currHeaderVal;
 
-		std::vector<char>							body;
-		long long									bodySize;
-		int                                 reqSize;
-		size_t								reqBufferSize;
-		size_t								reqBufferIndex;
-		std::vector<char>					reqBuffer;
+	std::vector<char> body;
+	long long bodySize;
+	int reqSize;
+	size_t reqBufferSize;
+	size_t reqBufferIndex;
+	std::vector<char> reqBuffer;
 
-		httpError							error;
+	httpError error;
 
-		methodeStr							methodeStr;
-		std::string							httpVersion;
+	methodeStr methodeStr;
+	std::string httpVersion;
 
+	int convertChunkSize();
+	void chunkEnd();
 
-		int 		convertChunkSize();
-		void			chunkEnd();
+	void parseMethod();
+	void parsePath();
+	void parseHttpVersion();
+	void parseHeaderName();
+	void parseHeaderVal();
+	void parseBody();
+	void crlfGetting();
 
+	int firstHeadersCheck();
 
-		void		parseMethod();
-		void		parsePath();
-		void		parseHttpVersion();
-		void		parseHeaderName();
-		void		parseHeaderVal();
-		void		parseBody();
-		void		crlfGetting();
+	int verifyUriChar(char c);
+	void checkHttpVersion(int *state);
 
-		int			firstHeadersCheck();
+	void contentLengthBodyParsing();
+	void chunkedBodyParsing();
 
-		int			verifyUriChar(char c);
-		void		checkHttpVersion(int *state);
+	void returnHandle();
+	void nLineHandle();
+	int checkContentType();
 
-		void		contentLengthBodyParsing();
-		void		chunkedBodyParsing();
+	int parseMuliPartBody();
+	void andNew();
 
-		void		returnHandle();
-		void		nLineHandle();
-		int			checkContentType();
+  public:
+	std::vector<data_t *> data;
+	void clearData();
+	reqBodyType reqBody;
+	std::string bodyBoundary;
+	enum reqState state;
+	// std::vector<multiPart>						multiPartBodys;
+	Location *location;
+	bool eof;
 
-		int			parseMuliPartBody();
-		void		andNew();
-		
+	HttpRequest();
+	HttpRequest(int fd);
+	~HttpRequest();
 
-	public:
-		std::vector<data_t *>         data;
-		void										clearData();
-		reqBodyType									reqBody;
-		std::string									bodyBoundary;
-		enum reqState								state;
-		// std::vector<multiPart>						multiPartBodys;
-		Location									*location;
-		bool										eof;
+	void setHttpReqError(int code, std::string str);
+	void feed();
+	void readRequest(int data);
 
-		HttpRequest();
-		HttpRequest(int fd);
-		~HttpRequest();
+	void setFd(int fd);
 
-		void		setHttpReqError(int code, std::string str);
-		void		feed();
-		void		readRequest(int data);
+	static int isNum(const std::string &str);
+	void clear();
 
-		void		setFd(int fd);
+	const std::map<std::string, std::string> &getHeaders() const;
+	std::vector<char> getBody() const;
+	httpError getStatus() const;
+	std::string getStrMethode() const;
+	const std::string &getHost() const;
+	const std::string &getPath() const;
+	bool validateRequestLine();
 
-		static int	isNum(const std::string& str);
-		void		clear();
-
-		const std::map<std::string, std::string>	&getHeaders() const;
-		std::vector<char>					getBody() const;
-		httpError							getStatus() const;
-		std::string							getStrMethode() const;
-		const std::string					&getHost() const;
-		const std::string					&getPath() const;
-		bool						validateRequestLine();
-		
-		int 								parseMultiPart();
+	int parseMultiPart();
 };
 
 #endif

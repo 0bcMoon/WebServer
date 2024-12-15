@@ -271,7 +271,7 @@ void Event::ReadEvent(const struct kevent *ev)
 		Client *client = connections.requestHandler(ev->ident, ev->data);
 		if (!client)
 			return;
-		if (client->request.state >= HEADER_NAME)
+		if (client->request.state >= HEADER_NAME) // this should only run one time
 		{
 			client->request.location = this->getLocation(client);
 			client->request.validateRequestLine();
