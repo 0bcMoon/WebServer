@@ -15,6 +15,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "DataType.hpp"
 #include "HttpResponse.hpp"
 
 HttpRequest::HttpRequest() : fd(-1)
@@ -814,7 +815,6 @@ void HttpRequest::contentLengthBodyParsing()
 			return;
 		}
 	}
-	// size_t buffSize = data.back()->bodyHandler.bodySize > ;
 	std::vector<char> &body = data.back()->bodyHandler.body;
 	bodyHandler &bodyHandler = data.back()->bodyHandler;
 
@@ -1249,7 +1249,7 @@ int bodyHandler::writeBody()
 {
 	std::cout << "ANA KANKTB" << std::endl;
 	if (bodyFd < 0)
-		bodyFd = open("/tmp/body", O_CREAT | O_TRUNC | O_RDWR, 0777);
+		bodyFd = open(bodyFile.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0644);
 	if (bodyFd < 0)
 		return (0);
 	if (write(bodyFd, body.data(), bodyIt) < 0)
@@ -1283,6 +1283,7 @@ bodyHandler::bodyHandler() : bodyFd(-1), body(BUFFER_SIZE), currFd(-1), fileBody
 	fileBodyIt = 0;
 	bodySize = 0;
 	borderIt = 0;
+	bodyFile = Proc::mktmpfileName();
 }
 
 bodyHandler::~bodyHandler()

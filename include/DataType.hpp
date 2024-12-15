@@ -16,7 +16,7 @@ class Proc
 			TIMEOUT,
 			NONE
 		};
-		std::string mktmpfileName();
+		static std::string mktmpfileName();
 		std::string output;
 		std::string input;
 		int			output_fd;

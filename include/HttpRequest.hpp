@@ -99,8 +99,9 @@ struct bodyHandler
 
 	std::map<std::string, std::string> headers;
 
-	int bodyFd;
-	size_t bodyIt;
+	int								bodyFd;
+	std::string						bodyFile;
+	size_t							bodyIt;
 	std::vector<char> body; // raw body;
 	size_t bodySize;
 
