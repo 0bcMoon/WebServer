@@ -32,6 +32,9 @@
 
 #define CGI_VAR_SIZE 11
 
+
+void printStackTrace(int skipFrames = 1);
+
 void log_file(const std::string &name)
 {
 	std::stringstream ss;
@@ -271,10 +274,13 @@ void Event::ReadEvent(const struct kevent *ev)
 		Client *client = connections.requestHandler(ev->ident, ev->data);
 		if (!client)
 			return;
-		if (client->request.state >= HEADER_NAME) // this should only run one time
+		if (!client->request.data.back()->isRequestLineValid)
 		{
+			client->request.decodingUrl();
+			client->request.splitingQuery();
 			client->request.location = this->getLocation(client);
 			client->request.validateRequestLine();
+			client->request.data.back()->isRequestLineValid = 1;
 		}
 		client->request.feed();
 		this->setWriteEvent(client->getFd(), EV_ENABLE);
@@ -480,12 +486,13 @@ void Event::ProcEvent(const struct kevent *ev)
 		return (client->response.setHttpResError(503, "Bad Gateway"));
 	client->response.state = START_CGI_RESPONSE;
 	proc.clean();
-	int fd = open("/tmp/cgi_out", O_RDONLY); // TODO: generate a Random file name
+	int fd = open(proc.output.data(), O_RDONLY); // TODO: generate a Random file name
 	if (fd < 0)
 		return client->response.setHttpResError(500, "Internal Server Error");
 	client->response.responseFd = fd;
-	client->response.cgiOutFile = "/tmp/cgi_out"; // TODO: generate a Random file name
-	proc.clean();
+	client->response.cgiOutFile = proc.output;
+	// client->request.data.front()->bodyHandler.bodyFile;
+	// proc.clean();
 	this->procs.erase(ev->ident); // simple clean
 }
 
@@ -496,6 +503,7 @@ void Event::eventLoop()
 	std::cout << "TODO: add default index.html\n";
 	std::cout << "TODO: edit path algo : handel path info\n";
 	std::cout << "TODO: edit method how to find if it a cgi or not\n";
+	std::cout << "-------------------\n";
 	while (1)
 	{
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);

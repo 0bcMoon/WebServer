@@ -266,7 +266,7 @@ void Proc::clean()
 	this->output_fd = -1;
 }
 
-std::string mktmpfile()
+std::string Proc::mktmpfileName()
 {
 	std::stringstream ss;
 	time_t now = std::time(0);
@@ -294,12 +294,13 @@ std::string mktmpfile()
 	}
 	return ("/tmp/" + rstr + ss.str());
 }
+
 int Proc::writeBody(const char *ptr, int size)
 {
 	std::cout << "Error make: change file location\n";
 	if (this->output_fd == -1)
 	{
-		this->output = mktmpfile();
+		this->output = Proc::mktmpfileName();
 		this->output_fd = open(this->output.data(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	}
 	if (this->output_fd < 0)

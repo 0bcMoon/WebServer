@@ -16,6 +16,7 @@ class Proc
 			TIMEOUT,
 			NONE
 		};
+		std::string mktmpfileName();
 		std::string output;
 		std::string input;
 		int			output_fd;
@@ -31,6 +32,7 @@ class Proc
 		int fout;
 		bool outToFile;
 		int		offset;
+
 		enum State state;
 };
 

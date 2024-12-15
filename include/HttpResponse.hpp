@@ -179,6 +179,8 @@ class HttpResponse
 		void								multiPartParse();
 };
 
+int					isHex(char c);
 std::string			decimalToHex(int	decimal);
+std::string			getRandomName();
 
 #endif

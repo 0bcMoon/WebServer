@@ -9,6 +9,7 @@
 #include "VirtualServer.hpp"
 
 
+void print(int skipFrames = 1);
 class Event
 {
 

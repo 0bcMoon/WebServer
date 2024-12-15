@@ -113,15 +113,21 @@ struct bodyHandler
 	std::vector<char> fileBody;
 };
 
-typedef struct data_s
-{
-	std::string path;
-	std::string path_info;
-	std::string strMethode;
-	std::map<std::string, std::string> headers;
-	httpError error;
-	enum reqState state;
-	bodyHandler bodyHandler;
+typedef struct data_s {
+	std::string                         path;
+	std::string							queryStr;
+	std::string							path_info;
+	
+	bool									isRequestLineValid;
+
+	std::string							strMethode;
+	std::map<std::string, std::string>	headers;
+
+	httpError							error;
+	enum reqState						state;
+
+	bodyHandler							bodyHandler;
+	
 } data_t;
 
 class HttpRequest
@@ -212,7 +218,6 @@ class HttpRequest
 	reqBodyType reqBody;
 	std::string bodyBoundary;
 	enum reqState state;
-	// std::vector<multiPart>						multiPartBodys;
 	Location *location;
 	bool eof;
 
@@ -238,6 +243,8 @@ class HttpRequest
 	bool validateRequestLine();
 
 	int parseMultiPart();
+	void decodingUrl();
+	void splitingQuery();
 };
 
 #endif
