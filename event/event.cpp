@@ -271,10 +271,13 @@ void Event::ReadEvent(const struct kevent *ev)
 		Client *client = connections.requestHandler(ev->ident, ev->data);
 		if (!client)
 			return;
-		if (client->request.state >= HEADER_NAME)
+		if (!client->request.data.back()->isRequestLineValid)
 		{
+			client->request.decodingUrl();
+			client->request.splitingQuery();
 			client->request.location = this->getLocation(client);
 			client->request.validateRequestLine();
+			client->request.data.back()->isRequestLineValid = 1;
 		}
 		client->request.feed();
 		this->setWriteEvent(client->getFd(), EV_ENABLE);

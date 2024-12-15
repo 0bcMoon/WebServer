@@ -58,7 +58,7 @@ const std::string &Client::getHost() const
 
 const std::string &Client::getPath() const
 {
-	return (this->request.data[0]->path);
+	return (this->request.data.back()->path);
 }
 
 int Client::getServerFd() const

@@ -212,24 +212,14 @@ std::string HttpResponse::getErrorRes()
 HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 {
 	this->isCgiBool = req.data.front()->bodyHandler.isCgi;
+	this->queryStr = req.data.front()->queryStr;
 	path = req.data[0]->path;
 	headers = req.data[0]->headers;
-	// body = req.data[0]->body;
 	status.code = req.data[0]->error.code;
 	status.description = req.data[0]->error.description;
 	strMethod = req.data[0]->strMethode;
 	if (req.data[0]->state == REQ_ERROR)
 		state = ERROR;
-	// path = req.getPath();
-	// headers = req.getHeaders();
-	// body = req.getBody();
-	// status.code = req.getStatus().code;
-	// status.description = req.getStatus().description;
-	// strMethod = req.getStrMethode();
-	// if (req.state == REQ_ERROR)
-	// 	state = ERROR;
-	// else
-	// 	state = ;
 	return (*this);
 }
 
@@ -486,12 +476,25 @@ int		HttpResponse::parseCgistatus()
 	return (1);
 }
 
+static int vecIsPrint(const std::vector<char>& vec)
+{
+	for (size_t i = 0; i < vec.size();i++)
+	{
+		if (!std::isprint(vec[i]) && vec[i] != '\r' && vec[i] != '\n')
+			return (0);
+	}
+	return (1);	
+}
+
 void HttpResponse::parseCgiOutput()
 {
+	
 	std::string headers(CGIOutput.data(), CGIOutput.size());
 	size_t pos = headers.find("\n");
 	size_t strIt = 0;
 
+	if (!vecIsPrint(CGIOutput))
+		return setHttpResError(502, "Bad Gateway");
 	cgiRes.state = HEADERS;
 	if (CGIOutput.size() == 0 || headers.find("\r\n\r\n") == std::string::npos)
 		return setHttpResError(502, "Bad Gateway");
@@ -530,10 +533,8 @@ void HttpResponse::writeCgiResponse()
 	if (state == ERROR)
 		return;
 	write2client(this->fd, getStatusLine().c_str(), getStatusLine().size());
-	if (resHeaders.find("Transfer-Encoding") == resHeaders.end() || resHeaders["Transfer-Encoding"] != "Chunked"
-		|| resHeaders.count("Content-Length") == 0)
+	if ((resHeaders.find("Transfer-Encoding") == resHeaders.end() || resHeaders["Transfer-Encoding"] != "Chunked"))
 		resHeaders["Content-Length"] = getContentLenght(bodyType);
-	std::cout << resHeaders["Content-Length"] << std::endl;
 	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
 	{
 		write2client(this->fd, it->first.c_str(), it->first.size());
@@ -661,7 +662,7 @@ std::string HttpResponse::getContentLenght(enum responseBodyType type)
 	return ("Content-Length: 0\r\n");
 }
 
-static int isHex(char c)
+int isHex(char c)
 {
 	std::string B = "0123456789ABCDEF";
 	std::string b = "0123456789abcdef";
@@ -789,8 +790,6 @@ int HttpResponse::uploadFile()
 
 void HttpResponse::responseCooking()
 {
-	decodingUrl();
-	splitingQuery();
 	if (!isPathFounded() || isCgi())
 		return;
 	else
@@ -799,8 +798,6 @@ void HttpResponse::responseCooking()
 			return setHttpResError(405, "Method Not Allowed");
 		if (!pathChecking())
 			return;
-		// if (methode == POST && !uploadFile())
-		// return;
 		if (methode == POST)
 			state = UPLOAD_FILES;
 		if (methode == GET)
@@ -840,7 +837,7 @@ std::string decimalToHex(int decimal)
 	return hexResult;
 }
 
-std::string HttpResponse::getRandomName()
+std::string			getRandomName()
 {
 	std::string rstr(48, ' ');
 	const char charset[] = {

@@ -7,8 +7,9 @@ from urllib.parse import parse_qs
 
     # Print HTTP header
 # print("HTTP/1.1 200 OK")
-print("Content-Lenght: 10")
-print("Content-Type: text/html\r\n")
+print("Content-Length: 10\r\n")
+print("Content-Type: text/html\r\n\r\n")
+print("<html><body>HELLO</body></html>")
 
 # # Start HTML output
 # print("<html>")

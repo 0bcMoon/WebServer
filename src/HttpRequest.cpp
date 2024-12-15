@@ -36,8 +36,8 @@ HttpRequest::HttpRequest() : fd(-1)
 
 HttpRequest::HttpRequest(int fd) : fd(fd), reqBuffer(BUFFER_SIZE)
 {
-	// methode = NONE;
 	reqSize = 0;
+	location = NULL;
 	bodySize = -1;
 	state = NEW;
 	bodyState = _NEW;
@@ -56,8 +56,7 @@ HttpRequest::HttpRequest(int fd) : fd(fd), reqBuffer(BUFFER_SIZE)
 
 void HttpRequest::clear()
 {
-	// std::cout << "--------------------------->"  << methodeStr.tmpMethodeStr <<
-	// std::endl;
+	location = NULL;
 	chunkState = SIZE;
 	totalChunkSize = 0;
 	chunkSize = 0;
@@ -66,24 +65,17 @@ void HttpRequest::clear()
 	chunkIndex = 0;
 	sizeStr.clear();
 	crlfState = READING;
-	path.clear();
-	// headers.clear();
 	currHeaderName.clear();
 	body.clear();
 	bodySize = -1;
 	reqSize = 0;
 	reqBody = NON;
 	bodyBoundary.clear();
-	// reqBufferSize = 0;
-	// reqBufferIndex = 0;
-	// reqBuffer.clear();
 	error.code = 200;
 	error.description = "OK";
 	methodeStr.eqMethodeStr.clear();
 	methodeStr.tmpMethodeStr.clear();
 	httpVersion.clear();
-	// std::cout << "index: " << reqBufferIndex << ", size: " << reqBufferSize <<
-	// std::endl;
 	if (reqBufferIndex < reqBufferSize)
 		eof = 0;
 	else
@@ -99,16 +91,6 @@ static int isValidHeaderChar(char c)
 {
 	return (isAlpha(c) || (c >= '1' && c <= '9') || c == '-' || c == ':');
 }
-
-const std::string &HttpRequest::getPath() const
-{
-	return (this->path);
-}
-
-// const std::map<std::string, std::string> &HttpRequest::getHeaders() const
-// {
-// 	return (headers);
-// }
 
 std::vector<char> HttpRequest::getBody() const
 {
@@ -195,6 +177,7 @@ void HttpRequest::andNew()
 	data[data.size() - 1]->error.description = "OK";
 	state = METHODE;
 	data[data.size() - 1]->state = NEW;
+	data.back()->isRequestLineValid = 0;
 }
 
 int HttpRequest::checkMultiPartEnd()
@@ -209,8 +192,6 @@ int HttpRequest::checkMultiPartEnd()
 		bodyState = _ERROR;
 		return (0);
 	}
-	// std::cout << "-- > " << data.back()->bodyHandler.header << std::endl;
-	// std::cout << "-- > " << "\r\n--" + bodyBoundary  + "--\r\n"<< std::endl;
 	if (data.back()->bodyHandler.header != "\r\n--" + bodyBoundary + "--\r\n")
 	{
 		setHttpReqError(400, "Bad Request");
@@ -1300,6 +1281,38 @@ void bodyHandler::clear()
 		close(bodyFd);
 	if (currFd >= 0)
 		close(currFd);
+}
+
+void HttpRequest::decodingUrl()
+{
+	std::string decodedUrl;
+	std::stringstream ss;
+
+	for (size_t i = 0; i < data.back()->path.size(); i++)
+	{
+		if (i < data.back()->path.size() - 2 && data.back()->path[i] == '%' 
+			&& isHex(data.back()->path[i + 1]) && isHex(data.back()->path[i + 2]))
+		{
+			int tmp;
+			ss << data.back()->path[i + 1] << data.back()->path[i + 2];
+			ss >> std::hex >> tmp;
+			ss.clear();
+			decodedUrl.push_back(tmp);
+			i += 2;
+		}
+		else
+			decodedUrl.push_back(data.back()->path[i]);
+	}
+	data.back()->path = decodedUrl;
+}
+
+void HttpRequest::splitingQuery()
+{
+	if (data.back()->path.find('?') == std::string::npos)
+		return;
+	size_t pos = data.back()->path.find('?');
+	data.back()->queryStr = data.back()->path.substr(pos + 1);
+	data.back()->path = data.back()->path.substr(0, pos);
 }
 
 const std::string &HttpRequest::getHost() const

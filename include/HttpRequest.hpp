@@ -112,14 +112,18 @@ struct bodyHandler {
 
 typedef struct data_s {
 	std::string                         path;
+	std::string							queryStr;
+	
+	bool									isRequestLineValid;
+
 	std::string							strMethode;
 	std::map<std::string, std::string>	headers;
-	// std::vector<char>					body;
-	httpError							error;
-	enum reqState								state;
 
-	// std::vector<multiPart>						multiPartBodys;
-	bodyHandler									bodyHandler;
+	httpError							error;
+	enum reqState						state;
+
+	bodyHandler							bodyHandler;
+	
 } data_t;
 
 class HttpRequest 
@@ -159,7 +163,7 @@ class HttpRequest
 		const int							fd;
 		enum crlfState						crlfState;
 
-		std::string                         path;
+		// std::string                         path;
 
 		// std::map<std::string, std::string>	headers;
 		std::string							currHeaderName;
@@ -234,8 +238,10 @@ class HttpRequest
 		httpError							getStatus() const;
 		std::string							getStrMethode() const;
 		const std::string					&getHost() const;
-		const std::string					&getPath() const;
-		bool						validateRequestLine();
+		bool								validateRequestLine();
+
+		void								splitingQuery();
+		void								decodingUrl();
 		
 		int 								parseMultiPart();
 };
