@@ -20,6 +20,7 @@ int Client::getFd() const
 
 Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), ctx(ctx), request(fd), response(fd, ctx, &request)
 {
+	this->writeEventState =0;
 	this->cgi_pid  = -1;
 	state = None;
 	this->timerType = NEW_CONNECTION;

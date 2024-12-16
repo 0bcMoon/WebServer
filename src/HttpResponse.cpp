@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 #include "CgiHandler.hpp"
+#include "Event.hpp"
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
@@ -60,9 +61,13 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 
 void HttpResponse::clear()
 {
-	std::cout << "CLEAR\n";
 	if (responseFd >= 0)
 		close(responseFd);
+	if (!this->cgiOutFile.empty())
+	{
+		std::remove(this->cgiOutFile.data());
+		this->cgiOutFile.clear();
+	}
 	responseFd = -1;
 	isErrDef = 1;
 
@@ -169,6 +174,14 @@ void HttpResponse::write2client(int fd, const char *str, size_t size)
 HttpResponse::IOException::~IOException() throw() {}
 HttpResponse::IOException::IOException() throw()
 {
+	void *array[10];
+	size_t size;
+
+	// get void*'s for all entries on the stack
+	size = backtrace(array, 10);
+
+	// print out all the frames to stderr
+	backtrace_symbols_fd(array, size, STDERR_FILENO);
 	this->msg = "IOException: " + std::string(strerror(errno));
 }
 
@@ -211,6 +224,8 @@ HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 {
 	this->isCgiBool = req.data.front()->bodyHandler.isCgi;
 	this->queryStr = req.data.front()->queryStr;
+	this->bodyFileName = req.data.front()->bodyHandler.bodyFile;
+	// this->path_info;
 	path = req.data[0]->path;
 	headers = req.data[0]->headers;
 	status.code = req.data[0]->error.code;
@@ -237,8 +252,7 @@ bool HttpResponse::isCgi()
 }
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	// print();
-	// exit(1);
+	printStackTrace();
 	std::cerr << "http Error has been set: " << code << "\n";
 	state = ERROR;
 	status.code = code;
@@ -475,19 +489,18 @@ int HttpResponse::parseCgistatus()
 	return (1);
 }
 
-static int vecIsPrint(const std::vector<char>& vec)
+static int vecIsPrint(const std::vector<char> &vec)
 {
-	for (size_t i = 0; i < vec.size();i++)
+	for (size_t i = 0; i < vec.size(); i++)
 	{
 		if (!std::isprint(vec[i]) && vec[i] != '\r' && vec[i] != '\n')
 			return (0);
 	}
-	return (1);	
+	return (1);
 }
 
 void HttpResponse::parseCgiOutput()
 {
-	
 	std::string headers(CGIOutput.data(), CGIOutput.size());
 	size_t pos = headers.find("\n");
 	size_t strIt = 0;
@@ -615,9 +628,6 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 	if (type == LOAD_FILE || type == CGI)
 	{
 		size_t readbuffer;
-
-		// while (eventByte > writeByte)
-		// {
 		readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
 		int size = read(responseFd, buff, readbuffer);
 		if (size < 0)
@@ -836,7 +846,7 @@ std::string decimalToHex(int decimal)
 	return hexResult;
 }
 
-std::string			getRandomName()
+std::string getRandomName()
 {
 	std::stringstream ss;
 	time_t now = std::time(0);

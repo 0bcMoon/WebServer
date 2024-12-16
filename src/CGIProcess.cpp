@@ -31,21 +31,19 @@ void CGIProcess::closePipe(int fd[2])
 
 int CGIProcess::redirectPipe()
 {
-	std::cout << "warning: make cgi input file dynamique\n";
 	close(this->pipeOut[0]);
 	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
 		return (-1);
 	close(this->pipeOut[1]);
 	if (this->response->strMethod != "POST")
 		return (0);
-	// int body_fd = open("/tmp/body", O_RDONLY);
-	// if (body_fd < 0)
-	// 	return (-1);
-	// if (dup2(body_fd, STDIN_FILENO) < 0)
-	// 	return (close(body_fd), -1);
-	// close(body_fd);
-	//
-	std::cout << "--------------run the cgi\n";
+	std::cout << "warning: A POST request has come\n";
+	int body_fd = open(this->response->bodyFileName.data(), O_RDONLY);
+	if (body_fd < 0)
+		return (-1);
+	if (dup2(body_fd, STDIN_FILENO) < 0)
+		return (close(body_fd), -1);
+	close(body_fd);
 	return (0);
 }
 
@@ -74,11 +72,11 @@ void CGIProcess::loadEnv()
 		this->env.push_back(ToEnv(it));
 	ss << response->location->getPort();
 	env["SERVER_SOFTWARE"] = "42webserv";
-	env["REDIRECT_STATUS"] = "";
+	env["REDIRECT_STATUS"] = ""; // make php a happy cgi
 	env["GATEWAY_INTERFACE"] = "CGI/1.1";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
 	env["SERVER_PORT"] = ss.str();
-	env["SERVER_NAME"] = response->location->getHost();
+	env["SERVER_NAME"] = response->location->getHost(); // TODO: handel does
 	env["REQUEST_METHOD"] = response->strMethod;
 	env["SCRIPT_NAME"] = response->path;
 	env["QUERY_STRING"] = response->queryStr;
