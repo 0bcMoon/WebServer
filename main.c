@@ -5,13 +5,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #define PORT 8080
 #define BUFFER_SIZE 4096
+
 void error(const char *msg)
 {
 	perror(msg);
 	exit(EXIT_FAILURE);
 }
+#include <fcntl.h>
 int main()
 {
 	int sockfd;
@@ -21,9 +24,13 @@ int main()
 	const char *host = "localhost";
 	const char *request =
 		"GET / HTTP/1.1\r\n"
-		"Host: localhost:8080\r\n"
+		"Host: test1\r\n"
 		"Connection: Keep-Alive\r\n\r\n";
 
+	const char *request2 =
+		"GET /html HTTP/1.1\r\n"
+		"Host: test2\r\n"
+		"Connection: Keep-Alive\r\n\r\n";
 	server = gethostbyname(host);
 	if (server == NULL)
 	{
@@ -43,27 +50,31 @@ int main()
 	bcopy((char *)server->h_addr, (char *)&servaddr.sin_addr.s_addr, server->h_length);
 	servaddr.sin_port = htons(PORT);
 	// Connect to the server
+	int logFd = open("./log", O_CREAT | O_RDWR | O_TRUNC, 0777);
 	if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
 	{
 		error("Error connecting");
 	}
+	write(logFd, request2, strlen(request2));
+	if (write(sockfd, request2, strlen(request2)) < 0)
+	{
+		error("Error writing to socket");
+	}
+	write(logFd, request, strlen(request));
 	if (write(sockfd, request, strlen(request)) < 0)
 	{
 		error("Error writing to socket");
 	}
-
+	write(logFd, request, strlen(request));
 	if (write(sockfd, request, strlen(request)) < 0)
 	{
 		error("Error writing to socket");
 	}
+	write(logFd, request, strlen(request));
 	if (write(sockfd, request, strlen(request)) < 0)
 	{
 		error("Error writing to socket");
 	}
-	// if (write(sockfd, request, strlen(request)) < 0)
-	// {
-	// 	error("Error writing to socket");
-	// }
 	bzero(buffer, BUFFER_SIZE);
 	ssize_t n;
 	printf("Reading\n");

@@ -14,6 +14,7 @@
 #define BODY_MAX 1024 * 10240000L
 
 typedef std::map<std::string, std::string>::iterator map_it; // WARNING
+typedef std::map<std::string, std::string> Headers;
 
 enum reqMethode
 {
@@ -116,10 +117,13 @@ struct bodyHandler
 
 typedef struct data_s {
 	std::string                         path;
+	std::string							getPath();
+
 	std::string							queryStr;
 	std::string							path_info;
 	
-	bool									isRequestLineValid;
+	bool								isRequestLineValid;
+	bool								isRequestLineValidated();
 
 	std::string							strMethode;
 	std::map<std::string, std::string>	headers;
@@ -211,7 +215,8 @@ class HttpRequest
 	int checkContentType();
 
 	int parseMuliPartBody();
-	void andNew();
+	void	andNew();
+	void	addPathIndex();
 
   public:
 	std::vector<data_t *> data;
@@ -221,6 +226,8 @@ class HttpRequest
 	enum reqState state;
 	Location *location;
 	bool eof;
+
+	bool			isStillParsing();
 
 	HttpRequest();
 	HttpRequest(int fd);
@@ -240,9 +247,8 @@ class HttpRequest
 	httpError getStatus() const;
 	std::string getStrMethode() const;
 	const std::string &getHost() const;
-	const std::string &getPath() const;
+	// const std::string &getPath() const;
 	bool validateRequestLine();
-
 	int parseMultiPart();
 	void decodingUrl();
 	void splitingQuery();

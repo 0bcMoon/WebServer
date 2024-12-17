@@ -274,15 +274,20 @@ void Event::ReadEvent(const struct kevent *ev)
 		Client *client = connections.requestHandler(ev->ident, ev->data);
 		if (!client)
 			return;
-		if (!client->request.data.back()->isRequestLineValid)
+		while (!client->request.eof && client->request.state != REQ_ERROR)
 		{
-			client->request.decodingUrl();
-			client->request.splitingQuery();
-			client->request.location = this->getLocation(client);
-			client->request.validateRequestLine();
-			client->request.data.back()->isRequestLineValid = 1;
+			client->request.feed();
+			if (!client->request.data.back()->isRequestLineValidated()
+					&& client->request.state == BODY)
+			{
+				client->request.decodingUrl();
+				client->request.splitingQuery();
+				client->request.location = this->getLocation(client);
+				client->request.validateRequestLine();
+				client->request.data.back()->isRequestLineValid = 1;
+			}
 		}
-		client->request.feed();
+		client->request.eof = 0;
 		this->setWriteEvent(client->getFd(), EV_ENABLE);
 	}
 }
@@ -332,7 +337,7 @@ void Event::WriteEvent(const struct kevent *ev)
 		return;
 	Client *client = kv->second;
 	if (client->request.data.size() == 0
-			|| (client->request.data[0]->state != REQUEST_FINISH && client->request.data[0]->state != REQ_ERROR))
+			|| (client->request.data.front()->state != REQUEST_FINISH && client->request.data.front()->state != REQ_ERROR))
 		return;
 	if (client->response.state == START)
 	{
@@ -363,7 +368,10 @@ void Event::WriteEvent(const struct kevent *ev)
 		delete client->request.data[0];
 		client->request.data.erase(client->request.data.begin());
 		if (client->request.data.size() == 0)
+		{
 			this->setWriteEvent(ev->ident, EV_DISABLE);
+			connections.closeConnection(ev->ident);//ERROR :: debug
+		}
 	}
 }
 
@@ -571,6 +579,7 @@ Location *Event::getLocation(const Client *client)
 	serverfd = client->getServerFd();
 	const std::string &path = client->getPath();
 	std::string host = client->getHost();
+	std::cout << "HOST: " << host << std::endl;
 	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second; // always exist
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())

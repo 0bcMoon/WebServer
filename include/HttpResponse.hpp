@@ -124,7 +124,6 @@ class HttpResponse
 		std::string											getCgiContentLenght();
 		int													parseCgiHaders(std::string str);
 		std::string											strMethod;
-		// std::vector<std::vector<char> >						responseBody;// INFO:cgi output
 		bool												keepAlive;
 		Location											*location;
 		enum responseState									state;
@@ -176,7 +175,7 @@ class HttpResponse
 		void							decodingUrl();
 		void							splitingQuery();
 		int								uploadFile();
-		void								multiPartParse();
+		void							multiPartParse();
 };
 
 int					isHex(char c);

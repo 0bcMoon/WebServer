@@ -8,10 +8,7 @@
 --- REDIRECTIONS
 --- HANDLING TIMEOUT IN CGI
 --- DELETE
-
---- APPEND DUPLICATE HEADER VALUE //Done!!
+--- PARSE content-disposition headers in multi part
 --- PATH_INFO
 
 --- CGI CONTENT_LENGHT
---- MULTI PART boudary "\r\n"
---- POST BODY

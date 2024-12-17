@@ -1,5 +1,7 @@
 #include "../include/HttpRequest.hpp"
+#include <strings.h>
 #include <sys/fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <algorithm>
 #include <cctype>
@@ -20,7 +22,6 @@
 
 HttpRequest::HttpRequest() : fd(-1)
 {
-	// methode = NONE;
 	reqSize = 0;
 	bodySize = 0;
 	bodyState = _NEW;
@@ -29,10 +30,7 @@ HttpRequest::HttpRequest() : fd(-1)
 	error.code = 200;
 	error.description = "OK";
 	reqBody = NON;
-	if (reqBufferIndex < reqBufferSize)
-		eof = 0;
-	else
-		eof = 1;
+	eof = 0;
 }
 
 HttpRequest::HttpRequest(int fd) : fd(fd), reqBuffer(BUFFER_SIZE)
@@ -49,10 +47,7 @@ HttpRequest::HttpRequest(int fd) : fd(fd), reqBuffer(BUFFER_SIZE)
 	chunkState = SIZE;
 	totalChunkSize = 0;
 	reqBody = NON;
-	if (reqBufferIndex < reqBufferSize)
-		eof = 0;
-	else
-		eof = 1;
+	eof = 0;
 }
 
 void HttpRequest::clear()
@@ -77,10 +72,7 @@ void HttpRequest::clear()
 	methodeStr.eqMethodeStr.clear();
 	methodeStr.tmpMethodeStr.clear();
 	httpVersion.clear();
-	if (reqBufferIndex < reqBufferSize)
-		eof = 0;
-	else
-		eof = 1;
+	eof = 0;
 }
 
 static int isAlpha(char c)
@@ -202,9 +194,23 @@ int HttpRequest::checkMultiPartEnd()
 	return (1);
 }
 
+bool	data_t::isRequestLineValidated()
+{
+	if (isRequestLineValid)
+		return (1);
+	if (headers.count("Host") == 0)
+		return (1);
+	return (0);
+}
+
+std::string		data_t::getPath()
+{
+	return (this->path);
+}
+
 void HttpRequest::feed()
 {
-	while (reqBufferIndex < reqBufferSize && state != REQ_ERROR && state != DEBUG)
+	while (/* reqBufferIndex < reqBufferSize && */ state != REQ_ERROR && state != DEBUG)
 	{
 		if (state == NEW)
 			andNew();
@@ -215,11 +221,7 @@ void HttpRequest::feed()
 		if (state == HTTP_VERSION)
 			parseHttpVersion();
 		if (state == REQUEST_LINE_FINISH)
-		{
 			crlfGetting();
-			if (state == HEADER_NAME)
-				break;
-		}
 		if (state == HEADER_NAME)
 			parseHeaderName();
 		if (state == HEADER_VALUE)
@@ -227,48 +229,28 @@ void HttpRequest::feed()
 		if (state == HEADER_FINISH)
 		{
 			crlfGetting();
+			if (state == BODY)
+			{
+				eof = 0;
+				return ;
+			}
 		}
 		if (state == BODY)
-		{
 			parseBody();
-		}
 		if (state == BODY_FINISH && checkMultiPartEnd())
-		{
 			state = REQUEST_FINISH;
-		}
 		if (state == REQUEST_FINISH)
 		{
 			std::cout << "DEBUG_8" << std::endl;
 			data.back()->state = state;
 			this->clear();
 		}
+		if (reqBufferIndex >= reqBufferSize)
+		{
+			eof = 1;
+			return ;
+		}
 	}
-	// for (size_t i = 0; i < multiPartBodys.size();i++)
-	// {
-	// 	std::cout << "WAAAAAAAAA\n";
-	// 	for (map_it it = multiPartBodys[i].headers.begin(); it !=
-	// multiPartBodys[i].headers.end(); ++it) { 		std::cout << "Key: " << it->first
-	// << ", Value: " << it->second << "|" <<  std::endl;
-	// 	}
-	// }
-	// // if (state == DEBUG && response(fd))
-	// // 	std::cout << "FUCKING DONE" << std::endl;
-
-	// INFO: print request information;
-
-	// std::cout << error.code << ": " << error.description << std::endl;
-	// std::cout << " --> " << methodeStr.tmpMethodeStr << " --> " << path << "
-	// --> " << httpVersion << std::endl; for (map_it it = headers.begin(); it !=
-	// headers.end(); ++it) {
-	//        std::cout << "Key: " << it->first << ", Value: " << it->second <<
-	//        "|" <<  std::endl;
-	//    }
-	// // int __fd = open("log", O_RDWR, 0777);
-	// for (auto& it : body)
-	// {
-	// 	// write(__fd, &it, 1);
-	// 	std::cout << (char)it;
-	// }
 }
 
 #include <execinfo.h>
@@ -547,8 +529,6 @@ void HttpRequest::crlfGetting()
 			return;
 		}
 		reqBufferIndex++;
-		// std::cout << reqBuffer[reqBufferIndex] << std::endl;
-		// std::cout << "HI\n";
 	}
 	if (crlfState == LNLINE)
 	{
@@ -765,13 +745,39 @@ bool HttpRequest::isCGI()
 	return (true);
 }
 
+void	HttpRequest::addPathIndex()
+{
+	std::string fullPath;
+	size_t offset = location->globalConfig.getAliasOffset() ? this->location->getPath().size() : 0;
+	fullPath = location->globalConfig.getRoot() + data.back()->path.substr(offset);
+
+	struct stat sStat;
+	stat(fullPath.c_str(), &sStat);
+	if (!S_ISDIR(sStat.st_mode))
+		return ;
+	const std::vector<std::string> &indexes = this->location->globalConfig.getIndexes();
+	if (fullPath[fullPath.size() - 1] != '/')
+	{
+		fullPath.push_back('/');
+		data.back()->path.push_back('/');
+	}
+	for (size_t i = 0; i < indexes.size(); i++)
+	{
+		if (access((fullPath + indexes[i]).c_str(), F_OK) != -1)
+		{
+			data.back()->path += indexes[i];
+			return ;
+		}
+	}
+}
+
 bool HttpRequest::validateRequestLine()
 {
 	if (location == NULL)
 		return (setHttpReqError(404, "Not Found"), 0);
 	if (!this->isMethodAllowed())
 		return (setHttpReqError(405, "Method Not Allowed"), 0);
-
+	addPathIndex();
 	data.back()->bodyHandler.isCgi = location->getCGIPath("." + HttpResponse::getExtension(data.back()->path)).size();
 	return (1);
 }
@@ -796,7 +802,6 @@ int HttpRequest::firstHeadersCheck()
 		&& data[data.size() - 1]->headers["Content-Type"].find(",") != std::string::npos)
 		return (setHttpReqError(400, "Bad Request"), 1);
 	return (checkContentType());
-	// this->isCGI();
 }
 
 void HttpRequest::contentLengthBodyParsing()
@@ -845,17 +850,10 @@ void HttpRequest::contentLengthBodyParsing()
 		std::cout << "DEBUG_7" << std::endl;
 		state = BODY_FINISH;
 	}
-	// else if (reqBody == MULTI_PART && bodyHandler.bodySize + body.size() >= (size_t)bodySize - bodyBoundary.size() -
-	// 8) if (reqBody == MULTI_PART && 		!data.back()->bodyHandler.upload2file(bodyBoundary)) 	setHttpReqError(500,
-	// "Internal Server Error"); data.back()->bodyHandler.bodyIt = 0; if (!data.back()->bodyHandler.writeBody() )
-	// 	setHttpReqError(500, "Internal Server Error");
 }
 
 int bodyHandler::push2fileBody(char c, const std::string &boundary)
 {
-	// std::string		border = "\r\n--" + boundary + "\r\n";
-
-	// std::cout << "-- " << fileBodyIt<< std::endl;;
 	fileBody[fileBodyIt++] = c;
 	if (boundary[borderIt] == c)
 		borderIt++;
@@ -952,7 +950,6 @@ void HttpRequest::chunkedBodyParsing()
 		}
 		while (reqBufferIndex < reqBufferSize && chunkSize > chunkIndex)
 		{
-			// data[data.size() - 1]->body.push_back(reqBuffer[reqBufferIndex]);
 			data.back()->bodyHandler.push2body(reqBuffer[reqBufferIndex]);
 			if (reqBody == MULTI_PART && !parseMultiPart())
 				return;
@@ -1340,5 +1337,10 @@ void HttpRequest::splitingQuery()
 
 const std::string &HttpRequest::getHost() const
 {
-	return (/* headers.find("Host")->second */ ""); // ERROR
+	map_it it ;
+
+	if (state == BODY)
+		return (data.back()->headers.find("Host")->second);
+	it = data.front()->headers.find("Host");
+	return (it->second);
 }

@@ -324,9 +324,7 @@ int HttpResponse::directoryHandler()
 	}
 	if (location->globalConfig.getAutoIndex())
 		return (bodyType = AUTO_INDEX, autoIndexCooking());
-	// else
-	// 	return (bodyType = NO_TYPE, 1);
-	return (setHttpResError(404, "Not Found"), 0);
+	return (setHttpResError(403, "Forbidden"), 0);
 }
 
 // int HttpResponse::loadFile(const std::string &pathName)
@@ -394,7 +392,7 @@ int HttpResponse::pathChecking()
 
 	struct stat sStat;
 	stat(fullPath.c_str(), &sStat);
-	if (S_ISDIR(sStat.st_mode))
+	if (S_ISDIR(sStat.st_mode) && methode == GET)
 		return (directoryHandler());
 	if (access(fullPath.c_str(), F_OK) != -1)
 		return (bodyType = LOAD_FILE, 1 /* loadFile(fullPath) */);
