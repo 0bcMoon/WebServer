@@ -32,6 +32,7 @@ class Client
 		HttpRequest			request;
 		HttpResponse		response;
 		int					cgi_pid;
+		uint16_t			writeEventState;
 
 
 		void							handleResponseError();

@@ -2,27 +2,30 @@
 #define CGIProcess_H
 #include <string>
 #include <vector>
+#include "Client.hpp"
 #include "DataType.hpp"
 #include "Event.hpp"
 #include "HttpResponse.hpp"
 
 class CGIProcess
 {
-  private:
-	  HttpResponse *response;
-	  std::vector<std::string> env;
-	  std::string cgi_bin;
-	  std::string cgi_file;
+	private:
+		HttpResponse *response;
+		Client *client;
+		std::vector<std::string> env;
+		std::string cgi_bin;
+		std::string cgi_file;
 
-	  int redirectPipe();
-	  void closePipe(int fd[2]);
-	  void child_process();
-	  void loadEnv();
-	  bool IsFileExist();
+		int redirectPipe();
+		void closePipe(int fd[2]);
+		void child_process();
+		void loadEnv();
+		bool IsFileExist();
 
-	  int pipeOut[2];
-  public:
-	  Proc RunCGIScript(HttpResponse &response);
+		int pipeOut[2];
+
+	public:
+		Proc RunCGIScript(HttpResponse &response);
 };
 
 #endif

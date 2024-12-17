@@ -9,7 +9,7 @@
 #include "VirtualServer.hpp"
 
 
-void print(int skipFrames = 1);
+void printStackTrace();
 class Event
 {
 
@@ -51,7 +51,7 @@ class Event
 		void CreateChangeList();
 		int newConnection(int socketFd, Connections &connections);
 		bool checkNewClient(int socketFd);
-		void setWriteEvent(int fd, uint16_t flags);
+		void setWriteEvent(Client *client, uint16_t flags);
 		Location *getLocation(const Client *client);
 		bool IsFileExist(HttpResponse &response);
 		Proc RunCGIScript(HttpResponse &response);
@@ -65,8 +65,10 @@ class Event
 
 
 		int waitProc(int pid);
+
+		void deleteProc(ProcMap_t::iterator &it);
 		void wpipe(const struct kevent *ev);
-		void rpipe(const struct kevent *ev);
+		void ReadPipe(const struct kevent *ev);
 	class EventExpection: public std::exception
 	{
 		private:

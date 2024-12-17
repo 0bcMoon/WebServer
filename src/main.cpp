@@ -21,11 +21,6 @@ extern "C"
 #define MAX_EVENTS 128
 #define MAX_CONNECTIONS_QUEUE 256
 
-void atexist()
-{
-	system("openport"); // there is no leaks
-	sleep(1);
-}
 
 #include <cxxabi.h>
 #include <dlfcn.h>
@@ -50,8 +45,9 @@ std::string demangle(const char *mangled)
 	return mangled ? mangled : "";
 }
 
-void printStackTrace(int skipFrames = 1)
+void printStackTrace()
 {
+	int skipFrames = 0;
 	void *callstack[128];
 	int frames = backtrace(callstack, 128);
 
@@ -72,27 +68,18 @@ void printStackTrace(int skipFrames = 1)
 			std::string funcName = demangle(info.dli_sname);
 
 			std::cerr << "  #" << (i - skipFrames) << ": ";
-
 			if (!funcName.empty())
-			{
 				std::cerr << funcName << " ";
-			}
-
 			if (info.dli_fname)
-			{
 				std::cerr << "in " << info.dli_fname;
-			}
-
 			std::cerr << std::endl;
 		}
 		else
-		{
 			std::cerr << "  #" << (i - skipFrames) << ": " << symbols[i] << std::endl;
-		}
 	}
-
 	free(symbols);
 }
+
 ServerContext *LoadConfig(const char *path)
 {
 	ServerContext *ctx = NULL;
@@ -155,7 +142,7 @@ int main()
 		event->Listen();
 		event->initIOmutltiplexing();
 		event->eventLoop();
-	}
+	} // TODO: add cgi expection
 	catch (const std::runtime_error &e)
 	{
 		std::cerr << "runtime_error -- " << e.what() << "\n";

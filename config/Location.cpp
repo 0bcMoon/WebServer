@@ -7,15 +7,16 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
+#include <sstream>
 #include <string>
 #include "DataType.hpp"
 #include "Tokenizer.hpp"
 Location::Location() 
 {
-	this->cgiMap["."] = "";	
+	this->cgiMap["."] = "";	 // mean no cgi
 	this->isRedirection = false;
 	this->methods = GET; // default method is GET only can be overwritten
-	this->upload_file_path = "/tmp/";
+	this->upload_file_path = "/tmp/"; // default when 
 }
 
 Location &Location::operator=(const Location &location)
@@ -54,31 +55,19 @@ bool GlobalConfig::isValidStatusCode(std::string &str)
 
 void Location::setRedirect(Tokens &token, Tokens &end)
 {
-	(void)end;
-	(void)token;
-	throw Tokenizer::ParserException("TODO: re impl");
-	// std::vector<std::string> vec;
-	// this->globalConfig.validateOrFaild(token, end);
-	// while (token != end && *token != ";")
-	// 	vec.push_back(this->globalConfig.consume(token, end));
-	// this->globalConfig.CheckIfEnd(token, end);
-	// if (vec.size() != 3)
-	// 	throw Tokenizer::ParserException("invalid redirects argument: usage return status url|None Body|None");
-	// // redirect.body = vec[2];
-	// redirect.url = vec[1];
-	// redirect.status = vec[0];
-	// // if (redirect.body == "None" && redirect.url == "None")
-	// // 	throw Tokenizer::ParserException("Body or redirection url most be define in redirection");
-	// else if (redirect.body != "None" && access(redirect.body.data(), F_OK | R_OK) != 0)
-	// 	throw Tokenizer::ParserException("invalid file in Redirection: " + redirect.body + " " + std::string(strerror(errno)));
-	// else if (!this->globalConfig.isValidStatusCode(redirect.status) || redirect.status[0] != '3')
-	// 	throw Tokenizer::ParserException("Invalid Redirection Status Code: " + *token);
-	// if (redirect.body == "None")
-	// 	redirect.body.clear();
-	// if (redirect.url == "None")
-	// 	redirect.url.clear();
-
-	// this->isRedirection = true;
+	int code;
+	std::stringstream ss;
+	this->globalConfig.validateOrFaild(token, end);
+	std::string status = this->globalConfig.consume(token, end);
+	std::string url = this->globalConfig.consume(token, end);
+	this->globalConfig.CheckIfEnd(token, end);
+	ss << status;
+	ss >> code;
+	if (code < 301 || code > 399 || !ss.eof())
+		throw Tokenizer::ParserException("Invalid  status: " + status +" code in Redirection: should be 3xx code");
+	this->redirect.status = status;
+	this->redirect.url = url;
+	this->isRedirection = true;
 }
 
 

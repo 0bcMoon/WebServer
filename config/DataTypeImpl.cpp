@@ -9,6 +9,7 @@
 #include <cassert>
 #include <csignal>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -257,13 +258,13 @@ void Proc::die()
 
 void Proc::clean()
 {
-	// TODO: remove request body
-	if (this->fout < 0)
+	if (this->fout >= 0)
 		close(this->fout);
 	if (this->output_fd >= 0)
 		close(this->output_fd);
 	this->fout = -1;
 	this->output_fd = -1;
+	std::remove(this->input.data());
 }
 
 std::string Proc::mktmpfileName()
@@ -297,7 +298,6 @@ std::string Proc::mktmpfileName()
 
 int Proc::writeBody(const char *ptr, int size)
 {
-	std::cout << "Error make: change file location\n";
 	if (this->output_fd == -1)
 	{
 		this->output = Proc::mktmpfileName();

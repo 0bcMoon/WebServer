@@ -120,7 +120,8 @@ class HttpResponse
 		};
 
 		static std::string getRandomName();
-		std::string							queryStr;
+		std::string											queryStr;
+		std::string											bodyFileName; // TODO: is this should be here
 		std::string											getCgiContentLenght();
 		int													parseCgiHaders(std::string str);
 		std::string											strMethod;
