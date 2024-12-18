@@ -110,7 +110,7 @@ void VirtualServer::parseTokens(Tokens &token, Tokens &end)
 		globalConfig.parseTokens(token, end);
 }
 
-std::set<std::string> &VirtualServer::getServerNames()
+const std::set<std::string> &VirtualServer::getServerNames()
 {
 	return (this->serverNames);
 }
@@ -123,5 +123,8 @@ Location *VirtualServer::getRoute(const std::string &path)
 
 void VirtualServer::init()
 {
+	std::vector<std::string> &v = this->globalConfig.getIndexes();
+	if (v.empty())
+		v.push_back("index.html");
 	this->routes.init(this->globalConfig);
 }
