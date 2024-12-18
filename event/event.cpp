@@ -30,8 +30,6 @@
 #include "HttpResponse.hpp"
 #include "VirtualServer.hpp"
 
-#define CGI_VAR_SIZE 11
-
 Event::Event(int max_connection, int max_events, ServerContext *ctx)
 	: connections(ctx, -1), MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
@@ -73,7 +71,7 @@ void Event::InsertDefaultServer(VirtualServer *server, int socketFd)
 
 void Event::insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd)
 {
-	std::set<std::string> &serverNames = server->getServerNames();
+	const std::set<std::string> &serverNames = server->getServerNames();
 	if (serverNames.size() == 0) // if there is no server name  uname will be the
 		this->InsertDefaultServer(server, socketFd); // default server in that port
 	else
@@ -137,6 +135,7 @@ int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 	if (r != 0)
 		throw std::runtime_error("Error :getaddrinfo: " + std::string(gai_strerror(r)));
 
+	assert(result->ai_next == NULL);
 	int socket_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	if (socket_fd < 0)
 	{
@@ -242,7 +241,8 @@ int Event::newConnection(int socketFd, Connections &connections)
 
 	struct kevent ev_set[2];
 	EV_SET(&ev_set[0], newSocketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-	EV_SET(&ev_set[1], newSocketFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL); // disable write event to stop client from spamming the server 
+	EV_SET(&ev_set[1], newSocketFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL); // disable write event to stop
+																					// client from spamming the server
 
 	if (kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL) < 0)
 		return (close(newSocketFd)); // report faild connections
@@ -272,11 +272,10 @@ void Event::ReadEvent(const struct kevent *ev)
 		Client *client = connections.requestHandler(ev->ident, ev->data);
 		if (!client)
 			return;
-		while (!client->request.eof && client->request.state != REQ_ERROR)
+		while (!client->request.eof && client->request.state != REQ_ERROR) // whats is header does not arrive fully ?
 		{
 			client->request.feed();
-			if (!client->request.data.back()->isRequestLineValidated()
-					&& client->request.state == BODY)
+			if (!client->request.data.back()->isRequestLineValidated() && client->request.state == BODY)
 			{
 				client->request.decodingUrl();
 				client->request.splitingQuery();
@@ -334,7 +333,7 @@ void Event::WriteEvent(const struct kevent *ev)
 		return;
 	Client *client = kv->second;
 	if (client->request.data.size() == 0
-			|| (client->request.data.front()->state != REQUEST_FINISH && client->request.data.front()->state != REQ_ERROR))
+		|| (client->request.data.front()->state != REQUEST_FINISH && client->request.data.front()->state != REQ_ERROR))
 		return;
 	if (client->response.state == START)
 	{
@@ -436,19 +435,13 @@ void Event::ReadPipe(const struct kevent *ev)
 
 void Event::TimerEvent(const struct kevent *ev)
 {
-	// std::cout << "timer event\n";
-	// exit(3);
-	// if (!ev->udata)
-	// 	return this->connections.closeConnection(ev->ident); // if client take too long to send full request
-	// exit(1);
-	// int fd = (size_t)ev->udata;
-	// Client *client = this->connections.getClient(fd);
-	// if (!client)
-	// 	return (void)(std::cout << "client has been free1\n");
-	// GlobalConfig::Proc &proc = client->proc;
-	// // else cgi take too long to process it data
-	// proc.state = GlobalConfig::Proc::TIMEOUT; // set the state for error TIMEOUT to response
-	// proc.die(); // we kill the cgi with SIGKILL
+	std::cout << "timer event happend\n";
+	ProcMap_t::iterator p = this->procs.find((size_t)ev->udata);
+	if (p == this->procs.end())
+		return ((void)(std::cout << "proc already dead false alarm\n"));
+	Proc &proc = p->second;
+	proc.state = Proc::TIMEOUT;
+	proc.die();
 }
 
 int Event::waitProc(int pid)
@@ -461,7 +454,7 @@ int Event::waitProc(int pid)
 	status = WEXITSTATUS(status); // check exist state
 	struct kevent event;
 	EV_SET(&event, pid, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
-	kevent(this->kqueueFd, &event, 1, NULL, 0, NULL); // an edge case where timer already in user land
+	kevent(this->kqueueFd, &event, 1, NULL, 0, NULL); // if timer has not been trigger better to delete it
 	return (signal || status);
 }
 
@@ -474,7 +467,9 @@ void Event::ProcEvent(const struct kevent *ev)
 	if (!client)
 		return this->deleteProc(p);
 	this->setWriteEvent(client, EV_ENABLE);
-	if (status)
+	if (proc.state == Proc::TIMEOUT)
+		return (client->response.setHttpResError(504, "Gateway Timeout"), this->deleteProc(p));
+	else if (status)
 		return (client->response.setHttpResError(502, "Bad Gateway"), this->deleteProc(p));
 	client->response.state = START_CGI_RESPONSE;
 	proc.clean();
@@ -490,14 +485,12 @@ void Event::eventLoop()
 {
 	connections.init(this->ctx, this->kqueueFd);
 	int nev;
-	std::cout << "TODO: add default index.html\n";
-	std::cout << "TODO: edit path algo : handel path info\n";
 	std::cout << "TODO: edit method how to find if it a cgi or not\n";
-	std::cout << "TODO: add redirection\n";
 	std::cout << "TODO: parser header before getting location\n";
 	std::cout << "-------------------\n";
 	while (1)
 	{
+		std::cout << "Wating for event....\n";
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));
@@ -555,33 +548,33 @@ void Event::deleteProc(ProcMap_t::iterator &it)
 	p.clean();
 	this->procs.erase(it);
 }
-Location *Event::getLocation(const Client *client)
+Location *Event::getLocation(Client *client)
 {
 	VirtualServer *Vserver;
 	int serverfd;
 	bool IsDefault = true;
 
-	// TODO add for cgi
-	// struct sockaddr_in addr = this->sockAddrInMap.find(client->getServerFd())->second;
-	// int port = ntohs(addr.sin_port);
 	serverfd = client->getServerFd();
 	const std::string &path = client->getPath();
 	std::string host = client->getHost();
-	std::cout << "HOST: " << host << std::endl;
 	ServerNameMap_t serverNameMap = this->virtuaServers.find(serverfd)->second; // always exist
 	ServerNameMap_t::iterator _Vserver = serverNameMap.find(host);
 	if (_Vserver == serverNameMap.end())
-		Vserver = this->defaultServer.find(client->getServerFd())->second,
-		IsDefault = false; // plz dont fail all my hope on you // crying like a little bitch, write a proper code like
-						   // men WARNING
+	{
+		Vserver = this->defaultServer.find(client->getServerFd())->second;
+		IsDefault = true;
+	}
 	else
 		Vserver = _Vserver->second;
 	Location *location = Vserver->getRoute(path);
 	if (!location)
 		return (NULL);
-	else if (!IsDefault)
-		host = *Vserver->getServerNames().begin();
-	// location->setHostPort(host, port);
+	else if (IsDefault)
+		client->response.server_name = *Vserver->getServerNames().begin();
+	struct sockaddr *addr = &this->sockAddrInMap.find(client->getServerFd())->second;
+	struct sockaddr_in *addr2 = (struct sockaddr_in *)addr;
+	int port = ntohs(addr2->sin_port);
+	client->response.server_port = port;
 	return (location);
 }
 
