@@ -70,17 +70,17 @@ void CGIProcess::loadEnv()
 	std::map<std::string, std::string>::iterator it = response->headers.begin();
 	for (int i = 0; it != response->headers.end(); it++, i++)
 		this->env.push_back(ToEnv(it));
-	ss << response->location->getPort();
+	ss << response->server_port;
 	env["SERVER_SOFTWARE"] = "42webserv";
 	env["REDIRECT_STATUS"] = ""; // make php a happy cgi
 	env["GATEWAY_INTERFACE"] = "CGI/1.1";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
-	env["SERVER_PORT"] = ss.str();
-	env["SERVER_NAME"] = response->location->getHost(); // TODO: handel does
+	env["SERVER_PORT"] = ss.str(); // need
+	env["SERVER_NAME"] = response->server_name;
 	env["REQUEST_METHOD"] = response->strMethod;
 	env["SCRIPT_NAME"] = response->path;
 	env["QUERY_STRING"] = response->queryStr;
-	env["PATH_INFO"] = "/"; //TODO: edit path algo
+	env["PATH_INFO"] = response->path_info;
 	env["HTTP_HOST"] = response->headers["Host"];
 	env["CONTENT_TYPE"] = response->headers["Content-type"];
 	env["SCRIPT_FILENAME"] = this->cgi_bin;
@@ -104,7 +104,7 @@ void CGIProcess::child_process()
 																	  : 0; // offset for alais
 	this->cgi_bin = response->location->globalConfig.getRoot() + response->path.substr(offset);
 
-	this->loadEnv(); // INFO: handel this
+	this->loadEnv();
 
 	std::string path =
 		response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique

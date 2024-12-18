@@ -7,7 +7,6 @@
 #include "Debug.hpp"
 #include "Event.hpp"
 #include "HttpResponse.hpp"
-#include "Log.hpp"
 #include "Tokenizer.hpp"
 #ifdef __cplusplus
 extern "C"
@@ -27,6 +26,7 @@ extern "C"
 #include <execinfo.h>
 #include <iostream>
 #include <string>
+
 std::string demangle(const char *mangled)
 {
 	if (!mangled)
@@ -47,7 +47,7 @@ std::string demangle(const char *mangled)
 
 void printStackTrace()
 {
-	int skipFrames = 0;
+	int skipFrames = 1;
 	void *callstack[128];
 	int frames = backtrace(callstack, 128);
 
@@ -92,7 +92,6 @@ ServerContext *LoadConfig(const char *path)
 		ctx = new ServerContext();
 		tokenizer.parseConfig(ctx);
 		ctx->init();
-		Log::init();
 	}
 	catch (const Tokenizer::ParserException &e)
 	{
@@ -154,5 +153,4 @@ int main()
 
 	delete event;
 	delete ctx;
-	Log::close();
 }

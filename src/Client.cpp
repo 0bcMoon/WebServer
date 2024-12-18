@@ -9,7 +9,6 @@
 #include <string>
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
-#include "Log.hpp"
 #include "ServerContext.hpp"
 
 int Client::getFd() const

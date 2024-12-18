@@ -42,7 +42,7 @@ class VirtualServer
 	VirtualServer();
 	void setListen(Tokens &Token, Tokens &end);
 	std::set<SocketAddr> &getAddress();
-		std::set<std::string> &getServerNames();
+	const std::set<std::string> &getServerNames();
 	bool isListen(const SocketAddr &addr) const;
 	void setServerNames(Tokens &Token, Tokens &end);
 	void pushLocation(Tokens &tokens, Tokens &end);

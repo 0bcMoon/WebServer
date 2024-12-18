@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <set>
 
 typedef std::vector<std::string>::iterator Tokens;
 #define CGI_BUFFER_SIZE 64L * 1024L
@@ -73,13 +74,7 @@ class GlobalConfig
 
 		void setAutoIndex(Tokens &token, Tokens &end);
 
-		void setAccessLog(Tokens &token, Tokens &end);
-		std::string getAccessLog() const;
-
-		void setErrorLog(Tokens &token, Tokens &end);
-		std::string getErrorLog() const;
-
-		const std::vector<std::string> &getIndexes();
+		std::vector<std::string> &getIndexes();
 		void setIndexes(Tokens &token, Tokens &end);
 		void setErrorPages(Tokens &token, Tokens &end);
 		const std::string &getErrorPage(std::string &StatusCode);

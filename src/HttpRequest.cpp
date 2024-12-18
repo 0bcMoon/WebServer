@@ -724,21 +724,19 @@ bool HttpRequest::isCGI()
 	size_t pos = path.rfind('.');
 	if (pos == std::string::npos)
 		return (false);
-	size_t j = pos;
-	for (; j < path.size(); j++)
+	size_t i = pos;
+	for (; i < path.size(); i++)
 	{
-		if (path[j] == '?') // double validetion
-			break;
-		if (path[j] == '/')
+		if (path[i] == '?' || path[i] == '/')
 			break;
 	}
-	const std::string ext = path.substr(pos, j - pos);
+	const std::string ext = path.substr(pos, i - pos);
 	if (this->location->getCGIPath(ext).empty())
 		return (false);
-	if (path[j] != '/')
+	if (path[i] != '/')
 		return (true);
-	this->data.back()->path_info = path.substr(j);
-	path = path.substr(0, j);
+	this->data.back()->bodyHandler.path_info = path.substr(i);
+	path = path.substr(0, i);
 	return (true);
 }
 
