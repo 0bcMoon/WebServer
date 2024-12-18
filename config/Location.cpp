@@ -11,12 +11,12 @@
 #include <string>
 #include "DataType.hpp"
 #include "Tokenizer.hpp"
-Location::Location() 
+Location::Location()
 {
-	this->cgiMap["."] = "";	 // mean no cgi
+	this->cgiMap["."] = ""; // mean no cgi
 	this->isRedirection = false;
 	this->methods = GET; // default method is GET only can be overwritten
-	this->upload_file_path = "/tmp/"; // default when 
+	this->upload_file_path = "/tmp/"; // default upload loaction if post method was allowed
 }
 
 Location &Location::operator=(const Location &location)
@@ -33,23 +33,17 @@ Location &Location::operator=(const Location &location)
 void Location::setPath(std::string &path)
 {
 	// TODO validate path
-	// may be support encode
 	this->path = path;
 }
 
 bool GlobalConfig::isValidStatusCode(std::string &str)
 {
-	int status = 0;
-	if (str.size() != 3)
+	std::stringstream ss;
+	ss << str;
+	int status;
+	ss >> status;
+	if (ss.fail() || !ss.eof())
 		return (false);
-	for (size_t i = 0; i < str.size(); i++)
-	{
-		if (str[i] < '0' || str[i] > '9')
-			return (false);
-		status = status * 10 + str[i] - 48;
-		if (status > 999)
-			return (false);
-	}
 	return (status >= 100 && status <= 599);
 }
 
@@ -63,14 +57,12 @@ void Location::setRedirect(Tokens &token, Tokens &end)
 	this->globalConfig.CheckIfEnd(token, end);
 	ss << status;
 	ss >> code;
-	if (code < 301 || code > 399 || !ss.eof())
-		throw Tokenizer::ParserException("Invalid  status: " + status +" code in Redirection: should be 3xx code");
+	if (code < 301 || code > 399 || ss.fail() || !ss.eof())
+		throw Tokenizer::ParserException("Invalid  status: " + status + " code in Redirection: should be 3xx code");
 	this->redirect.status = status;
 	this->redirect.url = url;
 	this->isRedirection = true;
 }
-
-
 
 void Location::parseTokens(Tokens &token, Tokens &end)
 {
@@ -82,14 +74,16 @@ void Location::parseTokens(Tokens &token, Tokens &end)
 		this->setMethods(token, end);
 	else if (*token == "client_upload_path")
 		this->setUploadPath(token, end);
+	else if (*token == "max_body_size")
+		this->setMaxBodySize(token, end);
 	else
 		this->globalConfig.parseTokens(token, end);
 }
 
 void Location::setCGI(Tokens &token, Tokens &end)
 {
-	std::string							cgi_path;
-	std::string							cgi_ext;
+	std::string cgi_path;
+	std::string cgi_ext;
 
 	this->globalConfig.validateOrFaild(token, end);
 	cgi_ext = this->globalConfig.consume(token, end);
@@ -104,23 +98,57 @@ void Location::setCGI(Tokens &token, Tokens &end)
 
 const std::string &Location::getCGIPath(const std::string &ext)
 {
-	std::map<std::string, std::string>::iterator	kv;
-	kv = this->cgiMap.find(ext);//
+	std::map<std::string, std::string>::iterator kv;
+	kv = this->cgiMap.find(ext); //
 	if (kv == this->cgiMap.end())
 		return (this->cgiMap.find(".")->second);
 	return (kv->second);
 }
 
-bool Location::HasRedirection() const 
+bool Location::HasRedirection() const
 {
 	return (this->isRedirection);
 }
-const Location::Redirection &Location::getRedirection() const 
+const Location::Redirection &Location::getRedirection() const
 {
 	return (this->redirect);
 }
 
-bool Location::isMethodAllowed(int method) const 
+static long long toBytes(std::string &size)
+{
+	const long maxValue = 8796093022208;
+	long long sizeValue = 0;
+
+	for (size_t i = 0; i < size.size() - 1; i++)
+	{
+		if (size[i] < '0' || size[i] > '9')
+			throw Tokenizer::ParserException("Invalid size");
+		sizeValue = sizeValue * 10 + size[i] - '0';
+		if (sizeValue > maxValue)
+			throw Tokenizer::ParserException("Size too large");
+	}
+	switch (size[size.size() - 1])
+	{
+		case 'k':
+		case 'K': sizeValue *= 1024; break;
+		case 'M':
+		case 'm': sizeValue *= 1024 * 1024; break;
+		case 'B':
+		case 'b': break;
+		default: return (-1);
+	}
+	return (sizeValue);
+}
+void Location::setMaxBodySize(Tokens &token, Tokens &end)
+{
+	this->globalConfig.validateOrFaild(token, end);
+	this->maxBodySize = toBytes(*token);
+	if (this->maxBodySize == -1)
+		throw Tokenizer::ParserException("Invalid max body size or too large max is 100");
+	token++;
+	this->globalConfig.CheckIfEnd(token, end);
+}
+bool Location::isMethodAllowed(int method) const
 {
 	return ((this->methods & method) != 0); // TODO: TEST
 }
@@ -149,21 +177,7 @@ const std::string &Location::getPath()
 {
 	return (this->path);
 }
-void Location::setHostPort(const std::string &host, int port)
-{
-	this->host = host;
-	this->port = port;
-}
 
-int Location::getPort() const
-{
-	return (this->port);
-}
-
-const std::string& Location::getHost() const
-{
-	return (this->host);
-}
 
 const std::string &Location::getFileUploadPath()
 {
