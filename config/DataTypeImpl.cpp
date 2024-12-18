@@ -11,26 +11,26 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 #include "DataType.hpp"
-#include "HttpResponse.hpp"
 
 GlobalConfig::GlobalConfig()
 {
 	this->autoIndex = -1;
 	this->errorPages["."] = "";
-	this->IsAlias = false; // INFO: this is art Do not touch unless you have a permit.
+	this->IsAlias = false;
 }
 
 GlobalConfig::GlobalConfig(int autoIndex, const std::string &upload_file_path)
 {
 	this->autoIndex = autoIndex;
 	this->upload_file_path = upload_file_path;
+	this->errorPages["."] = "";
+	this->IsAlias = false;
 }
 
 GlobalConfig::GlobalConfig(const GlobalConfig &other)
@@ -185,7 +185,7 @@ void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 	}
 }
 
-const std::vector<std::string> &GlobalConfig::getIndexes()
+std::vector<std::string> &GlobalConfig::getIndexes()
 {
 	return (this->indexes);
 }
