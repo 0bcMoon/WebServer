@@ -121,6 +121,9 @@ class HttpResponse
 
 		static std::string getRandomName();
 		std::string											queryStr;
+		std::string											path_info; // TODO: clear all used varible
+		std::string											server_name;
+		int													server_port;
 		std::string											bodyFileName; // TODO: is this should be here
 		std::string											getCgiContentLenght();
 		int													parseCgiHaders(std::string str);
@@ -139,7 +142,6 @@ class HttpResponse
 
 		void							responseCooking();
 		bool							isCgi();
-		void							cgiCooking();
 
 		int								getStatusCode() const;
 		std::string						getStatusDescr() const;

@@ -1,8 +1,7 @@
 #!/bin/bash
 
-echo "HTTP/1.1 200 OK"
 echo "Content-Type: text/html"
-echo ""
+echo "\r"
 echo "<html>"
 echo "<head><title>Simple Bash CGI Script</title></head>"
 echo "<body>"

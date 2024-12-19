@@ -176,7 +176,7 @@ void HttpRequest::andNew()
 int HttpRequest::checkMultiPartEnd()
 {
 	std::string border = "\r\n--" + bodyBoundary + "--\r\n";
-	if (reqBody != MULTI_PART)
+	if (reqBody != MULTI_PART || data.back()->bodyHandler.isCgi)
 		return (1);
 	if (data.back()->bodyHandler.currFd >= 0
 		&& write(data.back()->bodyHandler.currFd, border.c_str(), data.back()->bodyHandler.borderIt) < 0)
@@ -726,21 +726,19 @@ bool HttpRequest::isCGI()
 	size_t pos = path.rfind('.');
 	if (pos == std::string::npos)
 		return (false);
-	size_t j = pos;
-	for (; j < path.size(); j++)
+	size_t i = pos;
+	for (; i < path.size(); i++)
 	{
-		if (path[j] == '?') // double validetion
-			break;
-		if (path[j] == '/')
+		if (path[i] == '?' || path[i] == '/')
 			break;
 	}
-	const std::string ext = path.substr(pos, j - pos);
+	const std::string ext = path.substr(pos, i - pos);
 	if (this->location->getCGIPath(ext).empty())
 		return (false);
-	if (path[j] != '/')
+	if (path[i] != '/')
 		return (true);
-	this->data.back()->path_info = path.substr(j);
-	path = path.substr(0, j);
+	this->data.back()->bodyHandler.path_info = path.substr(i);
+	path = path.substr(0, i);
 	return (true);
 }
 
@@ -1248,7 +1246,6 @@ int bodyHandler::writeBody()
 	if (write(bodyFd, body.data(), bodyIt) < 0)
 		return (0);
 	bodyIt = 0;
-	exit(11);
 	return (1);
 }
 

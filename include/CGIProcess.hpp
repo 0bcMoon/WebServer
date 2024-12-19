@@ -11,7 +11,6 @@ class CGIProcess
 {
 	private:
 		HttpResponse *response;
-		Client *client;
 		std::vector<std::string> env;
 		std::string cgi_bin;
 		std::string cgi_file;

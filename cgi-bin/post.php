@@ -1,26 +1,61 @@
 <?php
-// Ensure the script is running in a CGI/CLI context.
-if (php_sapi_name() !== 'cgi-fcgi') {
-    header('Content-Type: text/plain');
-    echo "Error: This script must be run in a CGI environment.\n";
-    exit(1);
+// Set headers for CGI response
+header('Content-Type: text/html; charset=utf-8');
+
+// Function to sanitize input
+function sanitizeInput($input) {
+    return htmlspecialchars(trim($input));
 }
 
-// Set appropriate headers for the response.
-header('Content-Type: text/plain');
-
-// Read the raw POST body.
-$postBody = file_get_contents('php://input');
-
-if ($postBody === false) {
-    echo "Error reading POST body.\n";
-    exit(1);
+// Function to write to file safely
+function writeToFile($content, $filename) {
+    try {
+        // Create logs directory if it doesn't exist
+        $dir = 'logs';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        
+        // Full path to file
+        $filepath = $dir . '/' . $filename;
+        
+        // Write content to file
+        if (file_put_contents($filepath, $content . PHP_EOL, FILE_APPEND | LOCK_EX) === false) {
+            throw new Exception("Failed to write to file");
+        }
+        
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
 }
 
-// Output the POST body for debugging (optional, careful with binary data).
-echo "Received POST body:\n";
-echo $postBody;
+// Get input data (supports both GET and POST methods)
+$input = isset($_POST['input']) ? $_POST['input'] : (isset($_GET['input']) ? $_GET['input'] : '');
+$input = sanitizeInput($input);
 
-// Optionally save or process the POST body.
-file_put_contents('post_body.bin', $postBody);
+// Process the input
+if (!empty($input)) {
+    $filename = 'output_' . date('Y-m-d') . '.txt';
+    $success = writeToFile($input, $filename);
+    
+    // Return response
+    if ($success) {
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Data written successfully',
+            'filename' => $filename
+        ]);
+    } else {
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Failed to write data'
+        ]);
+    }
+} else {
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'No input provided'
+    ]);
+}
 ?>

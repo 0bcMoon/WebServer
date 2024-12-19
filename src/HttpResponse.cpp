@@ -23,7 +23,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include "CgiHandler.hpp"
 #include "Event.hpp"
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
@@ -196,6 +195,7 @@ const char *HttpResponse::IOException::what() const throw()
 
 std::string HttpResponse::getErrorRes()
 {
+	std::cout << "Fix this thing add hard coded page for undefine status code\n";
 	std::ostringstream oss;
 	oss << status.code;
 	std::string errorCode = oss.str();
@@ -225,7 +225,7 @@ HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 	this->isCgiBool = req.data.front()->bodyHandler.isCgi;
 	this->queryStr = req.data.front()->queryStr;
 	this->bodyFileName = req.data.front()->bodyHandler.bodyFile;
-	// this->path_info;
+	this->path_info  = req.data.front()->bodyHandler.path_info;
 	path = req.data[0]->path;
 	headers = req.data[0]->headers;
 	status.code = req.data[0]->error.code;
@@ -281,15 +281,6 @@ bool HttpResponse::isMethodAllowed()
 	// return (true);
 }
 
-void HttpResponse::cgiCooking()
-{
-	CgiHandler cgi(*this);
-	cgi.execute(location->getCGIPath("." + getExtension(path)));
-	if (state == ERROR)
-		return;
-	bodyType = CGI;
-	writeCgiResponse();
-}
 
 int HttpResponse::autoIndexCooking()
 {

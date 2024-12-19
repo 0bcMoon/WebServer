@@ -102,6 +102,7 @@ struct bodyHandler
 
 	int								bodyFd;
 	std::string						bodyFile;
+	std::string						path_info;
 	size_t							bodyIt;
 	std::vector<char> body; // raw body;
 	size_t bodySize;

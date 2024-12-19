@@ -52,7 +52,7 @@ class Event
 		int newConnection(int socketFd, Connections &connections);
 		bool checkNewClient(int socketFd);
 		void setWriteEvent(Client *client, uint16_t flags);
-		Location *getLocation(const Client *client);
+		Location *getLocation(Client *client);
 		bool IsFileExist(HttpResponse &response);
 		Proc RunCGIScript(HttpResponse &response);
 
@@ -64,10 +64,8 @@ class Event
 		void StartTimer(Client *client);
 
 
-		int waitProc(int pid);
-
+		int waitProc(pid_t pid);
 		void deleteProc(ProcMap_t::iterator &it);
-		void wpipe(const struct kevent *ev);
 		void ReadPipe(const struct kevent *ev);
 	class EventExpection: public std::exception
 	{
