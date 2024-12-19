@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include "DataType.hpp"
+#include "Event.hpp"
 #include "HttpResponse.hpp"
 
 HttpRequest::HttpRequest() : fd(-1)
@@ -273,6 +274,7 @@ void HttpRequest::setHttpReqError(int code, std::string str)
 {
 	// print_stack_trace();
 	// exit(1);
+	printStackTrace();
 	state = REQ_ERROR;
 	error.code = code;
 	error.description = str;
@@ -774,6 +776,7 @@ bool HttpRequest::validateRequestLine()
 		return (setHttpReqError(405, "Not Found"), 0);
 	if (!this->isMethodAllowed())
 		return (setHttpReqError(405, "Method Not Allowed"), 0);
+	addPathIndex();
 	data.back()->bodyHandler.isCgi = this->isCGI();
 	return (1);
 }
@@ -1245,6 +1248,7 @@ int bodyHandler::writeBody()
 	if (write(bodyFd, body.data(), bodyIt) < 0)
 		return (0);
 	bodyIt = 0;
+	exit(11);
 	return (1);
 }
 
