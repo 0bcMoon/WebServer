@@ -317,6 +317,7 @@ void Event::RegisterNewProc(Client *client)
 	client->cgi_pid = proc.pid;
 	proc.client = client->getFd();
 	proc.input = client->request.data.front()->bodyHandler.bodyFile;
+	std::cout << "Cgi INput: " << proc.input << std::endl;
 	this->procs[proc.pid] = proc;
 	this->setWriteEvent(client, EV_DISABLE);
 }
@@ -490,7 +491,7 @@ void Event::eventLoop()
 	std::cout << "-------------------\n";
 	while (1)
 	{
-		std::cout << "Wating for event....\n";
+		// std::cout << "Wating for event....\n";
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));

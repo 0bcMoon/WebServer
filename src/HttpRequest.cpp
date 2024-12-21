@@ -1243,7 +1243,7 @@ int bodyHandler::writeBody()
 		bodyFd = open(bodyFile.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0644);
 	if (bodyFd < 0)
 		return (0);
-	if (write(bodyFd, body.data(), bodyIt) < 0)
+	if (write(bodyFd, body.data(), body.size()) < 0)
 		return (0);
 	bodyIt = 0;
 	return (1);
