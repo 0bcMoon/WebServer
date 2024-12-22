@@ -476,7 +476,7 @@ void Event::ProcEvent(const struct kevent *ev)
 	proc.clean();
 	int fd = open(proc.output.data(), O_RDONLY);
 	if (fd < 0)
-		return client->response.setHttpResError(500, "Internal Server Error"), this->deleteProc(p);
+		return  client->response.setHttpResError(500, "Internal Server Error"), this->deleteProc(p);
 	client->response.responseFd = fd;
 	client->response.cgiOutFile = proc.output;
 	this->deleteProc(p);

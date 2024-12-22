@@ -195,7 +195,7 @@ const char *HttpResponse::IOException::what() const throw()
 
 std::string HttpResponse::getErrorRes()
 {
-	std::cout << "Fix this thing add hard coded page for undefine status code\n";
+	// std::cout << "Fix this thing add hard coded page for undefine status code\n";
 	std::ostringstream oss;
 	oss << status.code;
 	std::string errorCode = oss.str();
@@ -435,6 +435,8 @@ int HttpResponse::parseCgiHaders(std::string str)
 	if (tmpHeaderVal.size() < 3 || tmpHeaderVal[0] != ' ')
 		return (setHttpResError(502, "Bad Gateway"), 0);
 	resHeaders[tmpHeaderName] = tmpHeaderVal.substr(0, tmpHeaderVal.size() - 1);
+	if (resHeaders[tmpHeaderName].back() == '\r')
+		resHeaders[tmpHeaderName].pop_back();
 	return (1);
 }
 
