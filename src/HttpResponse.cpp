@@ -427,14 +427,12 @@ int HttpResponse::parseCgiHaders(std::string str)
 	for (size_t i = 0; i < tmpHeaderName.size(); i++)
 	{
 		if (!isValidHeaderChar(tmpHeaderName[i]))
-		{
 			return (setHttpResError(502, "Bad Gateway"), 0);
-		}
 	}
 	tmpHeaderVal = str.substr(pos + 1);
 	if (tmpHeaderVal.size() < 3 || tmpHeaderVal[0] != ' ')
 		return (setHttpResError(502, "Bad Gateway"), 0);
-	resHeaders[tmpHeaderName] = tmpHeaderVal.substr(0, tmpHeaderVal.size() - 1);
+	resHeaders[tmpHeaderName] = tmpHeaderVal.substr(0, tmpHeaderVal.size() - 2);
 	return (1);
 }
 
