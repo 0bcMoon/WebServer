@@ -1,6 +1,7 @@
 #include "Event.hpp"
 #include <netdb.h>
 #include <sys/_endian.h>
+#include <sys/_types/_errno_t.h>
 #include <sys/event.h>
 #include <sys/fcntl.h>
 #include <sys/socket.h>
@@ -429,23 +430,6 @@ void Event::ReadPipe(const struct kevent *ev)
 	}
 }
 
-// void Event::wpipe(const struct kevent *ev)
-// {
-// 	// add some writes offset that does cl
-// 	// std::cout << "WriteEvent pipe enter\n"; // TODO: test with post
-// 	int fd = (size_t)ev->udata;
-// 	Client *client = this->connections.getClient(fd);
-// 	if (!client)
-// 		return (void)(std::cout << "client has been free3\n");
-// 	HttpResponse *response = &client->response;
-// 	GlobalConfig::Proc &proc = client->proc;
-
-// 	int avdata = std::abs(proc.woffset - (int)response->getBody().size());
-// 	int wdata = std::min((int)ev->data, avdata);
-// 	proc.woffset += wdata;
-// 	if (write(ev->ident, response->getBody().data() + proc.woffset, wdata) < 0)
-// 		throw HttpResponse::IOException();
-// }
 
 void Event::TimerEvent(const struct kevent *ev)
 {
@@ -472,19 +456,6 @@ int Event::waitProc(int pid)
 	return (signal || status);
 }
 
-void log_file(std::string &filename)
-{
-	std::cerr << "log cgi output\n";
-	std::ofstream f(filename);
-	std::stringstream ss;
-	if (!f)
-		return ;
-
-	ss << f.rdbuf();
-	std::cerr << ss.str() << std::endl;
-	std::cerr << "------------log cgi output\n";
-
-}
 void Event::ProcEvent(const struct kevent *ev)
 {
 	int status = this->waitProc(ev->ident);
@@ -494,8 +465,6 @@ void Event::ProcEvent(const struct kevent *ev)
 	if (!client)
 		return this->deleteProc(p);
 	this->setWriteEvent(client, EV_ENABLE);
-	if (status)
-		log_file(proc.output);
 	if (proc.state == Proc::TIMEOUT)
 		return (client->response.setHttpResError(504, "Gateway Timeout"), this->deleteProc(p));
 	else if (status)
@@ -504,7 +473,11 @@ void Event::ProcEvent(const struct kevent *ev)
 	proc.clean();
 	int fd = open(proc.output.data(), O_RDONLY);
 	if (fd < 0)
+	{
+		std::cout << proc.output << " :";
+		std::cerr << strerror(errno) << ": has hppend\n"; 
 		return client->response.setHttpResError(500, "Internal Server Error"), this->deleteProc(p);
+	}
 	client->response.responseFd = fd;
 	client->response.cgiOutFile = proc.output;
 	this->deleteProc(p);

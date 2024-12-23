@@ -252,7 +252,7 @@ bool HttpResponse::isCgi()
 }
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	// printStackTrace();
+	printStackTrace();
 	std::cerr << "http Error has been set: " << code << "\n";
 	state = ERROR;
 	status.code = code;
@@ -410,7 +410,7 @@ int HttpResponse::pathChecking()
 
 static int isValidHeaderChar(char c)
 {
-	return (std::isalpha(c) || std::isdigit(c) || c == '-' || c == ':');
+	return (std::isalpha(c) || std::isdigit(c) || c == '-'|| c == ':');
 }
 
 int HttpResponse::parseCgiHaders(std::string str)
