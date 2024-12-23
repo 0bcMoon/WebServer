@@ -30,6 +30,12 @@
 #include "HttpResponse.hpp"
 #include "VirtualServer.hpp"
 
+#define red "\x1B[31m"
+#define reset "\033[0m"
+#define blue "\x1B[34m"
+#define green "\x1B[32m"
+#define yellow "\x1B[33m"
+
 Event::Event(int max_connection, int max_events, ServerContext *ctx)
 	: connections(ctx, -1), MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
@@ -261,6 +267,13 @@ void Event::setWriteEvent(Client *client, uint16_t flags)
 		throw Event::EventExpection("kevent faild:" + std::string(strerror(errno)));
 	client->writeEventState = flags;
 }
+void log(Client *client)
+{
+	data_t *req = client->request.data.back();
+	std::cout << green;
+	std::cout <<"HTTP/1.1 " << req->strMethode << " " << req->path  <<  std::endl;
+	std::cout << reset;
+}
 void Event::ReadEvent(const struct kevent *ev)
 {
 	if (ev->flags & EV_EOF && ev->data <= 0)
@@ -282,6 +295,7 @@ void Event::ReadEvent(const struct kevent *ev)
 				client->request.location = this->getLocation(client);
 				client->request.validateRequestLine();
 				client->request.data.back()->isRequestLineValid = 1;
+				log(client);
 			}
 		}
 		client->request.eof = 0;
@@ -458,6 +472,19 @@ int Event::waitProc(int pid)
 	return (signal || status);
 }
 
+void log_file(std::string &filename)
+{
+	std::cerr << "log cgi output\n";
+	std::ofstream f(filename);
+	std::stringstream ss;
+	if (!f)
+		return ;
+
+	ss << f.rdbuf();
+	std::cerr << ss.str() << std::endl;
+	std::cerr << "------------log cgi output\n";
+
+}
 void Event::ProcEvent(const struct kevent *ev)
 {
 	int status = this->waitProc(ev->ident);
@@ -467,6 +494,8 @@ void Event::ProcEvent(const struct kevent *ev)
 	if (!client)
 		return this->deleteProc(p);
 	this->setWriteEvent(client, EV_ENABLE);
+	if (status)
+		log_file(proc.output);
 	if (proc.state == Proc::TIMEOUT)
 		return (client->response.setHttpResError(504, "Gateway Timeout"), this->deleteProc(p));
 	else if (status)
@@ -487,6 +516,7 @@ void Event::eventLoop()
 	int nev;
 	std::cout << "TODO: edit method how to find if it a cgi or not\n";
 	std::cout << "TODO: parser header before getting location\n";
+	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
 	std::cout << "-------------------\n";
 	while (1)
 	{

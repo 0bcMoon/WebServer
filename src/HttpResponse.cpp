@@ -252,7 +252,7 @@ bool HttpResponse::isCgi()
 }
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	printStackTrace();
+	// printStackTrace();
 	std::cerr << "http Error has been set: " << code << "\n";
 	state = ERROR;
 	status.code = code;

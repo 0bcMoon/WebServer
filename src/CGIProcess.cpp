@@ -31,7 +31,6 @@ void CGIProcess::closePipe(int fd[2])
 
 int CGIProcess::redirectPipe()
 {
-	std::cerr << "warning a method " << this->response->strMethod<<"\n";
 	close(this->pipeOut[0]);
 	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
 		return (-1);
