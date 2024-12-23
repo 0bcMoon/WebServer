@@ -317,7 +317,6 @@ void Event::RegisterNewProc(Client *client)
 	client->cgi_pid = proc.pid;
 	proc.client = client->getFd();
 	proc.input = client->request.data.front()->bodyHandler.bodyFile;
-	std::cout << "Cgi INput: " << proc.input << std::endl;
 	this->procs[proc.pid] = proc;
 	this->setWriteEvent(client, EV_DISABLE);
 }

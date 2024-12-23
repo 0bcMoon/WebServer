@@ -1016,6 +1016,7 @@ void HttpRequest::handleMultiPartHeaders()
 	bodyHandler &bodyHandler = data.back()->bodyHandler;
 	const std::vector<char> &body = data.back()->bodyHandler.body;
 
+	// TODO : fix me ERROR
 	std::cout << "|";
 	write(1, &body.data()[bodyHandler.bodyIt], 5);
 	std::cout << "|\n";
