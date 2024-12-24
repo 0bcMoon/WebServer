@@ -28,20 +28,16 @@ void	Connections::closeConnection(int	fd)
 
 void	Connections::addConnection(int	fd, int server)
 {
-	// std::cout << "new Connections\n";
-	this->clients[fd] = new Client(fd, server, ctx);
+	this->clients[fd] = new Client(fd, server, this->ctx);
 }
 
 
-// TODO: return client object : search once
 Client		*Connections::requestHandler(int	fd, int data)
 {
 	ClientsIter clientIter = this->clients.find(fd);
-	if ( clientIter == this->clients.end()) // TODO : fix
+	if ( clientIter == this->clients.end())
 		return (NULL);
-
 	clientIter->second->request.readRequest(data);
-	// clientIter->second->request.feed();
 	return (clientIter->second);
 }
 

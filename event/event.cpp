@@ -31,11 +31,6 @@
 #include "HttpResponse.hpp"
 #include "VirtualServer.hpp"
 
-#define red "\x1B[31m"
-#define reset "\033[0m"
-#define blue "\x1B[34m"
-#define green "\x1B[32m"
-#define yellow "\x1B[33m"
 
 Event::Event(int max_connection, int max_events, ServerContext *ctx)
 	: connections(ctx, -1), MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
@@ -235,26 +230,21 @@ void Event::initIOmutltiplexing()
 		throw std::runtime_error("kqueue faild: " + std::string(strerror(errno)));
 	this->CreateChangeList();
 }
-// TODO:  i need someone to speek here (logger )
 int Event::newConnection(int socketFd, Connections &connections)
 {
 	struct sockaddr address = this->sockAddrInMap[socketFd];
 	socklen_t size = sizeof(struct sockaddr);
 	int newSocketFd = accept(socketFd, &address, &size);
-	if (newSocketFd < 0) // TODO: add logger here
-		return (std::cout << "-----accept faild--------\n", -1);
+	if (newSocketFd < 0)
+		return (-1);
 	if (this->setNonBlockingIO(newSocketFd))
-		return (close(newSocketFd), std::cout << "-----accept faild--------\n", -1);
-
+		return (close(newSocketFd), -1);
 	struct kevent ev_set[2];
 	EV_SET(&ev_set[0], newSocketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	EV_SET(&ev_set[1], newSocketFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL); // disable write event to stop
-																					// client from spamming the server
-
 	if (kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL) < 0)
-		return (close(newSocketFd)); // report faild connections
+		return (close(newSocketFd), -1);
 	connections.addConnection(newSocketFd, socketFd);
-
 	return (newSocketFd);
 }
 
@@ -273,7 +263,7 @@ void log(Client *client)
 	data_t *req = client->request.data.back();
 	std::cout << green;
 	std::cout <<"HTTP/1.1 " << req->strMethode << " " << req->path  <<  std::endl;
-	std::cout << reset;
+	std::cout << _rest;
 }
 void Event::ReadEvent(const struct kevent *ev)
 {
@@ -433,10 +423,9 @@ void Event::ReadPipe(const struct kevent *ev)
 
 void Event::TimerEvent(const struct kevent *ev)
 {
-	std::cout << "timer event happend\n";
 	ProcMap_t::iterator p = this->procs.find((size_t)ev->udata);
 	if (p == this->procs.end())
-		return ((void)(std::cout << "proc already dead false alarm\n"));
+		return ;
 	Proc &proc = p->second;
 	proc.state = Proc::TIMEOUT;
 	proc.die();
@@ -490,10 +479,10 @@ void Event::eventLoop()
 	std::cout << "TODO: edit method how to find if it a cgi or not\n";
 	std::cout << "TODO: parser header before getting location\n";
 	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
+	std::cout << "TODO: restructor error page in config\n";
 	std::cout << "-------------------\n";
 	while (1)
 	{
-		// std::cout << "Wating for event....\n";
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
 		if (nev < 0)
 			throw std::runtime_error("kevent failed: " + std::string(strerror(errno)));

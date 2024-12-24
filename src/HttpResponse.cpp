@@ -14,7 +14,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <exception>
 #include <fstream>
 #include <ios>
 #include <iostream>
@@ -252,8 +251,7 @@ bool HttpResponse::isCgi()
 }
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	printStackTrace();
-	std::cerr << "http Error has been set: " << code << "\n";
+	// printStackTrace();
 	state = ERROR;
 	status.code = code;
 	status.description = str;

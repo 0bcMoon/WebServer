@@ -3,8 +3,8 @@ use strict;
 use CGI;
 use CGI::Cookie;
 
-my $cgi = CGI->new;
 
+my $cgi = CGI->new;
 # Get existing cookies
 my %cookies = fetch CGI::Cookie;
 my $current_theme = $cookies{'theme'} ? $cookies{'theme'}->value : 'white';
