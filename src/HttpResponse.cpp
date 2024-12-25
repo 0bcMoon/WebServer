@@ -566,7 +566,8 @@ void HttpResponse::writeResponse()
 		write2client(fd, "\r\n", 2);
 	}
 	write2client(this->fd, "\r\n", 2);
-	state = WRITE_BODY;
+	if (methode == GET)
+		state = WRITE_BODY;
 }
 
 std::string HttpResponse::getStatusLine()
@@ -599,12 +600,12 @@ std::string HttpResponse::getExtension(const std::string &str)
 std::string HttpResponse::getContentType()
 {
 	if (bodyType == NO_TYPE)
-		return ("");
+		return ("Content-Type: text/plain\r\n");
 	if (bodyType == AUTO_INDEX)
 		return ("Content-Type: text/html\r\n");
 	return (
-		"Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n"
-		+ "Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n" + "Content-Type: text/html\r\n");
+		"Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
+		// + "Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n" + "Content-Type: text/html\r\n");
 }
 
 std::string HttpResponse::getDate()
@@ -615,7 +616,6 @@ std::string HttpResponse::getDate()
 int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 {
 	state = WRITE_BODY;
-
 	if (type == LOAD_FILE || type == CGI)
 	{
 		size_t readbuffer;
@@ -651,6 +651,8 @@ std::string HttpResponse::getContentLenght(enum responseBodyType type)
 		fileSize = s.st_size;
 		if (type == CGI)
 			return (ss.str());
+		if (methode == POST)
+			return ("Content-Length: 0\r\n");
 		return ("Content-Length: " + ss.str() + "\r\n");
 	}
 	if (type == AUTO_INDEX)
@@ -753,7 +755,7 @@ void HttpResponse::responseCooking()
 		if (!pathChecking())
 			return;
 		if (methode == POST)
-			state = UPLOAD_FILES;
+			uploadFile();
 		if (methode == GET)
 			writeResponse();
 		if (bodyType == LOAD_FILE)

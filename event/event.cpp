@@ -341,11 +341,6 @@ void Event::WriteEvent(const struct kevent *ev)
 		client->response.location = this->getLocation(client);
 		client->respond(ev->data, 0);
 	}
-	if (client->response.state == UPLOAD_FILES)
-	{
-		client->response.eventByte = ev->data;
-		client->response.uploadFile();
-	}
 	if (client->response.state == START_CGI_RESPONSE)
 		client->respond(ev->data, 0);
 	if (client->response.state == CGI_EXECUTING)

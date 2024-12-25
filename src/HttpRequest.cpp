@@ -996,6 +996,7 @@ int bodyHandler::openNewFile()
 {
 	std::string fileName;
 
+	std::cout << "headers >> " << header << "<< "<< std::endl;
 	size_t pos = header.find("filename=\"");
 	if (pos == std::string::npos || pos + 10 == header.size())
 		return (1);
@@ -1005,7 +1006,6 @@ int bodyHandler::openNewFile()
 	fileName = "/tmp/"; // TODO: make it dynamique
 	fileName += header.substr(pos, header.find('\"', pos) - pos);
 	currFd = open(fileName.c_str(), O_CREAT | O_RDWR, 0644);
-	std::cout << fileName << "--" << currFd << "\n";
 	if (currFd < 0)
 		return (0);
 	return (1);
@@ -1014,11 +1014,11 @@ int bodyHandler::openNewFile()
 void HttpRequest::handleMultiPartHeaders()
 {
 	bodyHandler &bodyHandler = data.back()->bodyHandler;
-	const std::vector<char> &body = data.back()->bodyHandler.body;
+	std::vector<char> &body = data.back()->bodyHandler.body;
 
-	std::cout << "|";
-	write(1, &body.data()[bodyHandler.bodyIt], 5);
-	std::cout << "|\n";
+	const std::string border = "\r\n--" + bodyBoundary + "\r\n";
+	// write(1, &body.data()[bodyHandler.bodyIt], border.size());
+
 	for (size_t &i = bodyHandler.bodyIt; i < body.size(); i++)
 	{
 		if (!std::isprint((int)body[i]) && body[i] != '\r' && body[i] != '\n')
@@ -1028,6 +1028,7 @@ void HttpRequest::handleMultiPartHeaders()
 			return (bodyState = _ERROR, setHttpReqError(400, "Bad Request"));
 		}
 		bodyHandler.header.push_back(body[i]);
+		std::cout << body[i];
 		if (bodyHandler.header.find("\r\n\r\n") != std::string::npos)
 		{
 			i++;
@@ -1097,6 +1098,7 @@ void HttpRequest::handleStoring()
 				// 	return (bodyState = _ERROR, setHttpReqError(500, "Internal Server Error"));
 				bodyHandler.bodyIt++;
 				bodyState = MULTI_PART_HEADERS;
+				data.back()->bodyHandler.header.clear();
 				if (bodyHandler.currFd >= 0)
 					close(bodyHandler.currFd);
 				bodyHandler.currFd = -1;
@@ -1130,6 +1132,7 @@ void HttpRequest::handleStoring()
 					return (bodyState = _ERROR, setHttpReqError(500, "Internal Server Error"));
 				bodyHandler.bodyIt += nbuff + border.size();
 				bodyState = MULTI_PART_HEADERS;
+				data.back()->bodyHandler.header.clear();
 				bodyHandler.borderIt = 0;
 				if (bodyHandler.currFd >= 0)
 					close(bodyHandler.currFd);
