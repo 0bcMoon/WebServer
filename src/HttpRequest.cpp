@@ -1017,7 +1017,6 @@ void HttpRequest::handleMultiPartHeaders()
 	std::vector<char> &body = data.back()->bodyHandler.body;
 
 	const std::string border = "\r\n--" + bodyBoundary + "\r\n";
-	// write(1, &body.data()[bodyHandler.bodyIt], border.size());
 
 	for (size_t &i = bodyHandler.bodyIt; i < body.size(); i++)
 	{

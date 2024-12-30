@@ -4,7 +4,12 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <set>
+
+#define red "\x1B[31m"
+#define _rest "\033[0m"
+#define blue "\x1B[34m"
+#define green "\x1B[32m"
+#define yellow "\x1B[33m"
 
 typedef std::vector<std::string>::iterator Tokens;
 #define CGI_BUFFER_SIZE 64L * 1024L

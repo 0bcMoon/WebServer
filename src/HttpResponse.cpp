@@ -14,7 +14,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <exception>
 #include <fstream>
 #include <ios>
 #include <iostream>
@@ -252,8 +251,7 @@ bool HttpResponse::isCgi()
 }
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	printStackTrace();
-	std::cerr << "http Error has been set: " << code << "\n";
+	// printStackTrace();
 	state = ERROR;
 	status.code = code;
 	status.description = str;
@@ -410,7 +408,7 @@ int HttpResponse::pathChecking()
 
 static int isValidHeaderChar(char c)
 {
-	return (std::isalpha(c) || std::isdigit(c) || c == '-' || c == ':');
+	return (std::isalpha(c) || std::isdigit(c) || c == '-'|| c == ':');
 }
 
 int HttpResponse::parseCgiHaders(std::string str)
@@ -427,16 +425,12 @@ int HttpResponse::parseCgiHaders(std::string str)
 	for (size_t i = 0; i < tmpHeaderName.size(); i++)
 	{
 		if (!isValidHeaderChar(tmpHeaderName[i]))
-		{
 			return (setHttpResError(502, "Bad Gateway"), 0);
-		}
 	}
 	tmpHeaderVal = str.substr(pos + 1);
 	if (tmpHeaderVal.size() < 3 || tmpHeaderVal[0] != ' ')
 		return (setHttpResError(502, "Bad Gateway"), 0);
-	resHeaders[tmpHeaderName] = tmpHeaderVal.substr(0, tmpHeaderVal.size() - 1);
-	if (resHeaders[tmpHeaderName].back() == '\r')
-		resHeaders[tmpHeaderName].pop_back();
+	resHeaders[tmpHeaderName] = tmpHeaderVal.substr(0, tmpHeaderVal.size() - 2);
 	return (1);
 }
 

@@ -37,7 +37,6 @@ int CGIProcess::redirectPipe()
 	close(this->pipeOut[1]);
 	if (this->response->strMethod != "POST")
 		return (0);
-	std::cout << "warning: A POST request has come\n";
 	int body_fd = open(this->response->bodyFileName.data(), O_RDONLY);
 	if (body_fd < 0)
 		return ( -1);
@@ -65,6 +64,7 @@ std::string ToEnv(std::map<std::string, std::string>::iterator &header)
 
 void CGIProcess::loadEnv()
 {
+
 	std::map<std::string, std::string> env;
 	std::stringstream ss;
 	std::map<std::string, std::string>::iterator it = response->headers.begin();
@@ -82,14 +82,10 @@ void CGIProcess::loadEnv()
 	env["QUERY_STRING"] = response->queryStr;
 	env["PATH_INFO"] = response->path_info;
 	env["HTTP_HOST"] = response->headers["Host"];
-	env["CONTENT_TYPE"] = response->headers["Content-type"];
+	env["CONTENT_TYPE"] = response->headers["Content-Type"];
 	env["SCRIPT_FILENAME"] = this->cgi_bin;
 	if (response->strMethod == "POST")
-	{
-		ss.clear();
-		ss << response->getBody().size();
-		env["CONTENT_LENGTH"] = ss.str();
-	}
+		env["CONTENT_LENGTH"] = response->headers["Content-Length"];
 	else
 		env["CONTENT_LENGTH"] = "0";
 
