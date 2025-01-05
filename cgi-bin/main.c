@@ -2,9 +2,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+
 int main()
 {
-
 	const char buffer[] =
 		"HTTP/1.1 200 OK\n"
 		"Connection: keep-alive\n"

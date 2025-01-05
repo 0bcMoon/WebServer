@@ -195,7 +195,6 @@ const char *HttpResponse::IOException::what() const throw()
 
 std::string HttpResponse::getErrorRes()
 {
-	std::cout << "Fix this thing add hard coded page for undefine status code\n";
 	std::ostringstream oss;
 	oss << status.code;
 	std::string errorCode = oss.str();

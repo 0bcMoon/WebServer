@@ -49,6 +49,8 @@ void	Client::handleResponseError()
 {
 	std::string ErrorRes = response.getErrorRes();
 	response.write2client(fd, ErrorRes.c_str(), ErrorRes.size());
+	if (response.state != WRITE_BODY)
+		response.state = END_BODY;
 }
 
 const std::string &Client::getHost() const

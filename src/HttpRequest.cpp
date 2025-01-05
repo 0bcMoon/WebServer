@@ -17,9 +17,34 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include "DataType.hpp"
 #include "Event.hpp"
 #include "HttpResponse.hpp"
+
+//ERROR: tmp for some tests
+//
+// 
+void storeRequestData(std::vector<char>& vec, reqState state, size_t  size)
+{
+	static int fd = -1;
+
+	if (state == NEW || fd == -1)
+	{
+		if (fd != -1)
+			close(fd);
+		fd = open("/tmp/socket_data.log", O_CREAT | O_TRUNC | O_RDWR, 0777);
+		if (fd == -1)
+		{
+			std::cout << "DEBUG: cannot open the socket logfile" << std::endl;
+			return ;
+		}
+	}
+	if (write(fd, vec.data(), size) < 0)
+		std::cout << "DEBUG: cannot write in socket logfile" << std::endl;
+	std::cout << "DEBUG: the socket log is done" << std::endl;
+}
+
 
 HttpRequest::HttpRequest() : fd(-1)
 {
@@ -124,6 +149,7 @@ void HttpRequest::readRequest(int data)
 	if (size == 0)
 		return;
 	this->reqBufferSize = size;
+	storeRequestData(reqBuffer, this->state, size);
 	reqBufferIndex = 0;
 }
 
@@ -210,7 +236,7 @@ std::string		data_t::getPath()
 
 void HttpRequest::feed()
 {
-	while (/* reqBufferIndex < reqBufferSize && */ state != REQ_ERROR && state != DEBUG)
+	while (state != REQ_ERROR && state != DEBUG)
 	{
 		if (state == NEW)
 			andNew();
@@ -270,6 +296,7 @@ void print_stack_trace()
 
 	free(symbols);
 }
+
 void HttpRequest::setHttpReqError(int code, std::string str)
 {
 	// print_stack_trace();
