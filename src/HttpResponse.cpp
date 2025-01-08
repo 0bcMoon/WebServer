@@ -27,6 +27,71 @@
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
+void		initStatus(std::map<std::string, std::string>& map)
+{
+	map["300"] = "Multiple Choices";
+	map["301"] = "Moved Permanently";
+	map["302"] = "Found";
+	map["303"] = "See Other";
+	map["304"] = "Not Modified";
+	map["307"] = "Temporary Redirect";
+	map["308"] = "Permanent Redirect";
+	map["100"] = "Continue";
+	map["101"] = "Switching Protocols";
+	map["102"] = "Processing";
+	map["103"] = "Early Hints";
+	map["200"] = "OK";
+	map["201"] = "Created";
+	map["202"] = "Accepted";
+	map["203"] = "Non-Authoritative Information";
+	map["204"] = "No Content";
+	map["205"] = "Reset Content";
+	map["206"] = "Partial Content";
+	map["207"] = "Multi-Status";
+	map["208"] = "Already Reported";
+	map["226"] = "IM Used";
+	map["400"] = "Bad Request";
+	map["401"] = "Unauthorized";
+	map["402"] = "Payment Required";
+	map["403"] = "Forbidden";
+	map["404"] = "Not Found";
+	map["405"] = "Method Not Allowed";
+	map["406"] = "Not Acceptable";
+	map["407"] = "Proxy Authentication Required";
+	map["408"] = "Request Timeout";
+	map["409"] = "Conflict";
+	map["410"] = "Gone";
+	map["411"] = "Length Required";
+	map["412"] = "Precondition Failed";
+	map["413"] = "Content Too Large";
+	map["414"] = "URI Too Long";
+	map["415"] = "Unsupported Media Type";
+	map["416"] = "Range Not Satisfiable";
+	map["417"] = "Expectation Failed";
+	map["418"] = "I'm a teapot";
+	map["421"] = "Misdirected Request";
+	map["422"] = "Unprocessable Content";
+	map["423"] = "Locked";
+	map["424"] = "Failed Dependency";
+	map["425"] = "Too Early";
+	map["426"] = "Upgrade Required";
+	map["428"] = "Precondition Required";
+	map["429"] = "Too Many Requests";
+	map["431"] = "Request Header Fields Too Large";
+	map["451"] = "Unavailable For Legal Reasons";
+	map["500"] = "Internal Server Error";
+	map["501"] = "Not Implemented";
+	map["502"] = "Bad Gateway";
+	map["503"] = "Service Unavailable";
+	map["504"] = "Gateway Timeout";
+	map["505"] = "HTTP Version Not Supported";
+	map["506"] = "Variant Also Negotiates";
+	map["507"] = "Insufficient Storage";
+	map["508"] = "Loop Detected";
+	map["510"] = "Not Extended";
+	map["511"] = "Network Authentication Required";
+}
+
 HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : ctx(ctx), request(request), fd(fd)
 {
 	keepAlive = 1;
@@ -36,8 +101,6 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 	state = START;
 	responseFd = -1;
 	isErrDef = 1;
-	// i = 0;
-	// j = 0;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Server: XXXXXXXX\r\n"; // TODO:name the server;
@@ -56,6 +119,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 		"</body>\n"
 		"</html>";
 	errorRes.connection = "Connection: Keep-Alive\r\n";
+	initStatus(this->redirectionsStatus);
 }
 
 void HttpResponse::clear()
@@ -131,7 +195,6 @@ void HttpResponse::clear()
 
 HttpResponse::~HttpResponse()
 {
-	// std::cout << "Destructor has been called\n";
 	if (responseFd >= 0)
 		close(responseFd);
 }
@@ -206,14 +269,7 @@ void HttpResponse::logResponse() const
 HttpResponse::IOException::~IOException() throw() {}
 HttpResponse::IOException::IOException() throw()
 {
-	void *array[10];
-	size_t size;
-
-	// get void*'s for all entries on the stack
-	size = backtrace(array, 10);
-
-	// print out all the frames to stderr
-	backtrace_symbols_fd(array, size, STDERR_FILENO);
+	printStackTrace();
 	this->msg = "IOException: " + std::string(strerror(errno));
 }
 
@@ -633,8 +689,8 @@ std::string HttpResponse::getContentType()
 		return ("Content-Type: text/plain\r\n");
 	if (bodyType == AUTO_INDEX)
 		return ("Content-Type: text/html\r\n");
-	return ("Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
-	// + "Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n" + "Content-Type: text/html\r\n");
+	return (
+		"Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
 }
 
 std::string HttpResponse::getDate()
@@ -791,6 +847,15 @@ void HttpResponse::deleteMethodeHandler()
 	this->state = END_BODY;
 }
 
+void	HttpResponse::redirectionHandler()
+{
+	status.code = 300 + location->getRedirection().status[2] - 48;
+	status.description = redirectionsStatus[location->getRedirection().status];
+	resHeaders["Location"] = location->getRedirection().url; 
+	writeResponse();
+	this->state = END_BODY;
+}
+
 void HttpResponse::responseCooking()
 {
 	if (!isPathFounded() || isCgi())
@@ -799,6 +864,8 @@ void HttpResponse::responseCooking()
 	{
 		if (!isMethodAllowed())
 			return setHttpResError(405, "Method Not Allowed");
+		if (location->HasRedirection())
+			redirectionHandler();
 		if (!pathChecking())
 			return;
 		if (methode == POST)
