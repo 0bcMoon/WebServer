@@ -1,5 +1,4 @@
 #include "HttpResponse.hpp"
-#include <algorithm>
 #include <dirent.h>
 #include <execinfo.h>
 #include <fcntl.h>
@@ -9,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include <unistd.h>
+#include <algorithm>
 #include <cctype>
 #include <cerrno>
 #include <cstddef>
@@ -169,6 +169,39 @@ void HttpResponse::write2client(int fd, const char *str, size_t size)
 	}
 	writeByte += size;
 }
+void HttpResponse::logResponse() const
+{
+	time_t now = time(NULL);
+
+	// Convert to local time structure
+	struct tm *timeinfo = localtime(&now);
+
+	// Create string stream for formatting
+	std::stringstream ss;
+
+	// Create array of month names
+	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+	// Create array of day names
+	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+
+	// Format the date and time
+	ss << "[" << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
+	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
+	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
+	   << (1900 + timeinfo->tm_year) << "]";
+	if (this->status.code < 300)
+		std::cout << green;
+	else if (this->status.code < 400)
+		std::cout << yellow;
+	else
+		std::cout << red;
+
+	std::cout << ss.str() << " ";
+	std::cout << "HTTP/1.1 " << this->strMethod << " " << this->path << " " << this->status.code << " "
+			  << this->status.description << "\n";
+	std::cout << _reset;
+}
 
 HttpResponse::IOException::~IOException() throw() {}
 HttpResponse::IOException::IOException() throw()
@@ -224,7 +257,7 @@ HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 	this->isCgiBool = req.data.front()->bodyHandler.isCgi;
 	this->queryStr = req.data.front()->queryStr;
 	this->bodyFileName = req.data.front()->bodyHandler.bodyFile;
-	this->path_info  = req.data.front()->bodyHandler.path_info;
+	this->path_info = req.data.front()->bodyHandler.path_info;
 	path = req.data[0]->path;
 	headers = req.data[0]->headers;
 	status.code = req.data[0]->error.code;
@@ -278,7 +311,6 @@ bool HttpResponse::isMethodAllowed()
 	// return (setHttpResError(405, "Method Not Allowed"));
 	// return (true);
 }
-
 
 int HttpResponse::autoIndexCooking()
 {
@@ -410,7 +442,7 @@ int HttpResponse::pathChecking()
 
 static int isValidHeaderChar(char c)
 {
-	return (std::isalpha(c) || std::isdigit(c) || c == '-'|| c == ':');
+	return (std::isalpha(c) || std::isdigit(c) || c == '-' || c == ':');
 }
 
 int HttpResponse::parseCgiHaders(std::string str)
@@ -601,9 +633,8 @@ std::string HttpResponse::getContentType()
 		return ("Content-Type: text/plain\r\n");
 	if (bodyType == AUTO_INDEX)
 		return ("Content-Type: text/html\r\n");
-	return (
-		"Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
-		// + "Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n" + "Content-Type: text/html\r\n");
+	return ("Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
+	// + "Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n" + "Content-Type: text/html\r\n");
 }
 
 std::string HttpResponse::getDate()
@@ -748,7 +779,7 @@ int HttpResponse::uploadFile()
 	return (1);
 }
 
-void	HttpResponse::deleteMethodeHandler()
+void HttpResponse::deleteMethodeHandler()
 {
 	if (bodyType == AUTO_INDEX)
 		return (bodyType = NO_TYPE, setHttpResError(403, "Forbidden"));
@@ -762,7 +793,6 @@ void	HttpResponse::deleteMethodeHandler()
 
 void HttpResponse::responseCooking()
 {
-	std::cout << fullPath << std::endl;
 	if (!isPathFounded() || isCgi())
 		return;
 	else

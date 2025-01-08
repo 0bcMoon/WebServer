@@ -248,13 +248,6 @@ void Event::setWriteEvent(Client *client, uint16_t flags)
 		throw Event::EventExpection("kevent faild:" + std::string(strerror(errno)));
 	client->writeEventState = flags;
 }
-void log(Client *client)
-{
-	data_t *req = client->request.data.back();
-	std::cout << green;
-	std::cout <<"HTTP/1.1 " << req->strMethode << " " << req->path  <<  std::endl;
-	std::cout << _rest;
-}
 void Event::ReadEvent(const struct kevent *ev)
 {
 	if (ev->flags & EV_EOF && ev->data <= 0)
@@ -276,7 +269,6 @@ void Event::ReadEvent(const struct kevent *ev)
 				client->request.location = this->getLocation(client);
 				client->request.validateRequestLine();
 				client->request.data.back()->isRequestLineValid = 1;
-				log(client);
 			}
 		}
 		client->request.eof = 0;
@@ -312,7 +304,6 @@ void Event::RegisterNewProc(Client *client)
 	client->cgi_pid = proc.pid;
 	proc.client = client->getFd();
 	proc.input = client->request.data.front()->bodyHandler.bodyFile;
-	std::cout << "proc.input >> " << proc.input << std::endl;
 	this->procs[proc.pid] = proc;
 	this->setWriteEvent(client, EV_DISABLE);
 }
@@ -335,6 +326,7 @@ void Event::WriteEvent(const struct kevent *ev)
 	{
 		client->response.location = this->getLocation(client);
 		client->respond(ev->data, 0);
+		client->response.logResponse();
 	}
 	if (client->response.state == START_CGI_RESPONSE)
 		client->respond(ev->data, 0);
@@ -372,7 +364,6 @@ void Event::ReadPipe(const struct kevent *ev)
 	int r = read(ev->ident, proc.buffer.data() + proc.offset, read_size); // create a event buffer
 	if (r < 0)
 		return response->setHttpResError(500, "Internal server Error"), proc.die();
-	assert(r == read_size && "this should't happend"); // TODO: remove later
 	read_size += proc.offset;
 	proc.offset = 0;
 	if (proc.outToFile)
@@ -422,7 +413,7 @@ int Event::waitProc(int pid)
 	int status;
 	int signal;
 
-	waitpid(pid, &status, 0); // this event only run if process has finish so witpid would not block
+	waitpid(pid, &status, 0); // this event only run if process has finish so waitpid would not block
 	signal = WIFSIGNALED(status); // check if process exist normally
 	status = WEXITSTATUS(status); // check exist state
 	struct kevent event;
@@ -448,11 +439,7 @@ void Event::ProcEvent(const struct kevent *ev)
 	proc.clean();
 	int fd = open(proc.output.data(), O_RDONLY);
 	if (fd < 0)
-	{
-		std::cout << proc.output << " :";
-		std::cerr << strerror(errno) << ": has hppend\n"; 
 		return client->response.setHttpResError(500, "Internal Server Error"), this->deleteProc(p);
-	}
 	client->response.responseFd = fd;
 	client->response.cgiOutFile = proc.output;
 	this->deleteProc(p);
@@ -462,7 +449,6 @@ void Event::eventLoop()
 {
 	connections.init(this->ctx, this->kqueueFd);
 	int nev;
-	std::cout << "TODO: edit method how to find if it a cgi or not\n";
 	std::cout << "TODO: parser header before getting location\n";
 	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
 	std::cout << "TODO: restructor error page in config\n";
@@ -508,7 +494,6 @@ void Event::eventLoop()
 			}
 			catch (std::bad_alloc &e)
 			{
-				std::cout << "memory faild: " << e.what() << "\n";
 				this->connections.closeConnection(ev->ident);
 			}
 		}
