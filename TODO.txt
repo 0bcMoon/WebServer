@@ -5,10 +5,9 @@
 --- LIMIT READ AND WRITE SIZE WITH KEVENT
 --- HANDLING EXCEPTION
 --- transfort file
---- REDIRECTIONS
 --- HANDLING TIMEOUT IN CGI
---- DELETE
 --- PARSE content-disposition headers in multi part
---- PATH_INFO
 --- KEEP-ALIVE
 --- CGI CONTENT_LENGHT
+--- status code
+
