@@ -771,7 +771,7 @@ void	HttpResponse::deleteMethodeHandler()
 
 void	HttpResponse::redirectionHandler()
 {
-	status.code = 300 + location->getRedirection().status[2] + 48;
+	status.code = 300 + location->getRedirection().status[2] - 48;
 	status.description = redirectionsStatus[location->getRedirection().status];
 	resHeaders["Location"] = location->getRedirection().url; 
 	writeResponse();
