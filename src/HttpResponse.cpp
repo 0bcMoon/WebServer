@@ -1,4 +1,5 @@
 #include "HttpResponse.hpp"
+#include <algorithm>
 #include <dirent.h>
 #include <execinfo.h>
 #include <fcntl.h>
@@ -194,7 +195,6 @@ const char *HttpResponse::IOException::what() const throw()
 
 std::string HttpResponse::getErrorRes()
 {
-	// std::cout << "Fix this thing add hard coded page for undefine status code\n";
 	std::ostringstream oss;
 	oss << status.code;
 	std::string errorCode = oss.str();
@@ -326,7 +326,9 @@ int HttpResponse::directoryHandler()
 			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1 /* , loadFile(fullPath) */);
 	}
 	if (location->globalConfig.getAutoIndex())
+	{
 		return (bodyType = AUTO_INDEX, autoIndexCooking());
+	}
 	return (setHttpResError(403, "Forbidden"), 0);
 }
 
@@ -395,7 +397,7 @@ int HttpResponse::pathChecking()
 
 	struct stat sStat;
 	stat(fullPath.c_str(), &sStat);
-	if (S_ISDIR(sStat.st_mode) && methode == GET)
+	if (S_ISDIR(sStat.st_mode) && methode != POST)
 		return (directoryHandler());
 	if (access(fullPath.c_str(), F_OK) != -1)
 		return (bodyType = LOAD_FILE, 1 /* loadFile(fullPath) */);
@@ -560,6 +562,8 @@ void HttpResponse::writeResponse()
 		write2client(fd, "\r\n", 2);
 	}
 	write2client(this->fd, "\r\n", 2);
+	if (methode == POST)
+		write2client(this->fd, "Resource created successfully", 29);
 	if (methode == GET)
 		state = WRITE_BODY;
 }
@@ -645,6 +649,8 @@ std::string HttpResponse::getContentLenght(enum responseBodyType type)
 		fileSize = s.st_size;
 		if (type == CGI)
 			return (ss.str());
+		if (methode == POST && request->data.front()->bodyHandler.created)
+			return ("Content-Length: 29\r\n");
 		if (methode == POST)
 			return ("Content-Length: 0\r\n");
 		return ("Content-Length: " + ss.str() + "\r\n");
@@ -732,14 +738,31 @@ void HttpResponse::splitingQuery()
 
 int HttpResponse::uploadFile()
 {
-	status.code = 201;
-	status.description = "Created";
+	if (request->data.front()->bodyHandler.created)
+	{
+		status.code = 201;
+		status.description = "Created";
+	}
 	writeResponse();
+	this->state = END_BODY;
 	return (1);
+}
+
+void	HttpResponse::deleteMethodeHandler()
+{
+	if (bodyType == AUTO_INDEX)
+		return (bodyType = NO_TYPE, setHttpResError(403, "Forbidden"));
+	bodyType = NO_TYPE;
+	std::remove(fullPath.c_str());
+	status.code = 204;
+	status.description = "No Content";
+	writeResponse();
+	this->state = END_BODY;
 }
 
 void HttpResponse::responseCooking()
 {
+	std::cout << fullPath << std::endl;
 	if (!isPathFounded() || isCgi())
 		return;
 	else
@@ -752,6 +775,8 @@ void HttpResponse::responseCooking()
 			uploadFile();
 		if (methode == GET)
 			writeResponse();
+		if (methode == DELETE)
+			deleteMethodeHandler();
 		if (bodyType == LOAD_FILE)
 		{
 			this->responseFd = open(fullPath.c_str(), O_RDONLY);
