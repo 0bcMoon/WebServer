@@ -1,4 +1,5 @@
 #include "Client.hpp"
+#include <cmath>
 #include <csignal>
 #include <cstddef>
 #include <sys/event.h>
@@ -30,9 +31,7 @@ void Client::respond(size_t data, size_t index)
 	response.eventByte = data;
 	if (request.data[index]->state != REQUEST_FINISH &&  request.data[index]->state != REQ_ERROR)
 		return ;
-			
 	response = request;
-
 	if (request.data[index]->state == REQUEST_FINISH)
 		response.responseCooking();
 	if (response.state == START_CGI_RESPONSE)
@@ -43,6 +42,7 @@ void Client::respond(size_t data, size_t index)
 	}
 	if (response.state != ERROR && response.isCgi() && response.state != UPLOAD_FILES && response.state != END_BODY) 
 		response.state = CGI_EXECUTING;
+
 }
 
 void	Client::handleResponseError()
