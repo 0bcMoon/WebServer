@@ -81,6 +81,8 @@ class HttpResponse
 		std::string							errorPage;	
 		bool								isErrDef;	
 		int									parseCgistatus();
+		void								redirectionHandler();
+		std::map<std::string, std::string>			redirectionsStatus;	
 	public:
 		struct upload_data {
 			size_t			 it;
@@ -167,7 +169,7 @@ class HttpResponse
 		std::string						getContentLenght(enum responseBodyType type); // TYPO
 
 		int								autoIndexCooking();
-		static std::string						getExtension(const std::string &str);
+		static std::string				getExtension(const std::string &str);
 
 		std::vector<char>				getBody() const;
 

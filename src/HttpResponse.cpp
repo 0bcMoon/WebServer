@@ -27,6 +27,17 @@
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
+void		initStatus(std::map<std::string, std::string>& map)
+{
+	map["300"] = "Multiple Choices";
+	map["301"] = "Moved Permanently";
+	map["302"] = "Found";
+	map["303"] = "See Other";
+	map["304"] = "Not Modified";
+	map["307"] = "Temporary Redirect";
+	map["308"] = "Permanent Redirect";
+}
+
 HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : ctx(ctx), request(request), fd(fd)
 {
 	keepAlive = 1;
@@ -36,8 +47,6 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 	state = START;
 	responseFd = -1;
 	isErrDef = 1;
-	// i = 0;
-	// j = 0;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Server: XXXXXXXX\r\n"; // TODO:name the server;
@@ -56,6 +65,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 		"</body>\n"
 		"</html>";
 	errorRes.connection = "Connection: Keep-Alive\r\n";
+	initStatus(this->redirectionsStatus);
 }
 
 void HttpResponse::clear()
@@ -603,7 +613,6 @@ std::string HttpResponse::getContentType()
 		return ("Content-Type: text/html\r\n");
 	return (
 		"Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
-		// + "Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n" + "Content-Type: text/html\r\n");
 }
 
 std::string HttpResponse::getDate()
@@ -760,15 +769,25 @@ void	HttpResponse::deleteMethodeHandler()
 	this->state = END_BODY;
 }
 
+void	HttpResponse::redirectionHandler()
+{
+	status.code = 300 + location->getRedirection().status[2] + 48;
+	status.description = redirectionsStatus[location->getRedirection().status];
+	resHeaders["Location"] = location->getRedirection().url; 
+	writeResponse();
+	this->state = END_BODY;
+}
+
 void HttpResponse::responseCooking()
 {
-	std::cout << fullPath << std::endl;
 	if (!isPathFounded() || isCgi())
 		return;
 	else
 	{
 		if (!isMethodAllowed())
 			return setHttpResError(405, "Method Not Allowed");
+		if (location->HasRedirection())
+			redirectionHandler();
 		if (!pathChecking())
 			return;
 		if (methode == POST)

@@ -268,6 +268,8 @@ void HttpRequest::feed()
 			state = REQUEST_FINISH;
 		if (state == REQUEST_FINISH)
 		{
+			if (location->HasRedirection())
+				eof = 1;
 			data.back()->state = state;
 			this->clear();
 		}
@@ -788,6 +790,8 @@ bool HttpRequest::validateRequestLine()
 		return (setHttpReqError(405, "Not Found"), 0);
 	if (!this->isMethodAllowed())
 		return (setHttpReqError(405, "Method Not Allowed"), 0);
+	if (location->HasRedirection())
+		return (state = REQUEST_FINISH, 1);
 	addPathIndex();
 	data.back()->bodyHandler.isCgi = this->isCGI();
 	return (1);
