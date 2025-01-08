@@ -47,9 +47,7 @@ Event::~Event()
 	delete this->evList;
 	VirtualServerMap_t::iterator it = this->virtuaServers.begin();
 	for (; it != this->virtuaServers.end(); it++)
-	{
 		close(it->first);
-	}
 	std::map<int, VirtualServer *>::iterator it2 = this->defaultServer.begin();
 	for (; it2 != this->defaultServer.end(); it2++)
 	{
@@ -126,18 +124,16 @@ int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 	int optval = 1;
 
 	struct addrinfo *result, hints;
-	hints.ai_family = AF_INET; // Allow IPv4 or IPv6
+	hints.ai_family = AF_INET; //  IPv4 
 	hints.ai_socktype = SOCK_STREAM; // TCP socket
 	hints.ai_flags = AI_PASSIVE; // For binding
-	hints.ai_protocol = IPPROTO_TCP; // Any protocol
+	hints.ai_protocol = IPPROTO_TCP; // TCP proto
 	hints.ai_canonname = NULL;
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 	int r = getaddrinfo(address->host.data(), address->port.data(), &hints, &result);
 	if (r != 0)
 		throw std::runtime_error("Error :getaddrinfo: " + std::string(gai_strerror(r)));
-
-	assert(result->ai_next == NULL);
 	int socket_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	if (socket_fd < 0)
 	{
@@ -170,21 +166,15 @@ int Event::setNonBlockingIO(int sockfd)
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1)
 		return (-1);
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC) < 0)
+	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | FD_CLOEXEC) < 0) // may faild
 		return (-1);
-	int sock_buf_size = BUFFER_SIZE;
+	int sock_buf_size = BUFFER_SIZE; // set socket send and recv buffer size
 	int result = setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &sock_buf_size, sizeof(sock_buf_size));
 	if (result < 0)
-	{
-		std::cout << "faild cause -- " << strerror(errno) << "\n";
 		return (-1);
-	}
 	result = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sock_buf_size, sizeof(sock_buf_size));
 	if (result < 0)
-	{
-		std::cout << "faild cause -- " << strerror(errno) << "\n";
 		return (-1);
-	}
 	return (0);
 }
 
