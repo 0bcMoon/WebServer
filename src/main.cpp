@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
-#include "Debug.hpp"
 #include "Event.hpp"
 #include "HttpResponse.hpp"
 #include "Tokenizer.hpp"

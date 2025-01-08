@@ -19,7 +19,10 @@ if ($cgi->param('theme')) {
         -expires => '+1M'  # Cookie expires in 1 month
     );
     
-    print $cgi->header(-cookie => $cookie);
+    print $cgi->header(
+		-cookie => $cookie
+		-status => "404 not Found"
+	);
     $current_theme = $cgi->param('theme');
 } else {
     print $cgi->header();
