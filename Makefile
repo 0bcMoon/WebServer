@@ -12,7 +12,7 @@ INCD = $(shell find . -name "*.hpp" | grep -v "test")
 
 INC = include/
 
-CFLAGS = -std=c++98 -Wall -Wextra -fsanitize=address -g3 -fsanitize=undefined
+CFLAGS = -std=c++98 -Wall -Wextra -O3
 
 
 NAME = webserv

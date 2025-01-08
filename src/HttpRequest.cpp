@@ -1023,7 +1023,6 @@ void HttpRequest::handleMultiPartHeaders()
 		if (!std::isprint((int)body[i]) && body[i] != '\r' && body[i] != '\n')
 		{
 			std::cout << "-- | " << (int)body[i] << " |-- \n";
-			exit(88);
 			return (bodyState = _ERROR, setHttpReqError(400, "Bad Request"));
 		}
 		bodyHandler.header.push_back(body[i]);
