@@ -179,6 +179,7 @@ class HttpResponse
 		void							splitingQuery();
 		int								uploadFile();
 		void							multiPartParse();
+		void							deleteMethodeHandler();
 };
 
 int					isHex(char c);

@@ -312,6 +312,7 @@ void Event::RegisterNewProc(Client *client)
 	client->cgi_pid = proc.pid;
 	proc.client = client->getFd();
 	proc.input = client->request.data.front()->bodyHandler.bodyFile;
+	std::cout << "proc.input >> " << proc.input << std::endl;
 	this->procs[proc.pid] = proc;
 	this->setWriteEvent(client, EV_DISABLE);
 }
@@ -334,11 +335,6 @@ void Event::WriteEvent(const struct kevent *ev)
 	{
 		client->response.location = this->getLocation(client);
 		client->respond(ev->data, 0);
-	}
-	if (client->response.state == UPLOAD_FILES)
-	{
-		client->response.eventByte = ev->data;
-		client->response.uploadFile();
 	}
 	if (client->response.state == START_CGI_RESPONSE)
 		client->respond(ev->data, 0);

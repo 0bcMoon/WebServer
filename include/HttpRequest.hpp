@@ -94,8 +94,9 @@ struct bodyHandler
 	void push2body(char c);
 	int push2fileBody(char c, const std::string &boundary);
 	int upload2file(std::string &boundary);
-	int openNewFile();
+	int openNewFile(std::string uploadPath);
 	int writeBody();
+	int	writeChunkedBody();
 	bool isCgi;
 
 	std::map<std::string, std::string> headers;
@@ -106,14 +107,17 @@ struct bodyHandler
 	size_t							bodyIt;
 	std::vector<char> body; // raw body;
 	size_t bodySize;
+	std::string						tmp;
 
 	std::string header;
 	std::string tmpBorder;
 
+	bool created;
 	int currFd;
 	size_t fileBodyIt;
 	size_t borderIt;
 	std::vector<char> fileBody;
+	std::vector<char> chunkeBody;
 };
 
 typedef struct data_s {
@@ -211,11 +215,11 @@ class HttpRequest
 	void contentLengthBodyParsing();
 	void chunkedBodyParsing();
 
-	void returnHandle();
-	void nLineHandle();
-	int checkContentType();
+	void	returnHandle();
+	void	nLineHandle();
+	int		checkContentType();
 
-	int parseMuliPartBody();
+	int		parseMuliPartBody();
 	void	andNew();
 	void	addPathIndex();
 

@@ -19,7 +19,7 @@ int Client::getFd() const
 
 Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), ctx(ctx), request(fd), response(fd, ctx, &request)
 {
-	this->writeEventState =0;
+	this->writeEventState = 0;
 	this->cgi_pid  = -1;
 	state = None;
 	this->timerType = NEW_CONNECTION;
@@ -49,6 +49,8 @@ void	Client::handleResponseError()
 {
 	std::string ErrorRes = response.getErrorRes();
 	response.write2client(fd, ErrorRes.c_str(), ErrorRes.size());
+	if (response.state != WRITE_BODY)
+		response.state = END_BODY;
 }
 
 const std::string &Client::getHost() const

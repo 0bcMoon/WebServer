@@ -33,13 +33,13 @@ int CGIProcess::redirectPipe()
 {
 	close(this->pipeOut[0]);
 	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
-		return (-1);
+		return (exit(13), -1);
 	close(this->pipeOut[1]);
 	if (this->response->strMethod != "POST")
 		return (0);
 	int body_fd = open(this->response->bodyFileName.data(), O_RDONLY);
 	if (body_fd < 0)
-		return (-1);
+		return ( -1);
 	if (dup2(body_fd, STDIN_FILENO) < 0)
 		return (close(body_fd), -1);
 	close(body_fd);
