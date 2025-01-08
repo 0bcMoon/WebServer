@@ -8,6 +8,13 @@
 #include <cstddef>
 #include <string>
 
+
+#define red "\x1B[31m"
+#define _reset "\033[0m"
+#define blue "\x1B[34m"
+#define green "\x1B[32m"
+#define yellow "\x1B[33m"
+
 enum responseState 
 {
 	START,
@@ -104,6 +111,7 @@ class HttpResponse
 		size_t								eventByte;
 		int									responseFd;
 		void								write2client(int fd, const char *str, size_t size);
+		void logResponse() const;
 
 		size_t								fileSize;
 		size_t								sendSize;

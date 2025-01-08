@@ -57,7 +57,7 @@ void Location::setRedirect(Tokens &token, Tokens &end)
 	this->globalConfig.CheckIfEnd(token, end);
 	ss << status;
 	ss >> code;
-	if (code < 301 || code > 399 || ss.fail() || !ss.eof())
+	if ( ss.fail() || !ss.eof() || code < 300 || code > 399)
 		throw Tokenizer::ParserException("Invalid  status: " + status + " code in Redirection: should be 3xx code");
 	this->redirect.status = status;
 	this->redirect.url = url;

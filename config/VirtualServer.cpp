@@ -6,14 +6,9 @@
 #include "Location.hpp"
 #include "Tokenizer.hpp"
 
-VirtualServer::VirtualServer() 
-{
-}
+VirtualServer::VirtualServer() {}
 
-VirtualServer::~VirtualServer() 
-{
-	
-}
+VirtualServer::~VirtualServer() {}
 
 VirtualServer::SocketAddr::SocketAddr() {};
 
@@ -32,7 +27,7 @@ void VirtualServer::pushLocation(Tokens &token, Tokens &end)
 	if (token == end)
 		throw Tokenizer::ParserException("Unexpected end of file");
 	token++;
-	 this->routes.insert(location);
+	this->routes.insert(location);
 }
 void VirtualServer::deleteRoutes()
 {
@@ -65,7 +60,7 @@ void VirtualServer::setListen(Tokens &token, Tokens &end)
 	if (pos == 0 || pos == token->size() - 1)
 		throw Tokenizer::ParserException("Unvalid [host:]port " + *token);
 
-	socketAddr.host = "0.0.0.0"; 
+	socketAddr.host = "0.0.0.0";
 	if (pos != std::string::npos)
 		socketAddr.host = token->substr(0, pos);
 	else
@@ -91,8 +86,7 @@ void VirtualServer::setServerNames(Tokens &token, Tokens &end)
 	this->globalConfig.validateOrFaild(token, end);
 
 	while (token != end && *token != ";")
-		serverNames.insert(
-			this->globalConfig.consume(token, end)); // CONSUME  take curr token and check if its an id then
+		serverNames.insert(this->globalConfig.consume(token, end));
 	this->globalConfig.CheckIfEnd(token, end);
 }
 
@@ -115,7 +109,6 @@ const std::set<std::string> &VirtualServer::getServerNames()
 	return (this->serverNames);
 }
 
-
 Location *VirtualServer::getRoute(const std::string &path)
 {
 	return (this->routes.findPath(path));
@@ -123,8 +116,5 @@ Location *VirtualServer::getRoute(const std::string &path)
 
 void VirtualServer::init()
 {
-	std::vector<std::string> &v = this->globalConfig.getIndexes();
-	if (v.empty())
-		v.push_back("index.html");
 	this->routes.init(this->globalConfig);
 }

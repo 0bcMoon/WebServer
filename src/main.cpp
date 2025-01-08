@@ -111,13 +111,9 @@ ServerContext *LoadConfig(const char *path)
 void sigpipe_handler(int signum)
 {
 	(void)signum;
-	printf("Caught SIGPIPE. Ignoring.\n");
 }
 
-/*
- * TODO:
- */
-int main()
+int main(int ac, char **argv)
 {
 	Event *event = NULL;
 	ServerContext *ctx = NULL;
@@ -131,7 +127,15 @@ int main()
 		printf("Failed to set SIGPIPE handler: %s\n", strerror(errno));
 		return 1;
 	}
-	ctx = LoadConfig("config/nginx.conf");
+	if (ac > 2)
+	{
+		std::cerr << "invalid number of argument \n";
+		return (1);
+	}
+	else if (ac == 2)
+		ctx = LoadConfig(argv[1]);
+	else
+		ctx = LoadConfig("webserv.conf");
 	if (!ctx)
 		return 1;
 	try

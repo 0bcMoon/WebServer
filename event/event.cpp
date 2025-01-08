@@ -47,9 +47,7 @@ Event::~Event()
 	delete this->evList;
 	VirtualServerMap_t::iterator it = this->virtuaServers.begin();
 	for (; it != this->virtuaServers.end(); it++)
-	{
 		close(it->first);
-	}
 	std::map<int, VirtualServer *>::iterator it2 = this->defaultServer.begin();
 	for (; it2 != this->defaultServer.end(); it2++)
 	{
@@ -126,18 +124,16 @@ int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 	int optval = 1;
 
 	struct addrinfo *result, hints;
-	hints.ai_family = AF_INET; // Allow IPv4 or IPv6
+	hints.ai_family = AF_INET; //  IPv4 
 	hints.ai_socktype = SOCK_STREAM; // TCP socket
 	hints.ai_flags = AI_PASSIVE; // For binding
-	hints.ai_protocol = IPPROTO_TCP; // Any protocol
+	hints.ai_protocol = IPPROTO_TCP; // TCP proto
 	hints.ai_canonname = NULL;
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 	int r = getaddrinfo(address->host.data(), address->port.data(), &hints, &result);
 	if (r != 0)
 		throw std::runtime_error("Error :getaddrinfo: " + std::string(gai_strerror(r)));
-
-	assert(result->ai_next == NULL);
 	int socket_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	if (socket_fd < 0)
 	{
@@ -170,21 +166,15 @@ int Event::setNonBlockingIO(int sockfd)
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1)
 		return (-1);
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC) < 0)
+	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK | FD_CLOEXEC) < 0) // may faild
 		return (-1);
-	int sock_buf_size = BUFFER_SIZE;
+	int sock_buf_size = BUFFER_SIZE; // set socket send and recv buffer size
 	int result = setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &sock_buf_size, sizeof(sock_buf_size));
 	if (result < 0)
-	{
-		std::cout << "faild cause -- " << strerror(errno) << "\n";
 		return (-1);
-	}
 	result = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sock_buf_size, sizeof(sock_buf_size));
 	if (result < 0)
-	{
-		std::cout << "faild cause -- " << strerror(errno) << "\n";
 		return (-1);
-	}
 	return (0);
 }
 
@@ -258,13 +248,6 @@ void Event::setWriteEvent(Client *client, uint16_t flags)
 		throw Event::EventExpection("kevent faild:" + std::string(strerror(errno)));
 	client->writeEventState = flags;
 }
-void log(Client *client)
-{
-	data_t *req = client->request.data.back();
-	std::cout << green;
-	std::cout <<"HTTP/1.1 " << req->strMethode << " " << req->path  <<  std::endl;
-	std::cout << _rest;
-}
 void Event::ReadEvent(const struct kevent *ev)
 {
 	if (ev->flags & EV_EOF && ev->data <= 0)
@@ -286,7 +269,6 @@ void Event::ReadEvent(const struct kevent *ev)
 				client->request.location = this->getLocation(client);
 				client->request.validateRequestLine();
 				client->request.data.back()->isRequestLineValid = 1;
-				log(client);
 			}
 		}
 		client->request.eof = 0;
@@ -322,7 +304,6 @@ void Event::RegisterNewProc(Client *client)
 	client->cgi_pid = proc.pid;
 	proc.client = client->getFd();
 	proc.input = client->request.data.front()->bodyHandler.bodyFile;
-	std::cout << "proc.input >> " << proc.input << std::endl;
 	this->procs[proc.pid] = proc;
 	this->setWriteEvent(client, EV_DISABLE);
 }
@@ -345,6 +326,7 @@ void Event::WriteEvent(const struct kevent *ev)
 	{
 		client->response.location = this->getLocation(client);
 		client->respond(ev->data, 0);
+		client->response.logResponse();
 	}
 	if (client->response.state == START_CGI_RESPONSE)
 		client->respond(ev->data, 0);
@@ -382,7 +364,6 @@ void Event::ReadPipe(const struct kevent *ev)
 	int r = read(ev->ident, proc.buffer.data() + proc.offset, read_size); // create a event buffer
 	if (r < 0)
 		return response->setHttpResError(500, "Internal server Error"), proc.die();
-	assert(r == read_size && "this should't happend"); // TODO: remove later
 	read_size += proc.offset;
 	proc.offset = 0;
 	if (proc.outToFile)
@@ -432,7 +413,7 @@ int Event::waitProc(int pid)
 	int status;
 	int signal;
 
-	waitpid(pid, &status, 0); // this event only run if process has finish so witpid would not block
+	waitpid(pid, &status, 0); // this event only run if process has finish so waitpid would not block
 	signal = WIFSIGNALED(status); // check if process exist normally
 	status = WEXITSTATUS(status); // check exist state
 	struct kevent event;
@@ -458,11 +439,7 @@ void Event::ProcEvent(const struct kevent *ev)
 	proc.clean();
 	int fd = open(proc.output.data(), O_RDONLY);
 	if (fd < 0)
-	{
-		std::cout << proc.output << " :";
-		std::cerr << strerror(errno) << ": has hppend\n"; 
 		return client->response.setHttpResError(500, "Internal Server Error"), this->deleteProc(p);
-	}
 	client->response.responseFd = fd;
 	client->response.cgiOutFile = proc.output;
 	this->deleteProc(p);
@@ -472,7 +449,6 @@ void Event::eventLoop()
 {
 	connections.init(this->ctx, this->kqueueFd);
 	int nev;
-	std::cout << "TODO: edit method how to find if it a cgi or not\n";
 	std::cout << "TODO: parser header before getting location\n";
 	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
 	std::cout << "TODO: restructor error page in config\n";
@@ -518,7 +494,6 @@ void Event::eventLoop()
 			}
 			catch (std::bad_alloc &e)
 			{
-				std::cout << "memory faild: " << e.what() << "\n";
 				this->connections.closeConnection(ev->ident);
 			}
 		}
