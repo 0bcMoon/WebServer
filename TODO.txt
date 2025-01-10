@@ -4,10 +4,11 @@
 --- FIX BODY_SIZE
 --- LIMIT READ AND WRITE SIZE WITH KEVENT
 --- HANDLING EXCEPTION
---- transfort file
 --- HANDLING TIMEOUT IN CGI
 --- PARSE content-disposition headers in multi part
 --- KEEP-ALIVE
 --- CGI CONTENT_LENGHT
 --- status code
 --- auto index css
+--- test the max
+--- std::string::back()

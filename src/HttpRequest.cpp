@@ -23,8 +23,6 @@
 #include "HttpResponse.hpp"
 
 //ERROR: tmp for some tests
-//
-// 
 void storeRequestData(std::vector<char>& vec, reqState state, size_t  size)
 {
 	static int fd = -1;
@@ -609,6 +607,9 @@ void HttpRequest::crlfGetting()
 
 void HttpRequest::parseHeaderName()
 {
+	if (data.back()->headers.size() > 100)
+		return (setHttpReqError(431, "Request Header Fields Too Large"));
+
 	while (reqBufferSize > reqBufferIndex && state == HEADER_NAME)
 	{
 		if ((currHeaderName.size() == 0 && !isAlpha(reqBuffer[reqBufferIndex]))
@@ -629,7 +630,6 @@ void HttpRequest::parseHeaderName()
 			if (reqBufferIndex < reqBufferSize && reqBuffer[reqBufferIndex] == ' ')
 				reqBufferIndex++;
 			return;
-			// headers[currHeaderName];
 		}
 		currHeaderName.push_back(reqBuffer[reqBufferIndex]);
 		reqBufferIndex++;
@@ -791,7 +791,7 @@ bool HttpRequest::validateRequestLine()
 	if (!this->isMethodAllowed())
 		return (setHttpReqError(405, "Method Not Allowed"), 0);
 	if (location->HasRedirection())
-		return (state = REQUEST_FINISH, 1);
+		return (std::cout << "DEBUG\n", state = REQUEST_FINISH, 1);
 	addPathIndex();
 	data.back()->bodyHandler.isCgi = this->isCGI();
 	return (1);
@@ -1025,7 +1025,7 @@ int bodyHandler::openNewFile(std::string uploadPath)
 	currFd = open(fileName.c_str(), O_CREAT | O_RDWR, 0644);
 	if (currFd < 0)
 		return (0);
-	return (1);
+	return (created = 1, 1);
 }
 
 void HttpRequest::handleMultiPartHeaders()
@@ -1054,30 +1054,6 @@ void HttpRequest::handleMultiPartHeaders()
 			return;
 		}
 	}
-	// char c = reqBuffer[reqBufferIndex];
-
-	// if (currHeaderName.size() == 0 && c == '\r')
-	// 	return;
-	// if (currHeaderName.size() == 0 && isBodycrlf()) {
-	// 	bodyState = STORING;
-	// 	if (!data.back()->bodyHandler.openNewFile()) {
-	// 		setHttpReqError(500, "Internal Server Error");
-	// 		bodyState = _ERROR;
-	// 	}
-	// 	data.back()->bodyHandler.headers.clear();
-	// 	return;
-	// }
-	// if ((currHeaderName.size() == 0 && !isAlpha(c)) ||
-	// 		(currHeaderName.size() > 0 && !isValidHeaderChar(c))) {
-	// 	setHttpReqError(400, "Bad Request");
-	// 	bodyState = _ERROR;
-	// 	return;
-	// }
-	// if (c == ':') {
-	// 	bodyState = MULTI_PART_HEADERS_VAL;
-	// 	return;
-	// }
-	// currHeaderName.push_back(c);
 }
 
 int HttpRequest::isBodycrlf()
@@ -1202,9 +1178,10 @@ int HttpRequest::parseMultiPart()
 	std::vector<char> &vec = data.back()->bodyHandler.body;
 	size_t size = data.back()->bodyHandler.bodySize - (((size_t)bodySize - bodyBoundary.size() - 8));
 	bodyHandler &tmp = data.back()->bodyHandler;
+
 	if (size > vec.size())
 		size = 0;
-	if (/* bodyState == STORING &&  */data.back()->bodyHandler.bodySize >= (size_t)bodySize - bodyBoundary.size() - 8)
+	if (data.back()->bodyHandler.bodySize >= (size_t)bodySize - bodyBoundary.size() - 8)
 	{
 		if (size > vec.size())
 		{
@@ -1217,6 +1194,7 @@ int HttpRequest::parseMultiPart()
 			vec.resize(vec.size() - size);
 		}
 	}
+
 	if (bodyState == _NEW)
 		handleNewBody();
 	while (vec.size() > tmp.bodyIt)

@@ -108,7 +108,6 @@ void HttpResponse::clear()
 	sendSize = 0;
 	queryStr.clear();
 	strMethod.clear();
-	// responseBody.clear();
 	state = START;
 	path.clear();
 	headers.clear();
@@ -238,8 +237,7 @@ std::string HttpResponse::getErrorRes()
 	errorRes.statusLine = "HTTP/1.1 " + oss.str() + " " + status.description + "\r\n";
 	errorRes.title = oss.str() + " " + status.description;
 	errorRes.htmlErrorId = oss.str() + " " + status.description;
-	if (!keepAlive)
-		errorRes.connection = "Connection: close\r\n";
+	errorRes.connection = "Connection: close\r\n";
 	errorRes.contentLen = getContentLenght();
 	if (this->responseFd >= 0)
 		close(responseFd);
@@ -265,8 +263,14 @@ HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 	status.code = req.data[0]->error.code;
 	status.description = req.data[0]->error.description;
 	strMethod = req.data[0]->strMethode;
+	if (req.data.front()->headers.count("Connection") != 0
+		&& req.data.front()->headers["Connection"] == "Close")
+		keepAlive = 0;
 	if (req.data[0]->state == REQ_ERROR)
+	{
 		state = ERROR;
+		keepAlive = 0;
+	}
 	return (*this);
 }
 
@@ -284,12 +288,13 @@ bool HttpResponse::isCgi()
 {
 	return (this->isCgiBool);
 }
+
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	// printStackTrace();
 	state = ERROR;
 	status.code = code;
 	status.description = str;
+	keepAlive = 0;
 }
 
 bool HttpResponse::isPathFounded()
@@ -310,8 +315,6 @@ bool HttpResponse::isMethodAllowed()
 	else
 		methode = NONE;
 	return (this->location->isMethodAllowed(this->methode));
-	// return (setHttpResError(405, "Method Not Allowed"));
-	// return (true);
 }
 
 int HttpResponse::autoIndexCooking()
@@ -362,64 +365,6 @@ int HttpResponse::directoryHandler()
 	return (setHttpResError(403, "Forbidden"), 0);
 }
 
-// int HttpResponse::loadFile(const std::string &pathName)
-// {
-// 	int _fd;
-// 	char buffer[fileReadingBuffer];
-// 	int j = 0;
-
-// 	_fd = open(pathName.c_str(), O_RDONLY);
-// 	if (_fd < 0)
-// 		return (setHttpResError(500, "Internal Server Error"), 0);
-// 	while (1)
-// 	{
-// 		int r = read(_fd, buffer, fileReadingBuffer);
-// 		if (r < 0)
-// 			return (close(_fd), setHttpResError(500, "Internal Server Error"), 0);
-// 		if (r == 0)
-// 			break;
-// 		responseBody.push_back(std::vector<char>(r));
-// 		for (int i = 0; i < r; i++)
-// 		{
-// 			responseBody[j][i] = buffer[i];
-// 		}
-// 		j++;
-// 	}
-// 	return (close(_fd), 1);
-// }
-
-// int HttpResponse::loadFile(int _fd)
-// {
-// 	char buffer[fileReadingBuffer];
-// 	int j = 0;
-
-// 	std::cout << "CGI response: " << std::endl;
-// 	while (1)
-// 	{
-// 		int r = read(_fd, buffer, fileReadingBuffer);
-// 		buffer[r] = 0;
-// 		std::cout << buffer << "\n";
-// 		if (r < 0)
-// 			return (setHttpResError(500, "Internal Server Error"), 0);
-// 		if (r == 0)
-// 			break;
-// 		responseBody.push_back(std::vector<char>(r)); // Gay pepole code
-// 		for (int i = 0; i < r; i++)
-// 		{
-// 			std::cout << buffer[i];
-// 			responseBody[j][i] = buffer[i];
-// 		}
-// 		j++;
-// 	}
-// 	return (1);
-// }
-// std::ifstream file(pathName.c_str());
-// unsigned char  tmp;
-// if (!file.is_open())
-// 	return (setHttpResError(500, "Internal Server Error"), 0);
-// while (!(file >> tmp).eof())
-// 	responseBody.push_back(tmp);
-
 int HttpResponse::pathChecking()
 {
 	size_t offset = location->globalConfig.getAliasOffset() ? this->location->getPath().size() : 0;
@@ -464,29 +409,6 @@ int HttpResponse::parseCgiHaders(std::string str)
 		return (setHttpResError(502, "Bad Gateway"), 0);
 	resHeaders[tmpHeaderName] = tmpHeaderVal.substr(0, tmpHeaderVal.size() - 2);
 	return (1);
-}
-
-static int isLineCrlf(std::vector<char> vec)
-{
-	size_t _i = 0;
-	while (_i < vec.size() - 1)
-	{
-		if (vec[_i] != '\r')
-			return (0);
-		_i++;
-	}
-	return (1);
-}
-
-static std::string vec2str(std::vector<char> vec)
-{
-	std::string str;
-
-	for (size_t i = 0; i < vec.size(); i++)
-	{
-		str.push_back(vec[i]);
-	}
-	return (str);
 }
 
 int HttpResponse::parseCgistatus()
@@ -554,10 +476,13 @@ std::string HttpResponse::getCgiContentLenght()
 
 void HttpResponse::writeCgiResponse()
 {
-	if (keepAlive)
-		resHeaders["Connection"] = "keep-alive";
-	else
-		resHeaders["Connection"] = "Close";
+	if (resHeaders.count("Connection") == 0)
+	{
+		if (keepAlive)
+			resHeaders["Connection"] = "keep-alive";
+		else
+			resHeaders["Connection"] = "Close";
+	}
 	parseCgiOutput();
 	if (state == ERROR)
 		return;
