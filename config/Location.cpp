@@ -5,8 +5,10 @@
 #include <sys/unistd.h>
 #include <unistd.h>
 #include <cerrno>
+#include <climits>
 #include <cstddef>
 #include <cstring>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include "DataType.hpp"
@@ -17,6 +19,7 @@ Location::Location()
 	this->isRedirection = false;
 	this->methods = GET; // default method is GET only can be overwritten
 	this->upload_file_path = "/tmp/"; // default upload loaction if post method was allowed
+	this->maxBodySize = LONG_MAX;
 }
 
 Location &Location::operator=(const Location &location)
@@ -28,6 +31,7 @@ Location &Location::operator=(const Location &location)
 	this->cgiMap = location.cgiMap;
 	this->methods = location.methods;
 	this->upload_file_path = location.upload_file_path;
+	this->maxBodySize = location.maxBodySize;
 	return *this;
 }
 void Location::setPath(std::string &path)
@@ -57,7 +61,7 @@ void Location::setRedirect(Tokens &token, Tokens &end)
 	this->globalConfig.CheckIfEnd(token, end);
 	ss << status;
 	ss >> code;
-	if ( ss.fail() || !ss.eof() || code < 300 || code > 399)
+	if (ss.fail() || !ss.eof() || code < 300 || code > 399)
 		throw Tokenizer::ParserException("Invalid  status: " + status + " code in Redirection: should be 3xx code");
 	this->redirect.status = status;
 	this->redirect.url = url;
@@ -114,39 +118,22 @@ const Location::Redirection &Location::getRedirection() const
 	return (this->redirect);
 }
 
-static long long toBytes(std::string &size)
-{
-	const long maxValue = 8796093022208;
-	long long sizeValue = 0;
 
-	for (size_t i = 0; i < size.size() - 1; i++)
-	{
-		if (size[i] < '0' || size[i] > '9')
-			throw Tokenizer::ParserException("Invalid size");
-		sizeValue = sizeValue * 10 + size[i] - '0';
-		if (sizeValue > maxValue)
-			throw Tokenizer::ParserException("Size too large");
-	}
-	switch (size[size.size() - 1])
-	{
-		case 'k':
-		case 'K': sizeValue *= 1024; break;
-		case 'M':
-		case 'm': sizeValue *= 1024 * 1024; break;
-		case 'B':
-		case 'b': break;
-		default: return (-1);
-	}
-	return (sizeValue);
-}
 void Location::setMaxBodySize(Tokens &token, Tokens &end)
 {
+	std::string maxBodySize;
+	std::stringstream ss;
 	this->globalConfig.validateOrFaild(token, end);
-	this->maxBodySize = toBytes(*token);
-	if (this->maxBodySize == -1)
-		throw Tokenizer::ParserException("Invalid max body size or too large max is 100");
-	token++;
+	maxBodySize = this->globalConfig.consume(token, end);
+	ss << maxBodySize;
+	ss >> this->maxBodySize;
+	if (ss.fail() || !ss.eof())
+		throw Tokenizer::ParserException("Invalid max body size " + maxBodySize);
 	this->globalConfig.CheckIfEnd(token, end);
+}
+long Location::getMaxBody() const
+{
+	return (this->maxBodySize);
 }
 bool Location::isMethodAllowed(int method) const
 {
@@ -177,7 +164,6 @@ const std::string &Location::getPath()
 {
 	return (this->path);
 }
-
 
 const std::string &Location::getFileUploadPath()
 {

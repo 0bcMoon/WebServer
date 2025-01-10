@@ -18,7 +18,6 @@ class Client
 	private:
 		int				fd;	
 		int				serverFd;
-		ServerContext	*ctx;
 	public:
 		enum TimerType
 		{

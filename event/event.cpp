@@ -31,7 +31,6 @@
 #include "HttpResponse.hpp"
 #include "VirtualServer.hpp"
 
-
 Event::Event(int max_connection, int max_events, ServerContext *ctx)
 	: connections(ctx, -1), MAX_CONNECTION_QUEUE(max_connection), MAX_EVENTS(max_events)
 {
@@ -124,7 +123,7 @@ int Event::CreateSocket(SocketAddrSet_t::iterator &address)
 	int optval = 1;
 
 	struct addrinfo *result, hints;
-	hints.ai_family = AF_INET; //  IPv4 
+	hints.ai_family = AF_INET; //  IPv4
 	hints.ai_socktype = SOCK_STREAM; // TCP socket
 	hints.ai_flags = AI_PASSIVE; // For binding
 	hints.ai_protocol = IPPROTO_TCP; // TCP proto
@@ -397,12 +396,11 @@ void Event::ReadPipe(const struct kevent *ev)
 	}
 }
 
-
 void Event::TimerEvent(const struct kevent *ev)
 {
 	ProcMap_t::iterator p = this->procs.find((size_t)ev->udata);
 	if (p == this->procs.end())
-		return ;
+		return;
 	Proc &proc = p->second;
 	proc.state = Proc::TIMEOUT;
 	proc.die();
@@ -450,6 +448,8 @@ void Event::eventLoop()
 	connections.init(this->ctx, this->kqueueFd);
 	int nev;
 	std::cout << "TODO: parser header before getting location\n";
+	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
+	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
 	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
 	std::cout << "TODO: restructor error page in config\n";
 	std::cout << "-------------------\n";
@@ -541,26 +541,21 @@ Location *Event::getLocation(Client *client)
 	return (location);
 }
 
-// void Event::StartTimer(Client *client)
-// {
-// 	int time;
-// 	struct kevent ev;
+void Event::KeepAlive(Client *client)
+{
+	int time;
+	struct kevent ev;
 
-// 	switch (client->getTimerType())
-// 	{
-// 		case Client::NEW_CONNECTION:
-// 		case Client::KEEP_ALIVE:
-// 			time = this->ctx->getKeepAliveTime();
-// 			break;
-// 		case Client::READING:
-// 			time = this->ctx->getClientReadTime();
-// 			break;
-// 		}
-// 		EV_SET(&ev, client->getFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_SECONDS, time, NULL);
-// 	// if (kevent(this->kqueueFd, ev, 1, NULL, 1, NULL) < 0)
-// 	// 	throw
-//
-// }
+	switch (client->getTimerType())
+	{
+		case Client::NEW_CONNECTION:
+		case Client::KEEP_ALIVE: time = this->ctx->getKeepAliveTime(); break;
+		case Client::READING: time = this->ctx->getClientReadTime(); break;
+	}
+	EV_SET(&ev, client->getFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_SECONDS, time, NULL);
+	if (kevent(this->kqueueFd, &ev, 1, NULL, 1, NULL) < 0)
+		throw Event::EventExpection("kevent : Timer: " + std::string(strerror(errno)));
+}
 
 Event::EventExpection::EventExpection(const std::string &msg) throw()
 {

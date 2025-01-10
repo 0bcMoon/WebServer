@@ -1,10 +1,10 @@
 #include "Client.hpp"
-#include <cmath>
-#include <csignal>
-#include <cstddef>
 #include <sys/event.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
+#include <cmath>
+#include <csignal>
+#include <cstddef>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -17,11 +17,11 @@ int Client::getFd() const
 	return (this->fd);
 }
 
-
-Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), ctx(ctx), request(fd), response(fd, ctx, &request)
+Client::Client(int fd, int serverFd, ServerContext *ctx)
+	: fd(fd), serverFd(serverFd), request(fd), response(fd, ctx, &request)
 {
 	this->writeEventState = 0;
-	this->cgi_pid  = -1;
+	this->cgi_pid = -1;
 	state = None;
 	this->timerType = NEW_CONNECTION;
 }
@@ -29,8 +29,8 @@ Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serv
 void Client::respond(size_t data, size_t index)
 {
 	response.eventByte = data;
-	if (request.data[index]->state != REQUEST_FINISH &&  request.data[index]->state != REQ_ERROR)
-		return ;
+	if (request.data[index]->state != REQUEST_FINISH && request.data[index]->state != REQ_ERROR)
+		return;
 	response = request;
 	if (request.data[index]->state == REQUEST_FINISH)
 		response.responseCooking();
@@ -39,14 +39,13 @@ void Client::respond(size_t data, size_t index)
 		response.bodyType = HttpResponse::CGI;
 		response.writeCgiResponse();
 		response.logResponse();
-		return ;
+		return;
 	}
-	if (response.state != ERROR && response.isCgi() && response.state != UPLOAD_FILES && response.state != END_BODY) 
+	if (response.state != ERROR && response.isCgi() && response.state != UPLOAD_FILES && response.state != END_BODY)
 		response.state = CGI_EXECUTING;
-
 }
 
-void	Client::handleResponseError()
+void Client::handleResponseError()
 {
 	std::string ErrorRes = response.getErrorRes();
 	response.write2client(fd, ErrorRes.c_str(), ErrorRes.size());
@@ -56,7 +55,7 @@ void	Client::handleResponseError()
 
 const std::string &Client::getHost() const
 {
-	return (this->request.getHost()); 
+	return (this->request.getHost());
 }
 
 const std::string &Client::getPath() const
@@ -71,8 +70,7 @@ int Client::getServerFd() const
 	return (this->serverFd);
 }
 
-
-Client::TimerType Client::getTimerType() const 
+Client::TimerType Client::getTimerType() const
 {
 	return (this->timerType);
 }

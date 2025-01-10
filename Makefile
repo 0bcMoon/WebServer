@@ -10,9 +10,9 @@ CC = c++
 
 INCD = $(shell find . -name "*.hpp" | grep -v "test")
 
-INC = include/
+INC = include/ 
 
-CFLAGS = -std=c++98 -Wall -Wextra -O3
+CFLAGS = -std=c++98 -Wall -Wextra -Wunused -fsanitize=address -fsanitize=undefined
 
 
 NAME = webserv

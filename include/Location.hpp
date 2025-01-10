@@ -31,9 +31,11 @@ class Location
 		std::map<std::string, std::string> cgiMap;
 		std::string upload_file_path;
 		std::string alias;
-		long long maxBodySize;
+		long maxBodySize;
 
 	public:
+
+		long getMaxBody() const;
 		Location();
 		Location &operator=(const Location &location);
 		GlobalConfig globalConfig;
@@ -49,7 +51,7 @@ class Location
 		const Redirection &getRedirection() const;
 		void setMethods(Tokens &token, Tokens &end);
 
-	void setMaxBodySize(Tokens &token, Tokens &end);
+		void setMaxBodySize(Tokens &token, Tokens &end);
 
 		const std::string &getCGIPath(const std::string &ext);
 		const std::string &geCGIext();
