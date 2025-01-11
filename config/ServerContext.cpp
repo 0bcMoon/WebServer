@@ -1,6 +1,9 @@
 #include "ServerContext.hpp"
 #include <unistd.h>
 #include <ctime>
+#include <iostream>
+#include <sstream>
+#include "DataType.hpp"
 #include "Tokenizer.hpp"
 
 ServerContext::ServerContext() : globalConfig(0, "/tmp")
@@ -131,16 +134,13 @@ void ServerContext::init()
 void ServerContext::setKeepAlive(Tokens &token, Tokens &end)
 {
 	this->globalConfig.validateOrFaild(token, end);
-	std::string s_time = this->globalConfig.consume(token, end);
-	this->keepAliveTimeout = 0;
-	for (size_t i = 0;i<s_time.size();i++)
-	{
-		if (s_time[i] <'0' || s_time[i] > '9' )
-			throw Tokenizer::ParserException("Invalid keep alive Timeout value");
-		this->keepAliveTimeout = this->keepAliveTimeout * 10 + s_time[i] - '0';
-		if (this->keepAliveTimeout > (1 << 30))
-			throw Tokenizer::ParserException("Invlaid keep alive Timeout value");
-	}
+	std::string time = this->globalConfig.consume(token, end);
+
+	std::stringstream ss;
+	ss << time;
+	ss >> this->keepAliveTimeout;
+	if (ss.fail() || !ss.eof() || this->keepAliveTimeout < 3)
+		throw Tokenizer::ParserException("invalid keepAlive value " + time);
 	this->globalConfig.CheckIfEnd(token, end);
 }
 

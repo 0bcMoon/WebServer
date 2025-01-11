@@ -15,11 +15,6 @@ class Event
 
 	public:
 	private:
-		enum EventType
-		{
-			SOCKET = 0,
-			PIPE = 1,
-		};
 
 		ServerContext *ctx;
 		Connections connections;
@@ -58,8 +53,8 @@ class Event
 
 		void ReadEvent(const struct kevent *ev);
 		void WriteEvent(const struct kevent *ev);
-		void RegisterNewProc(Client *client);
-		void TimerEvent(const struct kevent *ev);
+		int RegisterNewProc(Client *client);
+		void PorcTimerEvent(const struct kevent *ev);
 		void ProcEvent(const struct kevent *ev);
 		void KeepAlive(Client *client);
 
