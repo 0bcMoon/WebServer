@@ -355,6 +355,8 @@ void Event::WriteEvent(const struct kevent *ev)
 		client->response.clear();
 		delete client->request.data[0];
 		client->request.data.erase(client->request.data.begin());
+		// if (client->response.keepAlive)
+		// to close connection if keepAlive does set
 		if (client->request.data.size() == 0)
 		{
 			this->setWriteEvent(client, EV_DISABLE);
