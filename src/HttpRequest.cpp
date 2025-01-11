@@ -304,7 +304,7 @@ void HttpRequest::setHttpReqError(int code, std::string str)
 {
 	// print_stack_trace();
 	// exit(1);
-	printStackTrace();
+	// printStackTrace();
 	state = REQ_ERROR;
 	error.code = code;
 	error.description = str;

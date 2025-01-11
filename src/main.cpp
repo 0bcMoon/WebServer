@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include "CGIProcess.hpp"
 #include "Event.hpp"
 #include "HttpResponse.hpp"
 #include "Tokenizer.hpp"
@@ -153,7 +154,12 @@ int main(int ac, char **argv)
 	{
 		std::cerr << e.what() << "\n";
 	}
-
+	catch (const CGIProcess::ChildException &e)
+	{
+		delete event;
+		delete ctx;
+		return (1);
+	}
 	delete event;
 	delete ctx;
 }
