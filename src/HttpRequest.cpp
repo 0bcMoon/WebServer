@@ -888,9 +888,9 @@ int HttpRequest::convertChunkSize()
 {
 	char *end;
 	long tmp = std::strtol(sizeStr.c_str(), &end, 16);
-	if (*end != 0 || tmp > INT_MAX || sizeStr.size() == 0)
+	if (*end != 0 || tmp > LONG_MAX || sizeStr.size() == 0)
 		return (setHttpReqError(400, "Bad Request"), 1);
-	if (tmp + data.back()->bodyHandler.bodySize > BODY_MAX)
+	if (tmp + (long)data.back()->bodyHandler.bodySize > location->getMaxBody())
 		return (setHttpReqError(413, "Payload Too Large"), 1);
 	chunkSize = tmp;
 	sizeStr = "";

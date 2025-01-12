@@ -291,6 +291,7 @@ bool HttpResponse::isCgi()
 
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
+	printStackTrace();
 	state = ERROR;
 	status.code = code;
 	status.description = str;
@@ -418,7 +419,7 @@ int HttpResponse::parseCgistatus()
 
 	if (it == resHeaders.end())
 		return (1);
-	if (it->second.size() < 3)
+	if (it->second.size() < 5)
 		return (0);
 	ss << it->second;
 	ss >> this->status.code;
@@ -449,6 +450,7 @@ void HttpResponse::parseCgiOutput()
 	cgiRes.state = HEADERS;
 	if (CGIOutput.size() == 0 || headers.find("\r\n\r\n") == std::string::npos)
 		return setHttpResError(502, "Bad Gateway");
+	std::cout << "headers: " + headers;
 	while (pos != std::string::npos)
 	{
 		if (!parseCgiHaders(headers.substr(strIt, (pos - strIt + 1))))

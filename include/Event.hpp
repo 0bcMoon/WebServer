@@ -61,7 +61,7 @@ class Event
 		void RegisterNewProc(Client *client);
 		void TimerEvent(const struct kevent *ev);
 		void ProcEvent(const struct kevent *ev);
-		void StartTimer(Client *client);
+		void KeepAlive(Client *client);
 
 
 		int waitProc(pid_t pid);

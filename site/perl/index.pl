@@ -9,6 +9,9 @@ my $cgi = CGI->new;
 my %cookies = fetch CGI::Cookie;
 my $current_theme = $cookies{'theme'} ? $cookies{'theme'}->value : 'white';
 
+my $status_code = 404;  # Example: setting 404 status code for "Not Found"
+my $status_message = "Not Found";
+
 
 # Handle form submission
 if ($cgi->param('theme')) {
@@ -18,14 +21,16 @@ if ($cgi->param('theme')) {
         -value   => $cgi->param('theme'),
         -expires => '+1M'  # Cookie expires in 1 month
     );
-    
     print $cgi->header(
 		-cookie => $cookie
-		-status => "404 not Found"
+		-status  => "$status_code $status_message",  # Set status code and message
 	);
     $current_theme = $cgi->param('theme');
 } else {
-    print $cgi->header();
+
+    print $cgi->header(
+		-status  => "$status_code $status_message",  # Set status code and message
+	);
 }
 
 # Define theme colors
