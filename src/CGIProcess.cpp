@@ -137,7 +137,6 @@ Proc CGIProcess::RunCGIScript(HttpResponse &response)
 		return (proc);
 	else if (pipe(this->pipeOut) < 0)
 		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
-
 	proc.pid = fork();
 	if (proc.pid < 0)
 	{
@@ -163,6 +162,7 @@ int CGIProcess::chdir()
 }
 
 CGIProcess::ChildException::ChildException() throw() {}
+
 const char *CGIProcess::ChildException::what() const throw()
 {
 	return "child";

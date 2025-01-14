@@ -584,14 +584,19 @@ int HttpResponse::sendBody(enum responseBodyType type)
 	state = WRITE_BODY;
 	if (type == LOAD_FILE || type == CGI)
 	{
+		if (fileSize <= 0)
+		{
+			state = END_BODY;
+			writeByte = 0;
+			return (1);
+		}
 		size_t readbuffer;
 		readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
 		int size = read(responseFd, buff, readbuffer);
 		if (size < 0)
-			throw IOException("Read : ");
+			throw IOException("Read : " + std::string(strerror(errno)));
 		else if (size == 0)
 		{
-			std::cerr << readbuffer << "has been read\n";
 			state = END_BODY;
 			writeByte = 0;
 			return (1);
