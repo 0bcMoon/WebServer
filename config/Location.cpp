@@ -179,7 +179,7 @@ void Location::setUploadPath(Tokens &token, Tokens &end)
 	this->globalConfig.validateOrFaild(token, end);
 	this->upload_file_path = this->globalConfig.consume(token, end);
 	this->globalConfig.CheckIfEnd(token, end);
-	if (this->upload_file_path.back() != '/')
+	if (this->upload_file_path[upload_file_path.size() -1] != '/')
 		this->upload_file_path.push_back('/');
 	if (stat(this->upload_file_path.data(), &buf) != 0)
 		throw Tokenizer::ParserException("Upload path does directory does not exist");

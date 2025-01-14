@@ -1,4 +1,3 @@
 <?php
-header("XX: header\n");
+echo "00000\r\n";
 echo "Hello world\n";
-

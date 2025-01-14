@@ -16,14 +16,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <ios>
 #include <iostream>
 #include <ostream>
 #include <sstream>
-#include <stdexcept>
+#include "Event.hpp"
 #include <string>
 #include <vector>
-#include "Event.hpp"
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
@@ -90,10 +88,6 @@ void HttpResponse::clear()
 	errorRes.htmlErrorId.clear();
 	errorRes.bodyfoot.clear();
 	errorPage.clear();
-	cgiRes.state = HEADERS;
-	cgiRes.bodyStartIndex = 0;
-	cgiRes.cgiStatusLine.clear();
-	cgiRes.lines.resize(0);
 	CGIOutput.resize(0);
 	methode = NONE;
 	body.clear();
@@ -107,8 +101,9 @@ void HttpResponse::clear()
 	fileSize = 0;
 	sendSize = 0;
 	queryStr.clear();
+	this->path_info.clear();
+	this->server_name.clear();
 	strMethod.clear();
-	// responseBody.clear();
 	state = START;
 	path.clear();
 	headers.clear();
@@ -137,6 +132,8 @@ void HttpResponse::clear()
 		"</body>\n"
 		"</html>";
 	errorRes.connection = "Connection: Keep-Alive\r\n";
+	path_info.clear();
+	bodyFileName.clear();
 }
 
 HttpResponse::~HttpResponse()
@@ -145,9 +142,45 @@ HttpResponse::~HttpResponse()
 		close(responseFd);
 }
 
-std::vector<char> HttpResponse::getBody() const
+std::string	HttpResponse::getAutoIndexStyle()
 {
-	return (this->body);
+	static std::string style = 
+	"* { margin: 0;"
+   " padding: 0;"
+    "box-sizing: border-box; } body {"
+    "font-family: Arial, sans-serif;"
+    "background-color: #f4f4f9;"
+    "color: #333;"
+    "line-height: 1.6;"
+    "padding: 20px; } h1 {"
+    "font-size: 70px;"
+    "color: #ffffff;"
+    "background-color: #0056b3;"
+    "text-align: center;"
+    "margin-bottom: 30px; } "
+	"h2 {"
+    "font-size: 70px;"
+    "text-align: center;"
+    "margin-bottom: 0px; margin-top: 0px; border:0px}"
+	"a {"
+    "text-decoration: none;"
+    "color: #007BFF;"
+    "font-size: 50px;"
+    "margin: 0px 0;"
+    "display: block;"
+    "transition: color 0.3s ease; } a:hover { color: #0056b3; } div.file-list {"
+    "max-width: 600px;"
+    "margin: 0 auto;"
+    "background-color: #fff;"
+    "border-radius: 8px;"
+    "padding: 0px;"
+    "box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); } a + a {"
+    "margin-top: 10px; } footer {"
+    "text-align: center;"
+    "margin-top: 50px;"
+    "font-size: 40px;"
+    "color: #888; }";
+	return (style);
 }
 
 std::string HttpResponse::getContentLenght()
@@ -206,9 +239,9 @@ void HttpResponse::logResponse() const
 }
 
 HttpResponse::IOException::~IOException() throw() {}
+
 HttpResponse::IOException::IOException() throw()
 {
-	// printStackTrace();
 	this->msg = "IOException: " + std::string(strerror(errno));
 }
 
@@ -231,8 +264,7 @@ std::string HttpResponse::getErrorRes()
 	errorRes.statusLine = "HTTP/1.1 " + oss.str() + " " + status.description + "\r\n";
 	errorRes.title = oss.str() + " " + status.description;
 	errorRes.htmlErrorId = oss.str() + " " + status.description;
-	if (!keepAlive)
-		errorRes.connection = "Connection: close\r\n";
+	errorRes.connection = "Connection: close\r\n";
 	errorRes.contentLen = getContentLenght();
 	if (this->responseFd >= 0)
 		close(responseFd);
@@ -258,31 +290,29 @@ HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 	status.code = req.data[0]->error.code;
 	status.description = req.data[0]->error.description;
 	strMethod = req.data[0]->strMethode;
+	if (req.data.front()->headers.count("Connection") != 0
+		&& req.data.front()->headers["Connection"] == "Close")
+		keepAlive = 0;
 	if (req.data[0]->state == REQ_ERROR)
+	{
 		state = ERROR;
+		keepAlive = 0;
+	}
 	return (*this);
-}
-
-int HttpResponse::getStatusCode() const
-{
-	return (status.code);
-}
-
-std::string HttpResponse::getStatusDescr() const
-{
-	return (status.description);
 }
 
 bool HttpResponse::isCgi()
 {
 	return (this->isCgiBool);
 }
+
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	// printStackTrace();
+	printStackTrace();
 	state = ERROR;
 	status.code = code;
 	status.description = str;
+	keepAlive = 0;
 }
 
 bool HttpResponse::isPathFounded()
@@ -303,8 +333,6 @@ bool HttpResponse::isMethodAllowed()
 	else
 		methode = NONE;
 	return (this->location->isMethodAllowed(this->methode));
-	// return (setHttpResError(405, "Method Not Allowed"));
-	// return (true);
 }
 
 int HttpResponse::autoIndexCooking()
@@ -324,16 +352,17 @@ int HttpResponse::autoIndexCooking()
 		"	<head>\n"
 		"		<title>YOUR DADDY</title>\n"
 		"		<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+		"<style>" + getAutoIndexStyle() + "</style>"
 		"	</head>\n"
 		"	<body>\n";
-	autoIndexBody += "<h1>liste of files<h1>\n";
+	autoIndexBody += "<h1>Liste of files<h1>\n<h2>";
 	for (size_t i = 0; i < dirContent.size(); i++)
 	{
 		autoIndexBody += "<a href=\"";
 		autoIndexBody += path + dirContent[i] + "\">" + dirContent[i] + "</a><br>";
 	}
 	autoIndexBody +=
-		"	</body>\n"
+		"	</h2></body>\n"
 		"</html>\n";
 	return (closedir(dirStream), 1);
 }
@@ -346,7 +375,7 @@ int HttpResponse::directoryHandler()
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
-			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1 /* , loadFile(fullPath) */);
+			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1);
 	}
 	if (location->globalConfig.getAutoIndex())
 	{
@@ -354,64 +383,6 @@ int HttpResponse::directoryHandler()
 	}
 	return (setHttpResError(403, "Forbidden"), 0);
 }
-
-// int HttpResponse::loadFile(const std::string &pathName)
-// {
-// 	int _fd;
-// 	char buffer[fileReadingBuffer];
-// 	int j = 0;
-
-// 	_fd = open(pathName.c_str(), O_RDONLY);
-// 	if (_fd < 0)
-// 		return (setHttpResError(500, "Internal Server Error"), 0);
-// 	while (1)
-// 	{
-// 		int r = read(_fd, buffer, fileReadingBuffer);
-// 		if (r < 0)
-// 			return (close(_fd), setHttpResError(500, "Internal Server Error"), 0);
-// 		if (r == 0)
-// 			break;
-// 		responseBody.push_back(std::vector<char>(r));
-// 		for (int i = 0; i < r; i++)
-// 		{
-// 			responseBody[j][i] = buffer[i];
-// 		}
-// 		j++;
-// 	}
-// 	return (close(_fd), 1);
-// }
-
-// int HttpResponse::loadFile(int _fd)
-// {
-// 	char buffer[fileReadingBuffer];
-// 	int j = 0;
-
-// 	std::cout << "CGI response: " << std::endl;
-// 	while (1)
-// 	{
-// 		int r = read(_fd, buffer, fileReadingBuffer);
-// 		buffer[r] = 0;
-// 		std::cout << buffer << "\n";
-// 		if (r < 0)
-// 			return (setHttpResError(500, "Internal Server Error"), 0);
-// 		if (r == 0)
-// 			break;
-// 		responseBody.push_back(std::vector<char>(r)); // Gay pepole code
-// 		for (int i = 0; i < r; i++)
-// 		{
-// 			std::cout << buffer[i];
-// 			responseBody[j][i] = buffer[i];
-// 		}
-// 		j++;
-// 	}
-// 	return (1);
-// }
-// std::ifstream file(pathName.c_str());
-// unsigned char  tmp;
-// if (!file.is_open())
-// 	return (setHttpResError(500, "Internal Server Error"), 0);
-// while (!(file >> tmp).eof())
-// 	responseBody.push_back(tmp);
 
 int HttpResponse::pathChecking()
 {
@@ -423,7 +394,7 @@ int HttpResponse::pathChecking()
 	if (S_ISDIR(sStat.st_mode) && methode != POST)
 		return (directoryHandler());
 	if (access(fullPath.c_str(), F_OK) != -1)
-		return (bodyType = LOAD_FILE, 1 /* loadFile(fullPath) */);
+		return (bodyType = LOAD_FILE, 1);
 	else
 	{
 		return (state = ERROR, setHttpResError(404, "Not Found"), 0);
@@ -444,7 +415,7 @@ int HttpResponse::parseCgiHaders(std::string str)
 
 	if (str.size() < 3)
 		return (1);
-	if (pos == std::string::npos || pos == 0 || str.back() != '\n')
+	if (pos == std::string::npos || pos == 0 || str[str.size() - 1] != '\n')
 		return (setHttpResError(502, "Bad Gateway"), 0);
 	tmpHeaderName = str.substr(0, pos);
 	for (size_t i = 0; i < tmpHeaderName.size(); i++)
@@ -459,29 +430,6 @@ int HttpResponse::parseCgiHaders(std::string str)
 	return (1);
 }
 
-static int isLineCrlf(std::vector<char> vec)
-{
-	size_t _i = 0;
-	while (_i < vec.size() - 1)
-	{
-		if (vec[_i] != '\r')
-			return (0);
-		_i++;
-	}
-	return (1);
-}
-
-static std::string vec2str(std::vector<char> vec)
-{
-	std::string str;
-
-	for (size_t i = 0; i < vec.size(); i++)
-	{
-		str.push_back(vec[i]);
-	}
-	return (str);
-}
-
 int HttpResponse::parseCgistatus()
 {
 	map_it it = resHeaders.find("Status");
@@ -489,7 +437,7 @@ int HttpResponse::parseCgistatus()
 
 	if (it == resHeaders.end())
 		return (1);
-	if (it->second.size() < 3)
+	if (it->second.size() < 5)
 		return (0);
 	ss << it->second;
 	ss >> this->status.code;
@@ -517,7 +465,6 @@ void HttpResponse::parseCgiOutput()
 
 	if (!vecIsPrint(CGIOutput))
 		return setHttpResError(502, "Bad Gateway");
-	cgiRes.state = HEADERS;
 	if (CGIOutput.size() == 0 || headers.find("\r\n\r\n") == std::string::npos)
 		return setHttpResError(502, "Bad Gateway");
 	while (pos != std::string::npos)
@@ -533,24 +480,15 @@ void HttpResponse::parseCgiOutput()
 		setHttpResError(502, "Bad Gateway");
 }
 
-std::string HttpResponse::getCgiContentLenght()
-{
-	size_t len = 0;
-	for (size_t i = cgiRes.bodyStartIndex; i < cgiRes.lines.size(); i++)
-	{
-		len += cgiRes.lines[i].size();
-	}
-	std::ostringstream oss;
-	oss << len;
-	return (oss.str());
-}
-
 void HttpResponse::writeCgiResponse()
 {
-	if (keepAlive)
-		resHeaders["Connection"] = "keep-alive";
-	else
-		resHeaders["Connection"] = "Close";
+	if (resHeaders.count("Connection") == 0)
+	{
+		if (keepAlive)
+			resHeaders["Connection"] = "keep-alive";
+		else
+			resHeaders["Connection"] = "Close";
+	}
 	parseCgiOutput();
 	if (state == ERROR)
 		return;
@@ -629,22 +567,13 @@ std::string HttpResponse::getContentType()
 }
 
 std::string HttpResponse::getDate()
-{ // TODO:date;
+{
 	time_t now = time(NULL);
 
-	// Convert to local time structure
 	struct tm *timeinfo = localtime(&now);
-
-	// Create string stream for formatting
 	std::stringstream ss;
-
-	// Create array of month names
 	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-
-	// Create array of day names
 	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-	// Format the date and time
 	ss  << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
 	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
 	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
@@ -652,7 +581,7 @@ std::string HttpResponse::getDate()
 	return ("date: " + std::string(ss.str()) + "\r\n");
 }
 
-int HttpResponse::sendBody(int _fd, enum responseBodyType type)
+int HttpResponse::sendBody(enum responseBodyType type)
 {
 	state = WRITE_BODY;
 	if (type == LOAD_FILE || type == CGI)
@@ -710,72 +639,10 @@ int isHex(char c)
 	std::string B = "0123456789ABCDEF";
 	std::string b = "0123456789abcdef";
 
-	// noob code
 	if (b.find(c) == std::string::npos && B.find(c) == std::string::npos)
 		return (0);
 	return (1);
 }
-
-void HttpResponse::decodingUrl()
-{
-	std::string decodedUrl;
-	std::stringstream ss;
-
-	for (size_t i = 0; i < path.size(); i++)
-	{
-		if (i < path.size() - 2 && path[i] == '%' && isHex(path[i + 1]) && isHex(path[i + 2]))
-		{
-			int tmp;
-			ss << path[i + 1] << path[i + 2];
-			ss >> std::hex >> tmp;
-			ss.clear();
-			decodedUrl.push_back(tmp);
-			i += 2;
-		}
-		else
-			decodedUrl.push_back(path[i]);
-	}
-	path = decodedUrl;
-}
-
-void HttpResponse::splitingQuery()
-{
-	if (path.find('?') == std::string::npos)
-		return;
-	size_t pos = path.find('?');
-	queryStr = path.substr(pos + 1);
-	path = path.substr(0, pos);
-}
-
-// void		HttpResponse::multiPartParse()
-// {
-// 	std::stringstream     ss(body.data());
-// 	std::string			  line;
-// 	std::string			  boundary("--" + request->bodyBoundary + "\r\n");
-// 	std::string			  fileName;
-// 	size_t				  pos;
-// 	int					  uploadFd;
-
-// 	while (1)
-// 	{
-// 		line.clear();
-// 		std::getline(ss, line);
-// 		if (line != boundary)
-// 			return setHttpResError(400, "Bad Request");
-// 		std::getline(ss, line);
-
-// 		pos = line.find("; filename=\"");
-// 		if (pos == std::string::npos || std::string::npos == line.find("\"", pos +1))
-// 			continue;
-// 	    fileName = line.substr(pos, line.find("\"", pos +1) - pos);
-// 		while (std::getline(ss, line) && line != "\r\n")
-// 			;
-// 		uploadFd = open((location->getFileUploadPath() + fileName).c_str(), O_CREAT | O_RDONLY, 0644);
-// 		if (uploadFd < 0)
-// 			return setHttpResError(500, "Internal Server Error");
-// 		// while (std::getline(ss, ))
-// 	}
-// }
 
 int HttpResponse::uploadFile()
 {
@@ -835,32 +702,6 @@ void HttpResponse::responseCooking()
 				setHttpResError(500, "Internal Server Error");
 		}
 	}
-}
-
-std::string decimalToHex(int decimal)
-{
-	if (decimal == 0)
-		return "0";
-
-	const char hexDigits[] = "0123456789ABCDEF";
-	std::string hexResult;
-	bool isNegative = false;
-
-	if (decimal < 0)
-	{
-		isNegative = true;
-		decimal = -decimal;
-	}
-
-	while (decimal > 0)
-	{
-		hexResult += hexDigits[decimal % 16];
-		decimal /= 16;
-	}
-	if (isNegative)
-		hexResult += '-';
-	std::reverse(hexResult.begin(), hexResult.end());
-	return hexResult;
 }
 
 std::string getRandomName()

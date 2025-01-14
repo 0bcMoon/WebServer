@@ -346,7 +346,7 @@ void Event::WriteEvent(const struct kevent *ev)
 	if (client->response.state == WRITE_BODY)
 	{
 		client->response.eventByte = ev->data;
-		client->response.sendBody(-1, client->response.bodyType);
+		client->response.sendBody(client->response.bodyType);
 	}
 	if (client->response.state == ERROR)
 		client->handleResponseError();
