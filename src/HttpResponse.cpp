@@ -16,14 +16,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <ios>
 #include <iostream>
 #include <ostream>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <vector>
-#include "Event.hpp"
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
@@ -90,10 +87,6 @@ void HttpResponse::clear()
 	errorRes.htmlErrorId.clear();
 	errorRes.bodyfoot.clear();
 	errorPage.clear();
-	cgiRes.state = HEADERS;
-	cgiRes.bodyStartIndex = 0;
-	cgiRes.cgiStatusLine.clear();
-	cgiRes.lines.resize(0);
 	CGIOutput.resize(0);
 	methode = NONE;
 	body.clear();
@@ -136,6 +129,8 @@ void HttpResponse::clear()
 		"</body>\n"
 		"</html>";
 	errorRes.connection = "Connection: Keep-Alive\r\n";
+	path_info.clear();
+	bodyFileName.clear();
 }
 
 HttpResponse::~HttpResponse()
@@ -183,11 +178,6 @@ std::string	HttpResponse::getAutoIndexStyle()
     "font-size: 40px;"
     "color: #888; }";
 	return (style);
-}
-
-std::vector<char> HttpResponse::getBody() const
-{
-	return (this->body);
 }
 
 std::string HttpResponse::getContentLenght()
@@ -246,9 +236,9 @@ void HttpResponse::logResponse() const
 }
 
 HttpResponse::IOException::~IOException() throw() {}
+
 HttpResponse::IOException::IOException() throw()
 {
-	// printStackTrace();
 	this->msg = "IOException: " + std::string(strerror(errno));
 }
 
@@ -306,16 +296,6 @@ HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 		keepAlive = 0;
 	}
 	return (*this);
-}
-
-int HttpResponse::getStatusCode() const
-{
-	return (status.code);
-}
-
-std::string HttpResponse::getStatusDescr() const
-{
-	return (status.description);
 }
 
 bool HttpResponse::isCgi()
@@ -392,7 +372,7 @@ int HttpResponse::directoryHandler()
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		if (access((this->fullPath + indexes[i]).c_str(), F_OK) != -1)
-			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1 /* , loadFile(fullPath) */);
+			return (bodyType = LOAD_FILE, (fullPath += indexes[i]), 1);
 	}
 	if (location->globalConfig.getAutoIndex())
 	{
@@ -411,7 +391,7 @@ int HttpResponse::pathChecking()
 	if (S_ISDIR(sStat.st_mode) && methode != POST)
 		return (directoryHandler());
 	if (access(fullPath.c_str(), F_OK) != -1)
-		return (bodyType = LOAD_FILE, 1 /* loadFile(fullPath) */);
+		return (bodyType = LOAD_FILE, 1);
 	else
 	{
 		return (state = ERROR, setHttpResError(404, "Not Found"), 0);
@@ -482,7 +462,6 @@ void HttpResponse::parseCgiOutput()
 
 	if (!vecIsPrint(CGIOutput))
 		return setHttpResError(502, "Bad Gateway");
-	cgiRes.state = HEADERS;
 	if (CGIOutput.size() == 0 || headers.find("\r\n\r\n") == std::string::npos)
 		return setHttpResError(502, "Bad Gateway");
 	while (pos != std::string::npos)
@@ -496,18 +475,6 @@ void HttpResponse::parseCgiOutput()
 		setHttpResError(502, "Bad Gateway");
 	if (!parseCgistatus())
 		setHttpResError(502, "Bad Gateway");
-}
-
-std::string HttpResponse::getCgiContentLenght()
-{
-	size_t len = 0;
-	for (size_t i = cgiRes.bodyStartIndex; i < cgiRes.lines.size(); i++)
-	{
-		len += cgiRes.lines[i].size();
-	}
-	std::ostringstream oss;
-	oss << len;
-	return (oss.str());
 }
 
 void HttpResponse::writeCgiResponse()
@@ -597,22 +564,13 @@ std::string HttpResponse::getContentType()
 }
 
 std::string HttpResponse::getDate()
-{ // TODO:date;
+{
 	time_t now = time(NULL);
 
-	// Convert to local time structure
 	struct tm *timeinfo = localtime(&now);
-
-	// Create string stream for formatting
 	std::stringstream ss;
-
-	// Create array of month names
 	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-
-	// Create array of day names
 	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-	// Format the date and time
 	ss  << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
 	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
 	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
@@ -678,72 +636,10 @@ int isHex(char c)
 	std::string B = "0123456789ABCDEF";
 	std::string b = "0123456789abcdef";
 
-	// noob code
 	if (b.find(c) == std::string::npos && B.find(c) == std::string::npos)
 		return (0);
 	return (1);
 }
-
-void HttpResponse::decodingUrl()
-{
-	std::string decodedUrl;
-	std::stringstream ss;
-
-	for (size_t i = 0; i < path.size(); i++)
-	{
-		if (i < path.size() - 2 && path[i] == '%' && isHex(path[i + 1]) && isHex(path[i + 2]))
-		{
-			int tmp;
-			ss << path[i + 1] << path[i + 2];
-			ss >> std::hex >> tmp;
-			ss.clear();
-			decodedUrl.push_back(tmp);
-			i += 2;
-		}
-		else
-			decodedUrl.push_back(path[i]);
-	}
-	path = decodedUrl;
-}
-
-void HttpResponse::splitingQuery()
-{
-	if (path.find('?') == std::string::npos)
-		return;
-	size_t pos = path.find('?');
-	queryStr = path.substr(pos + 1);
-	path = path.substr(0, pos);
-}
-
-// void		HttpResponse::multiPartParse()
-// {
-// 	std::stringstream     ss(body.data());
-// 	std::string			  line;
-// 	std::string			  boundary("--" + request->bodyBoundary + "\r\n");
-// 	std::string			  fileName;
-// 	size_t				  pos;
-// 	int					  uploadFd;
-
-// 	while (1)
-// 	{
-// 		line.clear();
-// 		std::getline(ss, line);
-// 		if (line != boundary)
-// 			return setHttpResError(400, "Bad Request");
-// 		std::getline(ss, line);
-
-// 		pos = line.find("; filename=\"");
-// 		if (pos == std::string::npos || std::string::npos == line.find("\"", pos +1))
-// 			continue;
-// 	    fileName = line.substr(pos, line.find("\"", pos +1) - pos);
-// 		while (std::getline(ss, line) && line != "\r\n")
-// 			;
-// 		uploadFd = open((location->getFileUploadPath() + fileName).c_str(), O_CREAT | O_RDONLY, 0644);
-// 		if (uploadFd < 0)
-// 			return setHttpResError(500, "Internal Server Error");
-// 		// while (std::getline(ss, ))
-// 	}
-// }
 
 int HttpResponse::uploadFile()
 {
