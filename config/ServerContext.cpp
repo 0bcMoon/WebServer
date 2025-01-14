@@ -48,8 +48,6 @@ ServerContext::~ServerContext()
 	for (size_t i = 0; i < this->servers.size(); i++)
 		this->servers[i].deleteRoutes();
 }
-// TODO : check if value is was set  for duplicates
-//
 std::vector<VirtualServer> &ServerContext::getServers()
 {
 	return this->servers;
@@ -69,7 +67,6 @@ void ServerContext::pushServer(Tokens &token, Tokens &end)
 	this->servers.push_back(VirtualServer()); // push empty VirtualServer to keep
 											  // the reference in http object in case of exception to cause memory leak
 	VirtualServer &server = this->servers.back(); // grants access to the last element
-
 	while (token != end && *token != "}")
 	{
 		if (*token == "location")
@@ -122,10 +119,7 @@ void ServerContext::init()
 
 	for (size_t i = 0; i < this->servers.size(); i++)
 	{
-
 		this->servers[i].globalConfig.copy(this->globalConfig);
-
-
 		this->servers[i].init();
 	}
 }

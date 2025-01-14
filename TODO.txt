@@ -1,6 +1,3 @@
---- handel if at least one Vserver exist and each server has one location define
 --- 
---- add logging support
 --- HANDLING EXCEPTION
 
---- change dir

@@ -91,7 +91,7 @@ void Tokenizer::parseConfig(ServerContext *context)
 		else if (*token == "keepalive_timeout")
 			context->setKeepAlive(token, end);
 		else
-			context->parseTokens(token, end); // TODO;
+			context->parseTokens(token, end);
 	}
 }
 

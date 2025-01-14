@@ -2,7 +2,7 @@
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
-	header('Status: 502');
+	http_response_code(302);
     exit;
 }
 

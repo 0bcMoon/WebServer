@@ -4,7 +4,6 @@
 #include "DataType.hpp"
 #include "VirtualServer.hpp"
 
-// TODO: validate server count should  > 0
 class ServerContext
 {
   private:

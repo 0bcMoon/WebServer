@@ -148,7 +148,7 @@ int main(int ac, char **argv)
 		event->Listen();
 		event->initIOmutltiplexing();
 		event->eventLoop();
-	} // TODO: add cgi expection
+	}
 	catch (const std::runtime_error &e)
 	{
 		std::cerr << "runtime_error -- " << e.what() << "\n";
