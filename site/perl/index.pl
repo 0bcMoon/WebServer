@@ -9,8 +9,8 @@ my $cgi = CGI->new;
 my %cookies = fetch CGI::Cookie;
 my $current_theme = $cookies{'theme'} ? $cookies{'theme'}->value : 'white';
 
-my $status_code = 404;  # Example: setting 404 status code for "Not Found"
-my $status_message = "Not Found";
+my $status_code = 200;  # Example: setting 404 status code for "Not Found"
+my $status_message = "OK";
 
 
 # Handle form submission

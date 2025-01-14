@@ -19,6 +19,7 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
+#include "Event.hpp"
 #include <string>
 #include <vector>
 #include "HttpRequest.hpp"
@@ -158,19 +159,19 @@ std::string	HttpResponse::getAutoIndexStyle()
 	"h2 {"
     "font-size: 70px;"
     "text-align: center;"
-    "margin-bottom: 30px; }"
+    "margin-bottom: 0px; margin-top: 0px; border:0px}"
 	"a {"
     "text-decoration: none;"
     "color: #007BFF;"
-    "font-size: 40px;"
-    "margin: 5px 0;"
+    "font-size: 50px;"
+    "margin: 0px 0;"
     "display: block;"
     "transition: color 0.3s ease; } a:hover { color: #0056b3; } div.file-list {"
     "max-width: 600px;"
     "margin: 0 auto;"
     "background-color: #fff;"
     "border-radius: 8px;"
-    "padding: 20px;"
+    "padding: 0px;"
     "box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); } a + a {"
     "margin-top: 10px; } footer {"
     "text-align: center;"
@@ -305,7 +306,7 @@ bool HttpResponse::isCgi()
 
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	// printStackTrace();
+	printStackTrace();
 	state = ERROR;
 	status.code = code;
 	status.description = str;
@@ -699,32 +700,6 @@ void HttpResponse::responseCooking()
 				setHttpResError(500, "Internal Server Error");
 		}
 	}
-}
-
-std::string decimalToHex(int decimal)
-{
-	if (decimal == 0)
-		return "0";
-
-	const char hexDigits[] = "0123456789ABCDEF";
-	std::string hexResult;
-	bool isNegative = false;
-
-	if (decimal < 0)
-	{
-		isNegative = true;
-		decimal = -decimal;
-	}
-
-	while (decimal > 0)
-	{
-		hexResult += hexDigits[decimal % 16];
-		decimal /= 16;
-	}
-	if (isNegative)
-		hexResult += '-';
-	std::reverse(hexResult.begin(), hexResult.end());
-	return hexResult;
 }
 
 std::string getRandomName()

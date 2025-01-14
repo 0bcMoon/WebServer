@@ -1,13 +1,6 @@
 --- handel if at least one Vserver exist and each server has one location define
 --- 
 --- add logging support
---- FIX BODY_SIZE
---- LIMIT READ AND WRITE SIZE WITH KEVENT
 --- HANDLING EXCEPTION
---- HANDLING TIMEOUT IN CGI
---- PARSE content-disposition headers in multi part
---- KEEP-ALIVE
---- CGI CONTENT_LENGHT
---- status code
---- std::string::back()
+
 --- change dir

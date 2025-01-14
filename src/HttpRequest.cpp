@@ -578,7 +578,7 @@ void	HttpRequest::addPathIndex()
 bool HttpRequest::validateRequestLine()
 {
 	if (location == NULL)
-		return (setHttpReqError(405, "Not Found"), 0);
+		return (setHttpReqError(404, "Not Found"), 0);
 	if (!this->isMethodAllowed())
 		return (setHttpReqError(405, "Method Not Allowed"), 0);
 	if (location->HasRedirection())
@@ -1008,11 +1008,11 @@ void HttpRequest::decodingUrl()
 			decodedUrl.push_back(tmp);
 			i += 2;
 		}
+		else if (data.back()->path[i] == '%')
+			return setHttpReqError(400, "Bad Request");		
 		else
 			decodedUrl.push_back(data.back()->path[i]);
 	}
-	if (decodedUrl.find('%') != std::string::npos)
-		setHttpReqError(400, "Bad Request");
 	data.back()->path = decodedUrl;
 }
 

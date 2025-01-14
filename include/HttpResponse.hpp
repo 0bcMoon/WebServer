@@ -160,6 +160,5 @@ class HttpResponse
 };
 
 int										isHex(char c);
-std::string								decimalToHex(int	decimal);
 
 #endif
