@@ -144,6 +144,47 @@ HttpResponse::~HttpResponse()
 		close(responseFd);
 }
 
+std::string	HttpResponse::getAutoIndexStyle()
+{
+	static std::string style = 
+	"* { margin: 0;"
+   " padding: 0;"
+    "box-sizing: border-box; } body {"
+    "font-family: Arial, sans-serif;"
+    "background-color: #f4f4f9;"
+    "color: #333;"
+    "line-height: 1.6;"
+    "padding: 20px; } h1 {"
+    "font-size: 70px;"
+    "color: #ffffff;"
+    "background-color: #0056b3;"
+    "text-align: center;"
+    "margin-bottom: 30px; } "
+	"h2 {"
+    "font-size: 70px;"
+    "text-align: center;"
+    "margin-bottom: 30px; }"
+	"a {"
+    "text-decoration: none;"
+    "color: #007BFF;"
+    "font-size: 40px;"
+    "margin: 5px 0;"
+    "display: block;"
+    "transition: color 0.3s ease; } a:hover { color: #0056b3; } div.file-list {"
+    "max-width: 600px;"
+    "margin: 0 auto;"
+    "background-color: #fff;"
+    "border-radius: 8px;"
+    "padding: 20px;"
+    "box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); } a + a {"
+    "margin-top: 10px; } footer {"
+    "text-align: center;"
+    "margin-top: 50px;"
+    "font-size: 40px;"
+    "color: #888; }";
+	return (style);
+}
+
 std::vector<char> HttpResponse::getBody() const
 {
 	return (this->body);
@@ -284,7 +325,7 @@ bool HttpResponse::isCgi()
 
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	printStackTrace();
+	// printStackTrace();
 	state = ERROR;
 	status.code = code;
 	status.description = str;
@@ -328,16 +369,17 @@ int HttpResponse::autoIndexCooking()
 		"	<head>\n"
 		"		<title>YOUR DADDY</title>\n"
 		"		<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+		"<style>" + getAutoIndexStyle() + "</style>"
 		"	</head>\n"
 		"	<body>\n";
-	autoIndexBody += "<h1>liste of files<h1>\n";
+	autoIndexBody += "<h1>Liste of files<h1>\n<h2>";
 	for (size_t i = 0; i < dirContent.size(); i++)
 	{
 		autoIndexBody += "<a href=\"";
 		autoIndexBody += path + dirContent[i] + "\">" + dirContent[i] + "</a><br>";
 	}
 	autoIndexBody +=
-		"	</body>\n"
+		"	</h2></body>\n"
 		"</html>\n";
 	return (closedir(dirStream), 1);
 }
@@ -390,7 +432,7 @@ int HttpResponse::parseCgiHaders(std::string str)
 
 	if (str.size() < 3)
 		return (1);
-	if (pos == std::string::npos || pos == 0 || str.back() != '\n')
+	if (pos == std::string::npos || pos == 0 || str[str.size() - 1] != '\n')
 		return (setHttpResError(502, "Bad Gateway"), 0);
 	tmpHeaderName = str.substr(0, pos);
 	for (size_t i = 0; i < tmpHeaderName.size(); i++)
@@ -443,7 +485,6 @@ void HttpResponse::parseCgiOutput()
 	cgiRes.state = HEADERS;
 	if (CGIOutput.size() == 0 || headers.find("\r\n\r\n") == std::string::npos)
 		return setHttpResError(502, "Bad Gateway");
-	std::cout << "headers: " + headers;
 	while (pos != std::string::npos)
 	{
 		if (!parseCgiHaders(headers.substr(strIt, (pos - strIt + 1))))
@@ -579,7 +620,7 @@ std::string HttpResponse::getDate()
 	return ("date: " + std::string(ss.str()) + "\r\n");
 }
 
-int HttpResponse::sendBody(int _fd, enum responseBodyType type)
+int HttpResponse::sendBody(enum responseBodyType type)
 {
 	state = WRITE_BODY;
 	if (type == LOAD_FILE || type == CGI)

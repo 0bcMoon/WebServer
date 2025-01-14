@@ -9,7 +9,5 @@
 --- KEEP-ALIVE
 --- CGI CONTENT_LENGHT
 --- status code
---- auto index css
---- test the max
 --- std::string::back()
 --- change dir

@@ -173,7 +173,7 @@ class HttpResponse
 		std::string						getConnectionState();
 		std::string						getContentType();
 		std::string						getDate();
-		int								sendBody(int _fd, enum responseBodyType type);
+		int								sendBody(enum responseBodyType type);
 		std::string						getContentLenght(enum responseBodyType type); // TYPO
 
 		int								autoIndexCooking();
@@ -190,6 +190,7 @@ class HttpResponse
 		int								uploadFile();
 		void							multiPartParse();
 		void							deleteMethodeHandler();
+		std::string						getAutoIndexStyle();
 };
 
 int					isHex(char c);

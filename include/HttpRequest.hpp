@@ -13,7 +13,7 @@
 #define BUFFER_SIZE 5 * 1024 * 1024
 #define BODY_MAX 1024 * 10240000L
 
-typedef std::map<std::string, std::string>::iterator map_it; // WARNING
+typedef std::map<std::string, std::string>::iterator map_it;
 typedef std::map<std::string, std::string> Headers;
 
 enum reqMethode
@@ -59,7 +59,7 @@ enum crlfState
 
 typedef struct httpError
 {
-	int code;
+	int			code;
 	std::string description;
 } httpError;
 
@@ -78,48 +78,36 @@ enum reqBodyType
 	NON
 };
 
-struct multiPart
-{
-	std::vector<char> body;
-	int fd;
-	std::map<std::string, std::string> headers;
-	// std::vector<std::string>				strsHeaders;
-};
-
 struct bodyHandler
 {
 	bodyHandler();
 	~bodyHandler();
-	void clear();
-	void push2body(char c);
-	int push2fileBody(char c, const std::string &boundary);
-	int upload2file(std::string &boundary);
-	int openNewFile(std::string uploadPath);
-	int writeBody();
-	int	writeChunkedBody();
+	int			openNewFile(std::string uploadPath);
+	int			writeBody();
+	int			writeChunkedBody();
 	bool isCgi;
 
 	std::map<std::string, std::string> headers;
 
-	int								bodyFd;
-	std::string						bodyFile;
-	std::string						path_info;
-	size_t							bodyIt;
-	std::vector<char> body; // raw body;
-	size_t bodySize;
-	std::string						tmp;
+	int									bodyFd;
+	std::string							bodyFile;
+	std::string							path_info;
+	size_t								bodyIt;
+	std::vector<char>					body; // raw body;
+	size_t								bodySize;
+	std::string							tmp;
 
-	std::string header;
-	std::string tmpBorder;
+	std::string							header;
+	std::string							tmpBorder;
 
-	bool created;
-	bool isBodyInit;
+	bool								created;
+	bool								isBodyInit;
 
-	int currFd;
-	size_t fileBodyIt;
-	size_t borderIt;
-	std::vector<char> fileBody;
-	std::vector<char> chunkeBody;
+	int									currFd;
+	size_t								fileBodyIt;
+	size_t								borderIt;
+	std::vector<char>					fileBody;
+	std::vector<char>					chunkeBody;
 };
 
 typedef struct data_s {
@@ -157,16 +145,15 @@ class HttpRequest
 		FINISHED
 	};
 
-	bool isCGI();
-	void handleNewBody();
-	void handleMultiPartHeaders();
-	void handleStoring();
-	void parseMultiPartHeaderVal();
-	int isBodycrlf();
-	int isBorder();
-	int checkMultiPartEnd();
-	void parseBodyCrlf();
-	bool isMethodAllowed();
+	bool			isCGI();
+	void 			handleNewBody();
+	void 			handleMultiPartHeaders();
+	void 			handleStoring();
+	int 			isBodycrlf();
+	int 			isBorder();
+	int 			checkMultiPartEnd();
+	void 			parseBodyCrlf();
+	bool 			isMethodAllowed();
 
 	enum multiPartState bodyState;
 	struct kevent *ev;
@@ -180,23 +167,20 @@ class HttpRequest
 	const int fd;
 	enum crlfState crlfState;
 
-	std::string path;
-
-	// std::map<std::string, std::string>	headers;
 	std::string currHeaderName;
 	std::string currHeaderVal;
 
-	std::vector<char> body;
-	size_t	bodySize;
-	int	reqSize;
-	size_t reqBufferSize;
-	size_t reqBufferIndex;
-	std::vector<char> reqBuffer;
+	std::vector<char>	body;
+	size_t				bodySize;
+	int					reqSize;
+	size_t				reqBufferSize;
+	size_t				reqBufferIndex;
+	std::vector<char>	reqBuffer;
 
-	httpError error;
+	httpError			error;
 
-	methodeStr methodeStr;
-	std::string httpVersion;
+	methodeStr	    	methodeStr;
+	std::string			httpVersion;
 
 	int convertChunkSize();
 	void chunkEnd();
@@ -250,11 +234,9 @@ class HttpRequest
 	void clear();
 
 	const std::map<std::string, std::string> &getHeaders() const;
-	std::vector<char> getBody() const;
 	httpError getStatus() const;
 	std::string getStrMethode() const;
 	const std::string &getHost() const;
-	// const std::string &getPath() const;
 	bool validateRequestLine();
 	int parseMultiPart();
 	void decodingUrl();
