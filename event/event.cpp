@@ -228,10 +228,18 @@ int Event::newConnection(int socketFd, Connections &connections)
 		return (-1);
 	if (this->setNonBlockingIO(newSocketFd))
 		return (close(newSocketFd), -1);
-	struct kevent ev_set[2];
+	struct kevent ev_set[3];
 	EV_SET(&ev_set[0], newSocketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	EV_SET(&ev_set[1], newSocketFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL); // disable write event to stop
-	if (kevent(this->kqueueFd, ev_set, 2, NULL, 0, NULL) < 0)
+	EV_SET(
+		&ev_set[2],
+		newSocketFd,
+		EVFILT_TIMER,
+		EV_ADD | EV_ENABLE | EV_ONESHOT,
+		NOTE_SECONDS,
+		this->ctx->getKeepAliveTime(),
+		NULL); // disable write event to stop
+	if (kevent(this->kqueueFd, ev_set, 3, NULL, 0, NULL) < 0)
 		return (close(newSocketFd), -1);
 	connections.addConnection(newSocketFd, socketFd);
 	return (newSocketFd);
@@ -247,6 +255,7 @@ void Event::setWriteEvent(Client *client, uint16_t flags)
 		throw Event::EventExpection("kevent faild:" + std::string(strerror(errno)));
 	client->writeEventState = flags;
 }
+
 void Event::ReadEvent(const struct kevent *ev)
 {
 	if (ev->flags & EV_EOF && ev->data <= 0)
@@ -268,6 +277,7 @@ void Event::ReadEvent(const struct kevent *ev)
 				client->request.location = this->getLocation(client);
 				client->request.validateRequestLine();
 				client->request.data.back()->isRequestLineValid = 1;
+				this->KeepAlive(client);
 			}
 		}
 		client->request.eof = 0;
@@ -275,16 +285,16 @@ void Event::ReadEvent(const struct kevent *ev)
 	}
 }
 
-void Event::RegisterNewProc(Client *client)
+int Event::RegisterNewProc(Client *client)
 {
 	HttpResponse &response = client->response;
 	CGIProcess cgi;
 	Proc proc = cgi.RunCGIScript(response);
 	if (proc.pid < 0)
-		return;
+		return (-1);
 	struct kevent ev[3];
 	int evSize = 3;
-	EV_SET(&ev[0], proc.pid, EVFILT_PROC, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_EXIT, 0, (void *)(size_t)proc.pid);
+	EV_SET(&ev[0], proc.pid, EVFILT_PROC, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_EXIT, 0, NULL);
 	EV_SET(
 		&ev[1],
 		proc.pid,
@@ -298,13 +308,15 @@ void Event::RegisterNewProc(Client *client)
 	{
 		proc.clean();
 		proc.die();
-		throw Event::EventExpection("kevent faild:" + std::string(strerror(errno)));
+		response.setHttpResError(502, "Bad Gateway");
+		return (-1);
 	}
 	client->cgi_pid = proc.pid;
 	proc.client = client->getFd();
 	proc.input = client->request.data.front()->bodyHandler.bodyFile;
 	this->procs[proc.pid] = proc;
 	this->setWriteEvent(client, EV_DISABLE);
+	return (0);
 }
 
 void Event::WriteEvent(const struct kevent *ev)
@@ -329,8 +341,8 @@ void Event::WriteEvent(const struct kevent *ev)
 	}
 	if (client->response.state == START_CGI_RESPONSE)
 		client->respond(ev->data, 0);
-	if (client->response.state == CGI_EXECUTING)
-		return this->RegisterNewProc(client);
+	if (client->response.state == CGI_EXECUTING && !this->RegisterNewProc(client))
+		return;
 	if (client->response.state == WRITE_BODY)
 	{
 		client->response.eventByte = ev->data;
@@ -343,8 +355,13 @@ void Event::WriteEvent(const struct kevent *ev)
 		client->response.clear();
 		delete client->request.data[0];
 		client->request.data.erase(client->request.data.begin());
+		// if (client->response.keepAlive)
+		// to close connection if keepAlive does set
 		if (client->request.data.size() == 0)
+		{
 			this->setWriteEvent(client, EV_DISABLE);
+			this->KeepAlive(client);
+		}
 	}
 }
 
@@ -396,7 +413,7 @@ void Event::ReadPipe(const struct kevent *ev)
 	}
 }
 
-void Event::TimerEvent(const struct kevent *ev)
+void Event::PorcTimerEvent(const struct kevent *ev)
 {
 	ProcMap_t::iterator p = this->procs.find((size_t)ev->udata);
 	if (p == this->procs.end())
@@ -447,9 +464,6 @@ void Event::eventLoop()
 {
 	connections.init(this->ctx, this->kqueueFd);
 	int nev;
-	std::cout << "TODO: parser header before getting location\n";
-	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
-	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
 	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
 	std::cout << "TODO: restructor error page in config\n";
 	std::cout << "TODO: unsuported cgi\n";
@@ -462,7 +476,6 @@ void Event::eventLoop()
 		for (int i = 0; i < nev; i++)
 		{
 			const struct kevent *ev = &this->evList[i];
-
 			if (this->checkNewClient(ev->ident))
 			{
 				this->newConnection(ev->ident, connections);
@@ -471,7 +484,7 @@ void Event::eventLoop()
 			try
 			{
 				if (ev->fflags & EV_ERROR)
-					connections.closeConnection(ev->ident);
+					this->connections.closeConnection(ev->ident);
 				else if (ev->filter == EVFILT_READ && ev->udata)
 					this->ReadPipe(ev);
 				else if (ev->filter == EVFILT_READ)
@@ -480,8 +493,10 @@ void Event::eventLoop()
 					this->WriteEvent(ev);
 				else if (ev->filter == EVFILT_PROC)
 					this->ProcEvent(ev);
+				else if (ev->filter == EVFILT_TIMER && ev->udata)
+					this->PorcTimerEvent(ev);
 				else if (ev->filter == EVFILT_TIMER)
-					this->TimerEvent(ev);
+					this->connections.closeConnection(ev->ident);
 			}
 			catch (HttpResponse::IOException &e)
 			{
@@ -537,30 +552,29 @@ Location *Event::getLocation(Client *client)
 		client->response.server_name = *Vserver->getServerNames().begin();
 	struct sockaddr *addr = &this->sockAddrInMap.find(client->getServerFd())->second;
 	struct sockaddr_in *addr2 = (struct sockaddr_in *)addr;
-	int port = ntohs(addr2->sin_port);
-	client->response.server_port = port;
+	client->response.server_port = ntohs(addr2->sin_port);
 	return (location);
 }
 
 void Event::KeepAlive(Client *client)
 {
-	int time;
 	struct kevent ev;
 
-	switch (client->getTimerType())
-	{
-		case Client::NEW_CONNECTION:
-		case Client::KEEP_ALIVE: time = this->ctx->getKeepAliveTime(); break;
-		case Client::READING: time = this->ctx->getClientReadTime(); break;
-	}
-	EV_SET(&ev, client->getFd(), EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_SECONDS, time, NULL);
-	if (kevent(this->kqueueFd, &ev, 1, NULL, 1, NULL) < 0)
+	EV_SET(
+		&ev,
+		client->getFd(),
+		EVFILT_TIMER,
+		EV_ADD | EV_ENABLE | EV_ONESHOT,
+		NOTE_SECONDS,
+		this->ctx->getKeepAliveTime(),
+		NULL);
+	if (kevent(this->kqueueFd, &ev, 1, NULL, 0, NULL) < 0)
 		throw Event::EventExpection("kevent : Timer: " + std::string(strerror(errno)));
 }
 
 Event::EventExpection::EventExpection(const std::string &msg) throw()
 {
-	printStackTrace();
+	// printStackTrace();
 	this->msg = msg;
 }
 

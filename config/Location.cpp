@@ -93,10 +93,13 @@ void Location::setCGI(Tokens &token, Tokens &end)
 	cgi_ext = this->globalConfig.consume(token, end);
 	cgi_path = this->globalConfig.consume(token, end);
 	this->globalConfig.CheckIfEnd(token, end);
-	if (cgi_ext[0] != '.' || cgi_ext.size() <= 1)
-		throw Tokenizer::ParserException("Invalid CGI extension" + cgi_ext);
-	if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
-		throw Tokenizer::ParserException("Invalid CGI path" + cgi_path + ": " + std::string(strerror(errno)));
+	if (cgi_ext != ".pl" && cgi_ext != ".php") // for now we only supoort php and perl as cgi
+		throw Tokenizer::ParserException("Invalid CGI extension `" + cgi_ext + "` support php and perl as cgi");
+
+	if (cgi_path[0] != '/')
+		throw Tokenizer::ParserException("Invalid CGI path " + cgi_path + ": " + "path need to be absolute path");
+	else if (access(cgi_path.c_str(), F_OK | X_OK | R_OK) == -1)
+		throw Tokenizer::ParserException("Invalid CGI path " + cgi_path + ": " + std::string(strerror(errno)));
 	this->cgiMap[cgi_ext] = cgi_path;
 }
 
@@ -117,7 +120,6 @@ const Location::Redirection &Location::getRedirection() const
 {
 	return (this->redirect);
 }
-
 
 void Location::setMaxBodySize(Tokens &token, Tokens &end)
 {

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include "DataType.hpp"
 #include "Event.hpp"
 
@@ -39,7 +40,7 @@ int CGIProcess::redirectPipe()
 		return (0);
 	int body_fd = open(this->response->bodyFileName.data(), O_RDONLY);
 	if (body_fd < 0)
-		return ( -1);
+		return (-1);
 	if (dup2(body_fd, STDIN_FILENO) < 0)
 		return (close(body_fd), -1);
 	close(body_fd);
@@ -64,7 +65,6 @@ std::string ToEnv(std::map<std::string, std::string>::iterator &header)
 
 void CGIProcess::loadEnv()
 {
-
 	std::map<std::string, std::string> env;
 	std::stringstream ss;
 	std::map<std::string, std::string>::iterator it = response->headers.begin();
@@ -83,7 +83,7 @@ void CGIProcess::loadEnv()
 	env["PATH_INFO"] = response->path_info;
 	env["HTTP_HOST"] = response->headers["Host"];
 	env["CONTENT_TYPE"] = response->headers["Content-Type"];
-	env["SCRIPT_FILENAME"] = this->cgi_bin;
+	env["SCRIPT_FILENAME"] = this->cgi_file;
 	if (response->strMethod == "POST")
 		env["CONTENT_LENGTH"] = response->headers["Content-Length"];
 	else
@@ -96,27 +96,36 @@ void CGIProcess::loadEnv()
 
 void CGIProcess::child_process()
 {
-	size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size()
-																	  : 0; // offset for alais
-	this->cgi_bin = response->location->globalConfig.getRoot() + response->path.substr(offset);
-
-	this->loadEnv();
-
-	std::string path =
-		response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique
-	const char *args[3] = {path.data(), cgi_bin.data(), NULL};
-	char **envp = new char *[env.size() + 1];
-	size_t i = 0;
-	for (; i < env.size(); i++)
-		envp[i] = (char *)this->env[i].data();
-	envp[i] = NULL;
-	if (redirectPipe())
+	try
 	{
-		closePipe(this->pipeOut);
-		throw std::runtime_error("child could not be run: " + std::string(strerror(errno)));
+		size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size()
+																		  : 0; // offset for alais
+		this->cgi_file = response->location->globalConfig.getRoot() + response->path.substr(offset);
+
+		this->cgi_bin =
+			response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique
+																						  //
+		if (this->chdir())
+			throw CGIProcess::ChildException();
+		this->loadEnv();
+		const char *args[3] = {this->cgi_bin.data(), cgi_file.data(), NULL};
+		char **envp = new char *[env.size() + 1];
+		size_t i = 0;
+		for (; i < env.size(); i++)
+			envp[i] = (char *)this->env[i].data();
+		envp[i] = NULL;
+		if (this->redirectPipe())
+		{
+			closePipe(this->pipeOut);
+			throw CGIProcess::ChildException();
+		}
+		execve(*args, (char *const *)args, envp);
 	}
-	execve(*args, (char *const *)args, envp);
-	throw std::runtime_error("child process faild: execve: " + std::string(strerror(errno)));
+	catch (std::exception &e)
+	{
+		throw CGIProcess::ChildException();
+	}
+	throw CGIProcess::ChildException();
 }
 
 Proc CGIProcess::RunCGIScript(HttpResponse &response)
@@ -140,4 +149,21 @@ Proc CGIProcess::RunCGIScript(HttpResponse &response)
 	close(this->pipeOut[1]);
 	proc.fout = this->pipeOut[0];
 	return (proc);
+}
+int CGIProcess::chdir()
+{
+	size_t pos = this->cgi_file.rfind('/');
+	if (pos == std::string::npos)
+		return (-1);
+	std::string dir = this->cgi_file.substr(0, pos);
+	if (::chdir(dir.data()) < 0)
+		return (-1);
+	this->cgi_file = this->cgi_file.substr(pos + 1);
+	return (0);
+}
+
+CGIProcess::ChildException::ChildException() throw() {}
+const char *CGIProcess::ChildException::what() const throw()
+{
+	return "child";
 }

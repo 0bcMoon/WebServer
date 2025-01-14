@@ -181,19 +181,12 @@ void HttpResponse::logResponse() const
 {
 	time_t now = time(NULL);
 
-	// Convert to local time structure
 	struct tm *timeinfo = localtime(&now);
 
-	// Create string stream for formatting
 	std::stringstream ss;
-
-	// Create array of month names
 	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-	// Create array of day names
 	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-	// Format the date and time
 	ss << "[" << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
 	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
 	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
@@ -214,7 +207,7 @@ void HttpResponse::logResponse() const
 HttpResponse::IOException::~IOException() throw() {}
 HttpResponse::IOException::IOException() throw()
 {
-	printStackTrace();
+	// printStackTrace();
 	this->msg = "IOException: " + std::string(strerror(errno));
 }
 

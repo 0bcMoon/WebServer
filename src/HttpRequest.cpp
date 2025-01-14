@@ -146,7 +146,7 @@ void HttpRequest::readRequest(int data)
 		throw HttpResponse::IOException();
 	if (size == 0)
 		return;
-	// storeRequestData(reqBuffer, state, size);
+	storeRequestData(reqBuffer, state, size);
 	this->reqBufferSize = size;
 	reqBufferIndex = 0;
 }
@@ -302,7 +302,7 @@ void HttpRequest::setHttpReqError(int code, std::string str)
 {
 	// print_stack_trace();
 	// exit(1);
-	printStackTrace();
+	// printStackTrace();
 	state = REQ_ERROR;
 	error.code = code;
 	error.description = str;
@@ -821,7 +821,7 @@ int HttpRequest::firstHeadersCheck()
 
 void HttpRequest::contentLengthBodyParsing()
 {
-	if (bodySize == -1)
+	if (!this->data.back()->bodyHandler.isBodyInit)
 	{
 		std::stringstream ss(data.back()->headers["Content-Length"]);
 		if (!(ss >> bodySize) || !(ss.eof()))
@@ -829,12 +829,14 @@ void HttpRequest::contentLengthBodyParsing()
 			setHttpReqError(400, "Bad Request");
 			return;
 		}
-		if (data.back()->bodyHandler.bodySize + bodySize > (size_t)BODY_MAX)
+		if (data.back()->bodyHandler.bodySize + bodySize > (size_t)location->getMaxBody())
 		{
 			setHttpReqError(413, "Payload Too Large");
 			return;
 		}
+		this->data.back()->bodyHandler.isBodyInit = 1;
 	}
+
 	std::vector<char> &body = data.back()->bodyHandler.body;
 	bodyHandler &bodyHandler = data.back()->bodyHandler;
 
@@ -1275,6 +1277,7 @@ bodyHandler::bodyHandler() : bodyFd(-1), body(BUFFER_SIZE), currFd(-1), fileBody
 	borderIt = 0;
 	bodyFile = Proc::mktmpfileName();
 	created = 0;
+	isBodyInit = 0;
 }
 
 bodyHandler::~bodyHandler()

@@ -113,6 +113,8 @@ struct bodyHandler
 	std::string tmpBorder;
 
 	bool created;
+	bool isBodyInit;
+
 	int currFd;
 	size_t fileBodyIt;
 	size_t borderIt;
@@ -185,8 +187,8 @@ class HttpRequest
 	std::string currHeaderVal;
 
 	std::vector<char> body;
-	long long bodySize;
-	int reqSize;
+	size_t	bodySize;
+	int	reqSize;
 	size_t reqBufferSize;
 	size_t reqBufferIndex;
 	std::vector<char> reqBuffer;
