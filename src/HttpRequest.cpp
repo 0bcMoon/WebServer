@@ -138,7 +138,7 @@ void HttpRequest::readRequest(int data)
 		throw HttpResponse::IOException();
 	if (size == 0)
 		return;
-	storeRequestData(reqBuffer, state, size);
+	// storeRequestData(reqBuffer, state, size);
 	this->reqBufferSize = size;
 	reqBufferIndex = 0;
 }

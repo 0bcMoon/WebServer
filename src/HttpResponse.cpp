@@ -19,13 +19,13 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
-#include "Event.hpp"
 #include <string>
 #include <vector>
+#include "Event.hpp"
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
-void		initStatus(std::map<std::string, std::string>& map)
+void initStatus(std::map<std::string, std::string> &map)
 {
 	map["300"] = "Multiple Choices";
 	map["301"] = "Moved Permanently";
@@ -142,44 +142,44 @@ HttpResponse::~HttpResponse()
 		close(responseFd);
 }
 
-std::string	HttpResponse::getAutoIndexStyle()
+std::string HttpResponse::getAutoIndexStyle()
 {
-	static std::string style = 
-	"* { margin: 0;"
-   " padding: 0;"
-    "box-sizing: border-box; } body {"
-    "font-family: Arial, sans-serif;"
-    "background-color: #f4f4f9;"
-    "color: #333;"
-    "line-height: 1.6;"
-    "padding: 20px; } h1 {"
-    "font-size: 70px;"
-    "color: #ffffff;"
-    "background-color: #0056b3;"
-    "text-align: center;"
-    "margin-bottom: 30px; } "
-	"h2 {"
-    "font-size: 70px;"
-    "text-align: center;"
-    "margin-bottom: 0px; margin-top: 0px; border:0px}"
-	"a {"
-    "text-decoration: none;"
-    "color: #007BFF;"
-    "font-size: 50px;"
-    "margin: 0px 0;"
-    "display: block;"
-    "transition: color 0.3s ease; } a:hover { color: #0056b3; } div.file-list {"
-    "max-width: 600px;"
-    "margin: 0 auto;"
-    "background-color: #fff;"
-    "border-radius: 8px;"
-    "padding: 0px;"
-    "box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); } a + a {"
-    "margin-top: 10px; } footer {"
-    "text-align: center;"
-    "margin-top: 50px;"
-    "font-size: 40px;"
-    "color: #888; }";
+	static std::string style =
+		"* { margin: 0;"
+		" padding: 0;"
+		"box-sizing: border-box; } body {"
+		"font-family: Arial, sans-serif;"
+		"background-color: #f4f4f9;"
+		"color: #333;"
+		"line-height: 1.6;"
+		"padding: 20px; } h1 {"
+		"font-size: 70px;"
+		"color: #ffffff;"
+		"background-color: #0056b3;"
+		"text-align: center;"
+		"margin-bottom: 30px; } "
+		"h2 {"
+		"font-size: 70px;"
+		"text-align: center;"
+		"margin-bottom: 0px; margin-top: 0px; border:0px}"
+		"a {"
+		"text-decoration: none;"
+		"color: #007BFF;"
+		"font-size: 50px;"
+		"margin: 0px 0;"
+		"display: block;"
+		"transition: color 0.3s ease; } a:hover { color: #0056b3; } div.file-list {"
+		"max-width: 600px;"
+		"margin: 0 auto;"
+		"background-color: #fff;"
+		"border-radius: 8px;"
+		"padding: 0px;"
+		"box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); } a + a {"
+		"margin-top: 10px; } footer {"
+		"text-align: center;"
+		"margin-top: 50px;"
+		"font-size: 40px;"
+		"color: #888; }";
 	return (style);
 }
 
@@ -204,7 +204,7 @@ std::string HttpResponse::getContentLenght()
 
 void HttpResponse::write2client(int fd, const char *str, size_t size)
 {
-	if (write(fd, str, size) < 0)
+	if (write(fd, str, size) <= 0)
 	{
 		state = WRITE_ERROR;
 		throw IOException();
@@ -290,8 +290,7 @@ HttpResponse &HttpResponse::operator=(const HttpRequest &req)
 	status.code = req.data[0]->error.code;
 	status.description = req.data[0]->error.description;
 	strMethod = req.data[0]->strMethode;
-	if (req.data.front()->headers.count("Connection") != 0
-		&& req.data.front()->headers["Connection"] == "Close")
+	if (req.data.front()->headers.count("Connection") != 0 && req.data.front()->headers["Connection"] == "Close")
 		keepAlive = 0;
 	if (req.data[0]->state == REQ_ERROR)
 	{
@@ -562,8 +561,7 @@ std::string HttpResponse::getContentType()
 		return ("Content-Type: text/plain\r\n");
 	if (bodyType == AUTO_INDEX)
 		return ("Content-Type: text/html\r\n");
-	return (
-		"Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
+	return ("Content-Type: " + ctx->getType(getExtension(fullPath)) + "\r\n");
 }
 
 std::string HttpResponse::getDate()
@@ -574,7 +572,7 @@ std::string HttpResponse::getDate()
 	std::stringstream ss;
 	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-	ss  << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
+	ss << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
 	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
 	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
 	   << (1900 + timeinfo->tm_year);
@@ -591,6 +589,13 @@ int HttpResponse::sendBody(enum responseBodyType type)
 		int size = read(responseFd, buff, readbuffer);
 		if (size < 0)
 			throw IOException("Read : ");
+		else if (size == 0)
+		{
+			std::cerr << readbuffer << "has been read\n";
+			state = END_BODY;
+			writeByte = 0;
+			return (1);
+		}
 		write2client(fd, buff, size);
 		this->sendSize += size;
 		if (this->sendSize >= fileSize)
@@ -668,11 +673,11 @@ void HttpResponse::deleteMethodeHandler()
 	this->state = END_BODY;
 }
 
-void	HttpResponse::redirectionHandler()
+void HttpResponse::redirectionHandler()
 {
 	status.code = 300 + location->getRedirection().status[2] - 48;
 	status.description = redirectionsStatus[location->getRedirection().status];
-	resHeaders["Location"] = location->getRedirection().url; 
+	resHeaders["Location"] = location->getRedirection().url;
 	writeResponse();
 	this->state = END_BODY;
 }
