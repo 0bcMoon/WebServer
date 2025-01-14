@@ -23,7 +23,6 @@ if ($cgi->param('theme')) {
     );
     print $cgi->header(
 		-cookie => $cookie
-		-status  => "$status_code $status_message",  # Set status code and message
 	);
     $current_theme = $cgi->param('theme');
 } else {

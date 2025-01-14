@@ -91,6 +91,9 @@ ServerContext *LoadConfig(const char *path)
 		tokenizer.CreateTokens();
 		ctx = new ServerContext();
 		tokenizer.parseConfig(ctx);
+
+
+
 		ctx->init();
 	}
 	catch (const Tokenizer::ParserException &e)
@@ -145,7 +148,7 @@ int main(int ac, char **argv)
 		event->Listen();
 		event->initIOmutltiplexing();
 		event->eventLoop();
-	} // TODO: add cgi expection
+	}
 	catch (const std::runtime_error &e)
 	{
 		std::cerr << "runtime_error -- " << e.what() << "\n";

@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 use CGI;
-use CGI::Carp qw(fatalsToBrowser);
 
 # Create new CGI object
 my $cgi = CGI->new;

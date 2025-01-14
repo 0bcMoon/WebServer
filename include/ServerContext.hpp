@@ -4,11 +4,10 @@
 #include "DataType.hpp"
 #include "VirtualServer.hpp"
 
-// TODO: validate server count should  > 0
 class ServerContext
 {
   private:
-	static const int CGITimeOut = 3;// 5 second //TODO: make it dynamique and set min value of 3 seconds
+	static const int CGITimeOut = 30;// 5 second //TODO: make it dynamique and set min value of 3 seconds
 	static const int ClientReadTime = 30;// 30 second
 	typedef std::map<std::string, std::string> Type;
 	int keepAliveTimeout;

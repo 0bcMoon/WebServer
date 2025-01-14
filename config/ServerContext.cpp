@@ -48,8 +48,6 @@ ServerContext::~ServerContext()
 	for (size_t i = 0; i < this->servers.size(); i++)
 		this->servers[i].deleteRoutes();
 }
-// TODO : check if value is was set  for duplicates
-//
 std::vector<VirtualServer> &ServerContext::getServers()
 {
 	return this->servers;
@@ -66,12 +64,9 @@ void ServerContext::pushServer(Tokens &token, Tokens &end)
 	else if (*token != "{")
 		throw Tokenizer::ParserException("Unexpact token: " + *token);
 	token++;
-
 	this->servers.push_back(VirtualServer()); // push empty VirtualServer to keep
 											  // the reference in http object in case of exception to cause memory leak
-
 	VirtualServer &server = this->servers.back(); // grants access to the last element
-
 	while (token != end && *token != "}")
 	{
 		if (*token == "location")
@@ -88,8 +83,6 @@ std::vector<VirtualServer> &ServerContext::getVirtualServers()
 {
 	return this->servers;
 }
-
-
 
 void ServerContext::addTypes(Tokens &token, Tokens &end)
 {
@@ -123,13 +116,13 @@ void ServerContext::init()
 {
 	if (this->servers.size() == 0)
 		throw Tokenizer::ParserException("No Virtual Server has been define");
+
 	for (size_t i = 0; i < this->servers.size(); i++)
 	{
-		this->servers[i].globalConfig = this->globalConfig;
+		this->servers[i].globalConfig.copy(this->globalConfig);
 		this->servers[i].init();
 	}
 }
-
 
 void ServerContext::setKeepAlive(Tokens &token, Tokens &end)
 {
@@ -149,12 +142,12 @@ int ServerContext::getCGITimeOut() const
 	return (this->CGITimeOut);
 }
 
-int ServerContext::getClientReadTime() const 
+int ServerContext::getClientReadTime() const
 {
 	return (this->ClientReadTime);
 }
 
-int	ServerContext::getKeepAliveTime() const
+int ServerContext::getKeepAliveTime() const
 {
 	return (this->keepAliveTimeout);
 }

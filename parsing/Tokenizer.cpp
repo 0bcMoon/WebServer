@@ -1,10 +1,11 @@
 #include "Tokenizer.hpp"
+#include <fstream>
+#include <iostream>
+#include <stack>
+#include <string>
 #include "DataType.hpp"
 #include "ServerContext.hpp"
 #include "VirtualServer.hpp"
-#include <fstream>
-#include <stack>
-#include <string>
 
 Tokenizer::Tokenizer()
 {
@@ -49,8 +50,6 @@ bool Tokenizer::IsSpace(char c) const
 	return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r');
 }
 
-
-
 std::string Tokenizer::getNextToken()
 {
 	static size_t offset;
@@ -77,13 +76,13 @@ void Tokenizer::CreateTokens()
 
 void Tokenizer::parseConfig(ServerContext *context)
 {
-	Tokens			token; // typedef of vector<string>::it;
-	Tokens			end;
+	Tokens token; // typedef of vector<string>::it;
+	Tokens end;
 
 	end = this->tokens->end();
 	if (this->tokens->size() == 0)
 		throw ParserException("Error: empty config");
-	for (token = this->tokens->begin(); token < end;)
+	for (token = this->tokens->begin(); token != end;)
 	{
 		if (*token == "server")
 			context->pushServer(token, end);
@@ -92,7 +91,7 @@ void Tokenizer::parseConfig(ServerContext *context)
 		else if (*token == "keepalive_timeout")
 			context->setKeepAlive(token, end);
 		else
-			context->parseTokens(token, end); // TODO;
+			context->parseTokens(token, end);
 	}
 }
 
@@ -101,13 +100,11 @@ Tokenizer::ParserException::ParserException(std::string msg)
 	message = msg;
 }
 
-
 Tokenizer::ParserException::ParserException() : message("") {}
 
 const char *Tokenizer::ParserException::what() const throw()
 {
 	return (message.c_str());
 }
-
 
 Tokenizer::ParserException::~ParserException() throw() {}

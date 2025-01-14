@@ -238,7 +238,7 @@ int Event::newConnection(int socketFd, Connections &connections)
 		EV_ADD | EV_ENABLE | EV_ONESHOT,
 		NOTE_SECONDS,
 		this->ctx->getKeepAliveTime(),
-		NULL); // disable write event to stop
+		NULL);
 	if (kevent(this->kqueueFd, ev_set, 3, NULL, 0, NULL) < 0)
 		return (close(newSocketFd), -1);
 	connections.addConnection(newSocketFd, socketFd);
@@ -355,9 +355,9 @@ void Event::WriteEvent(const struct kevent *ev)
 		client->response.clear();
 		delete client->request.data[0];
 		client->request.data.erase(client->request.data.begin());
-		// if (client->response.keepAlive)
-		// to close connection if keepAlive does set
-		if (client->request.data.size() == 0)
+		if (!client->response.keepAlive)
+			this->connections.closeConnection(client->getFd());
+		else if (client->request.data.size() == 0)
 		{
 			this->setWriteEvent(client, EV_DISABLE);
 			this->KeepAlive(client);
@@ -464,10 +464,6 @@ void Event::eventLoop()
 {
 	connections.init(this->ctx, this->kqueueFd);
 	int nev;
-	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
-	std::cout << "TODO: restructor error page in config\n";
-	std::cout << "TODO: unsuported cgi\n";
-	std::cout << "-------------------\n";
 	while (1)
 	{
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
@@ -481,6 +477,7 @@ void Event::eventLoop()
 				this->newConnection(ev->ident, connections);
 				continue;
 			}
+
 			try
 			{
 				if (ev->fflags & EV_ERROR)
@@ -500,16 +497,17 @@ void Event::eventLoop()
 			}
 			catch (HttpResponse::IOException &e)
 			{
-				std::cerr << e.what() << " :" << strerror(errno) << "\n";
+				std::cerr << e.what() << " Error\n";
 				this->connections.closeConnection(ev->ident);
 			}
 			catch (Event::EventExpection &e)
 			{
-				std::cout << e.what() << "\n";
+				std::cerr << e.what() << " Error\n";
 				this->connections.closeConnection(ev->ident);
 			}
-			catch (std::bad_alloc &e)
+			catch (std::exception &e)
 			{
+				std::cerr << e.what() << " Error\n";
 				this->connections.closeConnection(ev->ident);
 			}
 		}

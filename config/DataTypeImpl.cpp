@@ -39,10 +39,20 @@ GlobalConfig::GlobalConfig(const GlobalConfig &other)
 }
 GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 {
-	std::map<std::string, std::string>::const_iterator kv = other.errorPages.begin();
 	if (this == &other)
-		return *this;
-
+		return (*this);
+	this->root = other.root;
+	this->autoIndex = other.autoIndex;
+	this->upload_file_path = other.upload_file_path;
+	this->indexes = other.indexes;
+	this->IsAlias = other.IsAlias;
+	this->errorPages = other.errorPages;
+	return *this;
+}
+void GlobalConfig::copy(const GlobalConfig &other)
+{
+	if (this == &other)
+		return;
 	if (root.empty())
 	{
 		root = other.root;
@@ -52,10 +62,14 @@ GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 		upload_file_path = other.upload_file_path;
 	if (autoIndex == -1)
 		autoIndex = other.autoIndex;
+
+	std::map<std::string, std::string>::const_iterator kv = other.errorPages.begin();
 	for (; kv != other.errorPages.end(); kv++)
 	{
 		if (this->errorPages.find(kv->first) == this->errorPages.end())
-			this->errorPages.insert(*kv);
+		{
+			this->errorPages[kv->first] = kv->second;
+		}
 	}
 	for (size_t i = 0; i < other.indexes.size(); i++)
 	{
@@ -64,7 +78,6 @@ GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 		if (it == this->indexes.end())
 			this->indexes.push_back(other.indexes[i]);
 	}
-	return *this; // Return *this to allow chained assignments
 }
 GlobalConfig::~GlobalConfig() {}
 
@@ -190,7 +203,7 @@ std::vector<std::string> &GlobalConfig::getIndexes()
 	return (this->indexes);
 }
 
-const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
+const std::string &GlobalConfig::getErrorPage(const std::string &StatusCode)
 {
 	const static std::string empty = "";
 
