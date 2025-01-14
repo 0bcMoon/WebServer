@@ -466,6 +466,7 @@ void Event::eventLoop()
 	int nev;
 	std::cout << "TODO: The CGI should be run in the correct directory for relative path file access\n";
 	std::cout << "TODO: restructor error page in config\n";
+	std::cout << "TODO: unsuported cgi\n";
 	std::cout << "-------------------\n";
 	while (1)
 	{

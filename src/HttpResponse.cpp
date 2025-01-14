@@ -36,60 +36,6 @@ void		initStatus(std::map<std::string, std::string>& map)
 	map["304"] = "Not Modified";
 	map["307"] = "Temporary Redirect";
 	map["308"] = "Permanent Redirect";
-	map["100"] = "Continue";
-	map["101"] = "Switching Protocols";
-	map["102"] = "Processing";
-	map["103"] = "Early Hints";
-	map["200"] = "OK";
-	map["201"] = "Created";
-	map["202"] = "Accepted";
-	map["203"] = "Non-Authoritative Information";
-	map["204"] = "No Content";
-	map["205"] = "Reset Content";
-	map["206"] = "Partial Content";
-	map["207"] = "Multi-Status";
-	map["208"] = "Already Reported";
-	map["226"] = "IM Used";
-	map["400"] = "Bad Request";
-	map["401"] = "Unauthorized";
-	map["402"] = "Payment Required";
-	map["403"] = "Forbidden";
-	map["404"] = "Not Found";
-	map["405"] = "Method Not Allowed";
-	map["406"] = "Not Acceptable";
-	map["407"] = "Proxy Authentication Required";
-	map["408"] = "Request Timeout";
-	map["409"] = "Conflict";
-	map["410"] = "Gone";
-	map["411"] = "Length Required";
-	map["412"] = "Precondition Failed";
-	map["413"] = "Content Too Large";
-	map["414"] = "URI Too Long";
-	map["415"] = "Unsupported Media Type";
-	map["416"] = "Range Not Satisfiable";
-	map["417"] = "Expectation Failed";
-	map["418"] = "I'm a teapot";
-	map["421"] = "Misdirected Request";
-	map["422"] = "Unprocessable Content";
-	map["423"] = "Locked";
-	map["424"] = "Failed Dependency";
-	map["425"] = "Too Early";
-	map["426"] = "Upgrade Required";
-	map["428"] = "Precondition Required";
-	map["429"] = "Too Many Requests";
-	map["431"] = "Request Header Fields Too Large";
-	map["451"] = "Unavailable For Legal Reasons";
-	map["500"] = "Internal Server Error";
-	map["501"] = "Not Implemented";
-	map["502"] = "Bad Gateway";
-	map["503"] = "Service Unavailable";
-	map["504"] = "Gateway Timeout";
-	map["505"] = "HTTP Version Not Supported";
-	map["506"] = "Variant Also Negotiates";
-	map["507"] = "Insufficient Storage";
-	map["508"] = "Loop Detected";
-	map["510"] = "Not Extended";
-	map["511"] = "Network Authentication Required";
 }
 
 HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : ctx(ctx), request(request), fd(fd)
@@ -369,9 +315,7 @@ int HttpResponse::autoIndexCooking()
 		return (setHttpResError(500, "Internal Server Error"), 0);
 	struct dirent *_dir;
 	while ((_dir = readdir(dirStream)) != NULL)
-	{
 		dirContent.push_back(_dir->d_name);
-	}
 	if (path[path.size() - 1] != '/')
 		path += '/';
 	autoIndexBody =
@@ -391,8 +335,6 @@ int HttpResponse::autoIndexCooking()
 	autoIndexBody +=
 		"	</body>\n"
 		"</html>\n";
-	// if (path[path.size() - 1] != '/')
-	// 	path -= '/';
 	return (closedir(dirStream), 1);
 }
 
@@ -553,7 +495,7 @@ int HttpResponse::parseCgistatus()
 	ss >> this->status.code;
 	if (this->status.code > 599 || this->status.code < 100)
 		return (0);
-	this->status.description = ss.str().substr(3);
+	this->status.description = ss.str().substr(5);
 	return (1);
 }
 
@@ -618,7 +560,7 @@ void HttpResponse::writeCgiResponse()
 	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
 	{
 		write2client(this->fd, it->first.c_str(), it->first.size());
-		write2client(this->fd, ": ", 2);
+		write2client(this->fd, ": ", 1);
 		write2client(this->fd, it->second.c_str(), it->second.size());
 		write2client(fd, "\r\n", 2);
 	}
@@ -688,7 +630,26 @@ std::string HttpResponse::getContentType()
 
 std::string HttpResponse::getDate()
 { // TODO:date;
-	return ("");
+	time_t now = time(NULL);
+
+	// Convert to local time structure
+	struct tm *timeinfo = localtime(&now);
+
+	// Create string stream for formatting
+	std::stringstream ss;
+
+	// Create array of month names
+	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+	// Create array of day names
+	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+
+	// Format the date and time
+	ss  << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
+	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
+	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
+	   << (1900 + timeinfo->tm_year);
+	return ("date: " + std::string(ss.str()) + "\r\n");
 }
 
 int HttpResponse::sendBody(int _fd, enum responseBodyType type)
@@ -712,7 +673,7 @@ int HttpResponse::sendBody(int _fd, enum responseBodyType type)
 		write2client(this->fd, autoIndexBody.c_str(), autoIndexBody.size());
 		state = END_BODY;
 	}
-	return (/* state = END_BODY, */ 1);
+	return (1);
 }
 
 std::string HttpResponse::getContentLenght(enum responseBodyType type)

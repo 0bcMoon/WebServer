@@ -1,6 +1,7 @@
 #include "VirtualServer.hpp"
 #include <sys/socket.h>
 #include <cstddef>
+#include <iostream>
 #include <string>
 #include <vector>
 #include "Location.hpp"

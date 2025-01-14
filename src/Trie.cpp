@@ -1,17 +1,6 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Trie.cpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: hicham <hibenouk@1337.ma>                  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/29 16:45:56 by hicham            #+#    #+#             */
-/*   Updated: 2024/12/11 20:52:42 by hibenouk         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "Trie.hpp"
 #include <cstring>
+#include <iostream>
 #include "Tokenizer.hpp"
 
 Trie::TrieNode::TrieNode() : isEnd(false)
@@ -93,7 +82,7 @@ void Trie::init(const GlobalConfig &conf)
 {
 	for (size_t i = 0; i < this->locations.size(); i++)
 	{
-		this->locations[i]->globalConfig = conf;
+		this->locations[i]->globalConfig.copy(conf);
 		if (this->locations[i]->globalConfig.getRoot().empty())
 			throw Tokenizer::ParserException("Root in loaction must not be empty");
 	}

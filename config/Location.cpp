@@ -26,7 +26,7 @@ Location &Location::operator=(const Location &location)
 {
 	this->path = location.path;
 	this->redirect = location.redirect;
-	this->globalConfig = location.globalConfig;
+	this->globalConfig.copy(location.globalConfig);
 	this->isRedirection = location.isRedirection;
 	this->cgiMap = location.cgiMap;
 	this->methods = location.methods;

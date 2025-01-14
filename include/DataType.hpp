@@ -33,21 +33,21 @@ class Proc
 		int fout;
 		bool outToFile;
 		int		offset;
-
 		enum State state;
 };
 
 class GlobalConfig
 {
 	private:
-		std::map<std::string, std::string> errorPages;
 		std::string root;
 		int autoIndex;
 		std::string upload_file_path;
 		std::vector<std::string> indexes;
 		bool IsAlias;
+		std::map<std::string, std::string> errorPages;
 
 	public:
+
 		bool isValidStatusCode(std::string &str); // WARNING:t5arbi9
 		void setMethods(Tokens &token, Tokens &end);
 		void setAlias(Tokens &token, Tokens &end);
@@ -56,7 +56,6 @@ class GlobalConfig
 		std::string &consume(Tokens &token, Tokens &end);
 		GlobalConfig &operator=(const GlobalConfig &globalParam);
 
-		// INFO:
 		bool isMethodAllowed(int method) const;
 		std::string getRoot() const;
 		bool getAutoIndex() const;
@@ -77,8 +76,9 @@ class GlobalConfig
 		std::vector<std::string> &getIndexes();
 		void setIndexes(Tokens &token, Tokens &end);
 		void setErrorPages(Tokens &token, Tokens &end);
-		const std::string &getErrorPage(std::string &StatusCode);
+		const std::string &getErrorPage(const std::string &StatusCode);
 		bool getAliasOffset() const;
+		void copy(const GlobalConfig &other);
 };
 
 #endif

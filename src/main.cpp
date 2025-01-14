@@ -91,6 +91,9 @@ ServerContext *LoadConfig(const char *path)
 		tokenizer.CreateTokens();
 		ctx = new ServerContext();
 		tokenizer.parseConfig(ctx);
+
+
+
 		ctx->init();
 	}
 	catch (const Tokenizer::ParserException &e)
