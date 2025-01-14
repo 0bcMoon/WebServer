@@ -202,7 +202,7 @@ std::string HttpResponse::getContentLenght()
 
 void HttpResponse::write2client(int fd, const char *str, size_t size)
 {
-	if (write(fd, str, size) < 0)
+	if (write(fd, str, size) <= 0)
 	{
 		state = WRITE_ERROR;
 		throw IOException();
@@ -587,7 +587,7 @@ int HttpResponse::sendBody(enum responseBodyType type)
 		size_t readbuffer;
 		readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
 		int size = read(responseFd, buff, readbuffer);
-		if (size < 0)
+		if (size <= 0)
 			throw IOException("Read : ");
 		write2client(fd, buff, size);
 		this->sendSize += size;
