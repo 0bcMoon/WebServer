@@ -8,25 +8,12 @@
 #include "Event.hpp"
 #include "HttpResponse.hpp"
 #include "Tokenizer.hpp"
-#ifdef __cplusplus
-extern "C"
-#endif
-	const char *
-	__asan_default_options()
-{
-	return "detect_leaks=0";
-}
 
-#define MAX_EVENTS 128
+#include <cstring>
+#include <cerrno>
+
+#define MAX_EVENTS 256
 #define MAX_CONNECTIONS_QUEUE 256
-
-
-#include <cxxabi.h>
-#include <dlfcn.h>
-#include <execinfo.h>
-#include <iostream>
-#include <string>
-
 
 ServerContext *LoadConfig(const char *path)
 {
@@ -72,7 +59,7 @@ int main(int ac, char **argv)
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sigpipe_handler;
 	sigemptyset(&sa.sa_mask);
-	std::srand(std::time(NULL));
+	std::srand(time(NULL));
 	if (sigaction(SIGPIPE, &sa, NULL) == -1)
 	{
 		printf("Failed to set SIGPIPE handler: %s\n", strerror(errno));

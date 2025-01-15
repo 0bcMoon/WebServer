@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include "Event.hpp"
+#include <iomanip>
 #include "HttpRequest.hpp"
 #include "ServerContext.hpp"
 
@@ -717,8 +718,8 @@ void HttpResponse::responseCooking()
 std::string getRandomName()
 {
 	std::stringstream ss;
-	time_t now = std::time(0);
-	struct tm *tstruct = std::localtime(&now);
+	time_t now = time(0);
+	struct tm *tstruct = localtime(&now);
 
 	ss << "_" << tstruct->tm_year + 1900 << "_";
 	ss << tstruct->tm_mon << "_";

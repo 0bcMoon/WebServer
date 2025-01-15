@@ -39,7 +39,7 @@ enum reqState
 	DEBUG
 };
 
-enum chunkState
+enum ChunkState
 {
 	SIZE,
 	LINE,
@@ -66,7 +66,7 @@ typedef struct methodeStr
 	std::string tmpMethodeStr;
 	std::string eqMethodeStr;
 
-} methodeStr;
+} MethodeStr;
 
 enum reqBodyType
 {
@@ -76,10 +76,10 @@ enum reqBodyType
 	NON
 };
 
-struct bodyHandler
+struct BodyHandler
 {
-	bodyHandler();
-	~bodyHandler();
+	BodyHandler();
+	~BodyHandler();
 	int			openNewFile(std::string uploadPath);
 	int			writeBody();
 	int			writeChunkedBody();
@@ -124,7 +124,7 @@ typedef struct data_s {
 	httpError							error;
 	enum reqState						state;
 
-	bodyHandler							bodyHandler;
+	BodyHandler							bodyHandler;
 	
 } data_t;
 
@@ -133,21 +133,21 @@ class HttpRequest
   private:
 	enum multiPartState
 	{
-		_ERROR,
 		_NEW,
+		_ERROR,
 		BORDER,
 		MULTI_PART_HEADERS,
 		BODY_CRLF,
 		MULTI_PART_HEADERS_VAL,
 		STORING,
-		FINISHED
+		FINISHED,
 	};
 
 
 	enum multiPartState							bodyState;
 	struct kevent								*ev;
 	typedef std::map<std::string, std::string>	Headers;
-	chunkState									chunkState;
+	ChunkState									chunkState;
 	size_t										totalChunkSize;
 	size_t										chunkSize;
 	size_t										chunkIndex;
@@ -168,7 +168,7 @@ class HttpRequest
 
 	httpError									error;
 
-	methodeStr									methodeStr;
+	MethodeStr									methodeStr;
 	std::string									httpVersion;
 
 	bool										 isCGI();
