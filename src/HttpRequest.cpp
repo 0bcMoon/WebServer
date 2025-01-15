@@ -236,7 +236,6 @@ void HttpRequest::feed()
 
 void HttpRequest::setHttpReqError(int code, std::string str)
 {
-	// printStackTrace();
 	state = REQ_ERROR;
 	error.code = code;
 	error.description = str;

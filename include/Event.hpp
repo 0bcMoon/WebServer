@@ -9,7 +9,6 @@
 #include "VirtualServer.hpp"
 
 
-void printStackTrace();
 class Event
 {
 

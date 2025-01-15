@@ -47,7 +47,7 @@ HttpResponse::HttpResponse(int fd, ServerContext *ctx, HttpRequest *request) : c
 	isErrDef = 1;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Server: XXXXXXXX\r\n"; // TODO:name the server;
+		"Server: Lwla-Dorouf\r\n";
 	errorRes.contentLen = "Content-Length: 0\r\n";
 	errorRes.bodyHead =
 		"\r\n"
@@ -116,7 +116,7 @@ void HttpResponse::clear()
 	responseFd = -1;
 	errorRes.headers =
 		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Server: XXXXXXXX\r\n"; // TODO:name the server;
+		"Server: Lwla-Dorouf\r\n";
 	errorRes.contentLen = "Content-Length: 0\r\n";
 	errorRes.bodyHead =
 		"\r\n"
@@ -180,6 +180,7 @@ std::string HttpResponse::getAutoIndexStyle()
 		"margin-top: 50px;"
 		"font-size: 40px;"
 		"color: #888; }";
+
 	return (style);
 }
 
@@ -307,7 +308,6 @@ bool HttpResponse::isCgi()
 
 void HttpResponse::setHttpResError(int code, const std::string &str)
 {
-	printStackTrace();
 	state = ERROR;
 	status.code = code;
 	status.description = str;

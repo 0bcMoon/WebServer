@@ -94,7 +94,7 @@ void Event::init()
 	for (size_t i = 0; i < virtualServers.size(); i++)
 	{
 		SocketAddrSet_t &socketAddr = virtualServers[i].getAddress();
-		SocketAddrSet_t::iterator it = socketAddr.cbegin();
+		SocketAddrSet_t::iterator it = socketAddr.begin();
 		for (; it != socketAddr.end(); it++)
 		{
 			int socketFd;
@@ -572,7 +572,6 @@ void Event::KeepAlive(Client *client)
 
 Event::EventExpection::EventExpection(const std::string &msg) throw()
 {
-	// printStackTrace();
 	this->msg = msg;
 }
 

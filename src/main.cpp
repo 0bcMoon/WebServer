@@ -27,58 +27,6 @@ extern "C"
 #include <iostream>
 #include <string>
 
-std::string demangle(const char *mangled)
-{
-	if (!mangled)
-		return "";
-
-	int status;
-	char *demangled = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
-
-	if (status == 0 && demangled)
-	{
-		std::string result(demangled);
-		free(demangled);
-		return result;
-	}
-
-	return mangled ? mangled : "";
-}
-
-void printStackTrace()
-{
-	int skipFrames = 1;
-	void *callstack[128];
-	int frames = backtrace(callstack, 128);
-
-	std::cerr << "Stack Trace (" << frames - skipFrames << " frames):\n";
-
-	char **symbols = backtrace_symbols(callstack, frames);
-	if (!symbols)
-	{
-		std::cerr << "Failed to get stack trace symbols\n";
-		return;
-	}
-
-	for (int i = skipFrames; i < frames; ++i)
-	{
-		Dl_info info;
-		if (dladdr(callstack[i], &info))
-		{
-			std::string funcName = demangle(info.dli_sname);
-
-			std::cerr << "  #" << (i - skipFrames) << ": ";
-			if (!funcName.empty())
-				std::cerr << funcName << " ";
-			if (info.dli_fname)
-				std::cerr << "in " << info.dli_fname;
-			std::cerr << std::endl;
-		}
-		else
-			std::cerr << "  #" << (i - skipFrames) << ": " << symbols[i] << std::endl;
-	}
-	free(symbols);
-}
 
 ServerContext *LoadConfig(const char *path)
 {
