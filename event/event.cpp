@@ -352,10 +352,11 @@ void Event::WriteEvent(const struct kevent *ev)
 		client->handleResponseError();
 	if (client->response.state == END_BODY)
 	{
+		bool tmp = (!client->response.keepAlive || client->response.state == ERROR);
 		client->response.clear();
 		delete client->request.data[0];
 		client->request.data.erase(client->request.data.begin());
-		if (!client->response.keepAlive)
+		if (tmp)
 			this->connections.closeConnection(client->getFd());
 		else if (client->request.data.size() == 0)
 		{

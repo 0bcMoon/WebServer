@@ -306,14 +306,21 @@ std::string Proc::mktmpfileName()
 		int idx = (std::rand() % n);
 		rstr[i] = charset[idx];
 	}
-	return ("/tmp/" + rstr + ss.str());
+	return ("/tmp/test/" + rstr + ss.str());
 }
 
 int Proc::writeBody(const char *ptr, int size)
 {
+	static std::set<std::string> set;
 	if (this->output_fd == -1)
 	{
 		this->output = Proc::mktmpfileName();
+		if (set.find(this->output) != set.end())
+		{
+			std::cout << "Problem with file creation\n";
+			exit(1);
+		}
+		set.insert(this->output);
 		this->output_fd = open(this->output.data(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	}
 	if (this->output_fd < 0)
