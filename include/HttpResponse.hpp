@@ -8,7 +8,13 @@
 #include <cstddef>
 #include <string>
 
-#define BUFFER_SIZE 1000000
+
+#define red "\x1B[31m"
+#define _reset "\033[0m"
+#define blue "\x1B[34m"
+#define green "\x1B[32m"
+#define yellow "\x1B[33m"
+
 enum responseState 
 {
 	START,
@@ -16,16 +22,10 @@ enum responseState
 	ERROR,
 	CGI_EXECUTING,
 	WRITE_ERROR,
-	END_BODY
+	UPLOAD_FILES,
+	END_BODY,
+	START_CGI_RESPONSE
 };
-
-enum pathType
-{
-	_DIR,
-	INDEX,
-	DEF_INDEX
-};
-
 
 class HttpResponse
 {
@@ -51,36 +51,31 @@ class HttpResponse
 			std::string		bodyfoot;
 		};
 
-		enum cgiResponeState
-		{
-			HEADERS,
-			BODY,
-			PARSING_DONE
-		};
-		struct cgiRespone 
-		{
-			cgiResponeState	state;
-			size_t			bodyStartIndex;
-			std::string		cgiStatusLine;
-			std::vector<std::vector<char > > lines;// mok li kadiro
-		};
+		enum reqMethode									methode;
+		std::vector<char>								body;
+		httpError										status;	
+		bool											isCgiBool;
+		errorResponse									errorRes;
 
-		cgiRespone							cgiRes;
-		enum reqMethode						methode;
-		std::vector<char>					body; // seperate 
-		httpError							status;	
-		bool								isCgiBool;
-		errorResponse						errorRes;
+		std::string										fullPath;
+		static const int								fileReadingBuffer = 10240;
+		std::string										autoIndexBody;
+		ServerContext									*ctx;
+		HttpRequest										*request;
+		char											buff[BUFFER_SIZE];
+		std::string										errorPage;	
+		bool											isErrDef;	
+		std::map<std::string, std::string>				redirectionsStatus;	
 
-		std::string							fullPath;
-		static const int					fileReadingBuffer = 10240;
-		std::string							autoIndexBody;
-		ServerContext						*ctx;
-		HttpRequest							*request;
-		char								buff[BUFFER_SIZE]; // TODO: make me 
-		std::string							errorPage;	
-		bool								isErrDef;	
+		int												parseCgistatus();
+		void											redirectionHandler();
 	public:
+		struct upload_data {
+			size_t			 it;
+			size_t		     fileIt;
+			std::string		 fileName;
+			int				 __fd;
+		};
 		enum responseBodyType 
 		{
 			LOAD_FILE,	
@@ -88,17 +83,17 @@ class HttpResponse
 			AUTO_INDEX,
 			CGI
 		};
-		std::vector<char>					CGIOutput;
+		std::vector<char>								CGIOutput;
 
-		enum responseBodyType				bodyType;
-		size_t								writeByte;
-		size_t								eventByte;
-		int									responseFd;
-		void								write2client(int fd, const char *str, size_t size);
+		enum responseBodyType							bodyType;
+		size_t											writeByte;
+		size_t											eventByte;
+		int												responseFd;
 
-		size_t								fileSize;
-		size_t								sendSize;
-		int									fd;
+		size_t											fileSize;
+		size_t											sendSize;
+		int												fd;
+		std::string										cgiOutFile;
 
 		class IOException : public std::exception
 		{
@@ -111,12 +106,12 @@ class HttpResponse
 				virtual const char* what() const throw();
 		};
 
-		std::string getRandomName();
-		std::string							queryStr;
-		std::string											getCgiContentLenght();
-		int													parseCgiHaders(std::string str);
+		std::string											queryStr;
+		std::string											path_info;
+		std::string											server_name;
+		int													server_port;
+		std::string											bodyFileName;
 		std::string											strMethod;
-		std::vector<std::vector<char> >						responseBody;// INFO:cgi output
 		bool												keepAlive;
 		Location											*location;
 		enum responseState									state;
@@ -129,47 +124,41 @@ class HttpResponse
 		void			clear();
 		~HttpResponse();
 
-		void							responseCooking();
-		bool							isCgi();
-		void							cgiCooking();
+		int													parseCgiHaders(std::string str);
+		void												write2client(int fd, const char *str, size_t size);
+		void												logResponse() const;
+		void												responseCooking();
+		bool												isCgi();
 
-		int								getStatusCode() const;
-		std::string						getStatusDescr() const;
+		bool												isPathFounded();
+		bool												isMethodAllowed();
+		int													pathChecking();
+		void												setHttpResError(int code, const std::string &str);
 
-		bool							isPathFounded();
-		bool							isMethodAllowed();
-		int								pathChecking();
-		void							setHttpResError(int code, const std::string &str);
+		std::string											getErrorRes();
+		std::string											getContentLenght();
+		int													directoryHandler();
 
-		std::string						getErrorRes();
-		std::string						getContentLenght(); // TYPO
-		int								directoryHandler();
-		int								loadFile(const std::string& pathName);
-		int								loadFile(int _fd);//for cgi
+		void												writeResponse();
 
-		void							writeResponse();
+		std::string											getStatusLine();
+		std::string											getConnectionState();
+		std::string											getContentType();
+		std::string											getDate();
+		int													sendBody(enum responseBodyType type);
+		std::string											getContentLenght(enum responseBodyType type);
 
-		std::string						getStatusLine();
-		std::string						getConnectionState();
-		std::string						getContentType();
-		std::string						getDate();
-		int								sendBody(int _fd, enum responseBodyType type);
-		std::string						getContentLenght(enum responseBodyType type); // TYPO
+		int													autoIndexCooking();
+		static std::string									getExtension(const std::string &str);
 
-		int								autoIndexCooking();
-		std::string						getExtension(const std::string &str);
+		void												parseCgiOutput();
+		void												writeCgiResponse();
 
-		std::vector<char>				getBody() const;
-
-
-		void							parseCgiOutput();
-		void							writeCgiResponse();
-
-		void							decodingUrl();
-		void							splitingQuery();
-		int								uploadFile();
+		int													uploadFile();
+		void												deleteMethodeHandler();
+		std::string											getAutoIndexStyle();
 };
 
-std::string			decimalToHex(int	decimal);
+int										isHex(char c);
 
 #endif

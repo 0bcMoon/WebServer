@@ -1,5 +1,7 @@
+#include <Tokenizer.hpp>
 #include <fcntl.h>
 #include <sys/event.h>
+#include <sys/fcntl.h>
 #include <sys/signal.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
@@ -7,28 +9,29 @@
 #include <cassert>
 #include <csignal>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 #include "DataType.hpp"
-#include <Tokenizer.hpp>
+#include <algorithm>
 
 GlobalConfig::GlobalConfig()
 {
 	this->autoIndex = -1;
 	this->errorPages["."] = "";
-	this->IsAlias = false; // INFO: this is art Do not touch unless you have a permit.
+	this->IsAlias = false;
 }
-
 
 GlobalConfig::GlobalConfig(int autoIndex, const std::string &upload_file_path)
 {
 	this->autoIndex = autoIndex;
 	this->upload_file_path = upload_file_path;
+	this->errorPages["."] = "";
+	this->IsAlias = false;
 }
 
 GlobalConfig::GlobalConfig(const GlobalConfig &other)
@@ -37,10 +40,20 @@ GlobalConfig::GlobalConfig(const GlobalConfig &other)
 }
 GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 {
-	std::map<std::string, std::string>::const_iterator kv = other.errorPages.begin();
 	if (this == &other)
-		return *this;
-
+		return (*this);
+	this->root = other.root;
+	this->autoIndex = other.autoIndex;
+	this->upload_file_path = other.upload_file_path;
+	this->indexes = other.indexes;
+	this->IsAlias = other.IsAlias;
+	this->errorPages = other.errorPages;
+	return *this;
+}
+void GlobalConfig::copy(const GlobalConfig &other)
+{
+	if (this == &other)
+		return;
 	if (root.empty())
 	{
 		root = other.root;
@@ -50,10 +63,14 @@ GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 		upload_file_path = other.upload_file_path;
 	if (autoIndex == -1)
 		autoIndex = other.autoIndex;
+
+	std::map<std::string, std::string>::const_iterator kv = other.errorPages.begin();
 	for (; kv != other.errorPages.end(); kv++)
 	{
 		if (this->errorPages.find(kv->first) == this->errorPages.end())
-			this->errorPages.insert(*kv);
+		{
+			this->errorPages[kv->first] = kv->second;
+		}
 	}
 	for (size_t i = 0; i < other.indexes.size(); i++)
 	{
@@ -62,7 +79,6 @@ GlobalConfig &GlobalConfig::operator=(const GlobalConfig &other)
 		if (it == this->indexes.end())
 			this->indexes.push_back(other.indexes[i]);
 	}
-	return *this; // Return *this to allow chained assignments
 }
 GlobalConfig::~GlobalConfig() {}
 
@@ -75,7 +91,7 @@ void GlobalConfig::setRoot(Tokens &token, Tokens &end)
 	validateOrFaild(token, end);
 	this->root = consume(token, end);
 	if (stat(this->root.c_str(), &buf) != 0)
-		throw Tokenizer::ParserException("Root directory does not exist");
+		throw Tokenizer::ParserException("Root directory does not exist: " + this->root);
 	if (S_ISDIR(buf.st_mode) == 0)
 		throw Tokenizer::ParserException("Root is not a directory");
 	CheckIfEnd(token, end);
@@ -183,14 +199,14 @@ void GlobalConfig::setErrorPages(Tokens &token, Tokens &end)
 	}
 }
 
-const std::vector<std::string> &GlobalConfig::getIndexes()
+std::vector<std::string> &GlobalConfig::getIndexes()
 {
 	return (this->indexes);
 }
 
-const std::string &GlobalConfig::getErrorPage(std::string &StatusCode)
+const std::string &GlobalConfig::getErrorPage(const std::string &StatusCode)
 {
-	const static std::string  empty = "";
+	const static std::string empty = "";
 
 	const std::map<std::string, std::string>::iterator &kv = this->errorPages.find(StatusCode);
 	if (kv == this->errorPages.end())
@@ -213,46 +229,95 @@ void GlobalConfig::setAlias(Tokens &token, Tokens &end)
 	this->IsAlias = true;
 	CheckIfEnd(token, end);
 }
-bool GlobalConfig::getAliasOffset() const 
+bool GlobalConfig::getAliasOffset() const
 {
 	return (this->IsAlias);
 }
 
-GlobalConfig::Proc::Proc()
+Proc::Proc() : buffer(CGI_BUFFER_SIZE + 3)
 {
-	this->fin = -1;
-	this->woffset = 0;
+	this->offset = 0;
+	this->output_fd = -1;
+	this->outToFile = false;
 	this->fout = -1;
 	this->pid = -1;
 	this->state = NONE;
 }
 
-GlobalConfig::Proc &GlobalConfig::Proc::operator=(Proc &other)
+Proc::Proc(const Proc &other)
 {
+	*this = other;
+}
+Proc &Proc::operator=(const Proc &other)
+{
+	if (this == &other)
+		return (*this);
 	this->pid = other.pid;
-	this->fin = other.fin;
 	this->fout = other.fout;
 	this->state = other.state;
+	this->client = other.client;
+	this->outToFile = other.outToFile;
+	this->offset = other.offset;
+	this->input = other.input;
+	this->output = other.output;
 	return (*this);
 }
 
-void GlobalConfig::Proc::die()
+void Proc::die()
 {
-	// assert(this->pid > 0 && "Major Error Need to be fix: with proc");
-
 	if (this->pid > 0)
 		::kill(this->pid, SIGKILL);
-	// this->pid = -1;
-	
+	this->pid = -1;
 }
 
-void GlobalConfig::Proc::clean()
+void Proc::clean()
 {
-	if (this->fin < 0 || this->fout < 0 )
-		return ;
-	close(this->fin);
-	close(this->fout);
+	if (this->fout >= 0)
+		close(this->fout);
+	if (this->output_fd >= 0)
+		close(this->output_fd);
 	this->fout = -1;
-	this->fin = -1;
+	this->output_fd = -1;
+	std::remove(this->input.data());
 }
 
+std::string Proc::mktmpfileName()
+{
+	std::stringstream ss;
+	time_t now = time(0);
+	struct tm *tstruct = localtime(&now);
+
+	ss << "_" << tstruct->tm_year + 1900 << "_";
+	ss << tstruct->tm_mon << "_";
+	ss << tstruct->tm_mday << "_";
+	ss << tstruct->tm_hour << "_";
+	ss << tstruct->tm_min << "_";
+	ss << tstruct->tm_sec;
+	std::string rstr(24, ' ');
+	const char charset[] = {
+
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+		'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
+		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+	int n = sizeof(charset) / sizeof(charset[0]);
+	for (int i = 0; i < 24; i++)
+	{
+		int idx = (std::rand() % n);
+		rstr[i] = charset[idx];
+	}
+	return ("/tmp/" + rstr + ss.str());
+}
+
+int Proc::writeBody(const char *ptr, int size)
+{
+	if (this->output_fd == -1)
+	{
+		this->output = Proc::mktmpfileName();
+		this->output_fd = open(this->output.data(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	}
+	if (this->output_fd < 0)
+		return (-1);
+	return (write(this->output_fd, ptr, size));
+}

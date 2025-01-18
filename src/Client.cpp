@@ -1,14 +1,15 @@
 #include "Client.hpp"
-#include <cstddef>
 #include <sys/event.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
+#include <cmath>
+#include <csignal>
+#include <cstddef>
 #include <iostream>
 #include <iterator>
 #include <string>
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
-#include "Log.hpp"
 #include "ServerContext.hpp"
 
 int Client::getFd() const
@@ -16,52 +17,58 @@ int Client::getFd() const
 	return (this->fd);
 }
 
-
-Client::Client(int fd, int serverFd, ServerContext *ctx) : fd(fd), serverFd(serverFd), ctx(ctx), request(fd), response(fd, ctx, &request)
+Client::Client(int fd, int serverFd, ServerContext *ctx)
+	: fd(fd), serverFd(serverFd), request(fd), response(fd, ctx, &request)
 {
-	state = None;
-	this->timerType = NEW_CONNECTION;
+	this->writeEventState = 0;
+	this->cgi_pid = -1;
 }
 
-void Client::respond(size_t data)
+void Client::respond(size_t data, size_t index)
 {
 	response.eventByte = data;
-	if (request.state != REQUEST_FINISH && request.state != REQ_ERROR)
-		return ;
-
+	if (request.data[index]->state != REQUEST_FINISH && request.data[index]->state != REQ_ERROR)
+		return;
 	response = request;
-	std::map<std::string, std::string>::iterator kv = response.headers.find("Connection");
-
-	if ((kv != response.headers.end()
-		&& (kv->second.find("close") != std::string::npos
-			|| kv->second.find("Close") != std::string::npos))
-		|| request.state == REQ_ERROR)
-		response.keepAlive = 0;
-	if (request.state == REQUEST_FINISH)
+	if (request.data[index]->state == REQUEST_FINISH)
 		response.responseCooking();
-	if (response.state == CGI_EXECUTING)
+	if (response.state == START_CGI_RESPONSE)
 	{
 		response.bodyType = HttpResponse::CGI;
 		response.writeCgiResponse();
+		response.logResponse();
+		return;
 	}
-	if (response.isCgi() && response.state != END_BODY
-		&& response.state != ERROR) 
+	if (response.state != ERROR && response.isCgi() && response.state != UPLOAD_FILES && response.state != END_BODY)
 		response.state = CGI_EXECUTING;
+<<<<<<< HEAD
 	if (response.state == ERROR)
 	{
 		// std::cerr << "response with error\n";
 		response.write2client(fd, response.getErrorRes().c_str(), response.getErrorRes().size());
 	}
+=======
+}
+
+void Client::handleResponseError()
+{
+	std::string ErrorRes = response.getErrorRes();
+	response.write2client(fd, ErrorRes.c_str(), ErrorRes.size());
+	if (response.state != WRITE_BODY)
+		response.state = END_BODY;
+>>>>>>> cMoon
 }
 
 const std::string &Client::getHost() const
 {
-	return (this->request.getHost()); 
+	return (this->request.getHost());
 }
 
 const std::string &Client::getPath() const
 {
-	return (this->request.getPath());
+	if (this->request.state == BODY)
+		return (this->request.data.back()->path);
+	return (this->request.data.front()->path);
 }
 
 int Client::getServerFd() const
@@ -69,14 +76,8 @@ int Client::getServerFd() const
 	return (this->serverFd);
 }
 
-
-Client::TimerType Client::getTimerType() const 
-{
-	return (this->timerType);
-}
-
 Client::~Client()
 {
-	this->proc.die(); // make process clean it own shit \n
-	this->proc.clean();
+	if (this->cgi_pid > 0)
+		::kill(this->cgi_pid, SIGKILL);
 }

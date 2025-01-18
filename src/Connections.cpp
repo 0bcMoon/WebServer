@@ -1,57 +1,80 @@
 #include "Connections.hpp"
 #include <sys/event.h>
 #include <unistd.h>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include "Client.hpp"
 
-
-Connections::Connections(ServerContext *ctx, int kqueueFd) : ctx(ctx), kqueueFd(kqueueFd)
-{
-}
+Connections::Connections(ServerContext *ctx, int kqueueFd) : ctx(ctx), kqueueFd(kqueueFd) {}
 
 Connections::~Connections()
 {
-	for (ClientsIter it = clients.begin(); it != clients.end(); ++it) {
+	for (ClientsIter it = clients.begin(); it != clients.end(); ++it)
+	{
 		delete it->second;
 	}
 }
 
-void	Connections::closeConnection(int	fd)
+void Connections::closeConnection(int fd)
 {
-	// std::cout << "client disconnect\n";
+	time_t now = time(NULL);
+	struct tm *timeinfo = localtime(&now);
+
+	std::stringstream ss;
+	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+	ss << "[" << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
+	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
+	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
+	   << (1900 + timeinfo->tm_year) << "]";
+	std::cout << green;
+	std::cout << ss.str() << " ";
+	std::cout << "client disconnect\n";
+	std::cout << _reset;
 	close(fd); // after close file fd all event will be clear
 	delete clients[fd];
 	clients.erase(fd);
 }
 
-
-void	Connections::addConnection(int	fd, int server)
+void Connections::addConnection(int fd, int server)
 {
-	// std::cout << "new Connections\n";
-	this->clients[fd] = new Client(fd, server, ctx);
+	time_t now = time(NULL);
+	struct tm *timeinfo = localtime(&now);
+
+	std::stringstream ss;
+	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+	ss << "[" << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
+	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
+	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
+	   << (1900 + timeinfo->tm_year) << "]";
+	std::cout << green;
+	std::cout << ss.str() << " ";
+	std::cout << "new client connect\n";
+	std::cout << _reset;
+	this->clients[fd] = new Client(fd, server, this->ctx);
 }
 
-
-// TODO: return client object : search once
-Client		*Connections::requestHandler(int	fd, int data)
+Client *Connections::requestHandler(int fd, int data)
 {
 	ClientsIter clientIter = this->clients.find(fd);
-	if ( clientIter == this->clients.end()) // TODO : fix
+	if (clientIter == this->clients.end())
 		return (NULL);
-
 	clientIter->second->request.readRequest(data);
-	clientIter->second->request.feed();
 	return (clientIter->second);
 }
 
-void		Connections::init(ServerContext *ctx, int kqueueFd)
+void Connections::init(ServerContext *ctx, int kqueueFd)
 {
 	this->ctx = ctx;
 	this->kqueueFd = kqueueFd;
 }
 
-Client		*Connections::getClient(int fd)
+Client *Connections::getClient(int fd)
 {
 	std::map<int, Client *>::iterator kv = this->clients.find(fd);
 	if (kv == this->clients.end())

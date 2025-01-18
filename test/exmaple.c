@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/event.h>
+#include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -124,12 +125,6 @@ int main()
 				}
 				printf("Accepted new connection\n");
 			}
-			else if (ev_list[i].filter == EVFILT_TIMER)
-			{
-				printf("hi\n");
-				printf("%ld\n", ev_list[i].data);
-				continue;
-			}
 			else if (ev_list[i].filter == EVFILT_READ)
 			{
 				// Data available to read from a client socket
@@ -145,8 +140,7 @@ int main()
 				}
 				else
 				{
-					buffer[n] = '\0'; // Null-terminate the string
-					printf("Received message: %s\n", buffer);
+					write(ev_list[i].ident, buffer, sizeof(buffer) - 1);
 				}
 			}
 		}

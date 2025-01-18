@@ -14,8 +14,8 @@ class VirtualServer
   public:
 	struct SocketAddr
 	{
-		int		port;
-		int		host; // wich interface bind to (require ip address )
+		std::string		port;
+		std::string		host; // wich interface bind to (require ip address )
 		bool operator<(const SocketAddr &rhs) const // code from the great chatGpt
 		{
 			if (host != rhs.host)
@@ -26,7 +26,6 @@ class VirtualServer
 		{
 			return host == rhs.host && port == rhs.port;
 		}
-		SocketAddr(int port, int host);
 		SocketAddr();
 	};
 
@@ -43,7 +42,7 @@ class VirtualServer
 	VirtualServer();
 	void setListen(Tokens &Token, Tokens &end);
 	std::set<SocketAddr> &getAddress();
-		std::set<std::string> &getServerNames();
+	const std::set<std::string> &getServerNames();
 	bool isListen(const SocketAddr &addr) const;
 	void setServerNames(Tokens &Token, Tokens &end);
 	void pushLocation(Tokens &tokens, Tokens &end);

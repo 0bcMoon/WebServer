@@ -1,18 +1,20 @@
-
 #include "CGIProcess.hpp"
+#include <sys/fcntl.h>
 #include <sys/unistd.h>
 #include <unistd.h>
 #include <cerrno>
+#include <cstdlib>
 #include <cstring>
-#include <sstream>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include "DataType.hpp"
 #include "Event.hpp"
 
 bool CGIProcess::IsFileExist()
 {
-	size_t offset =
-		response->location->globalConfig.getAliasOffset() ? response->location->getPath().size() : 0; // offset for alais
+	size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size()
+																	  : 0; // offset for alais
 	std::string scriptPath = response->location->globalConfig.getRoot() + response->path.substr(offset);
 
 	if (access(scriptPath.c_str(), F_OK) == -1)
@@ -30,15 +32,18 @@ void CGIProcess::closePipe(int fd[2])
 
 int CGIProcess::redirectPipe()
 {
-	close(this->pipeIn[1]);
 	close(this->pipeOut[0]);
-
-	if (dup2(this->pipeOut[1], STDOUT_FILENO) < 0)
-		return (-1);
-	if (dup2(this->pipeIn[0], STDIN_FILENO) < 0)
-		return (-1);
+	if (dup2(pipeOut[1], STDOUT_FILENO) < 0)
+		return (exit(13), -1);
 	close(this->pipeOut[1]);
-	close(this->pipeIn[0]);
+	if (this->response->strMethod != "POST")
+		return (0);
+	int body_fd = open(this->response->bodyFileName.data(), O_RDONLY);
+	if (body_fd < 0)
+		return (-1);
+	if (dup2(body_fd, STDIN_FILENO) < 0)
+		return (close(body_fd), -1);
+	close(body_fd);
 	return (0);
 }
 
@@ -65,27 +70,24 @@ void CGIProcess::loadEnv()
 	std::map<std::string, std::string>::iterator it = response->headers.begin();
 	for (int i = 0; it != response->headers.end(); it++, i++)
 		this->env.push_back(ToEnv(it));
-	ss << response->location->getPort();
-	env["SERVER_SOFTWARE"] = "macOS";
+	ss << response->server_port;
+	env["SERVER_SOFTWARE"] = "42webserv";
+	env["REDIRECT_STATUS"] = ""; // make php a happy cgi
 	env["GATEWAY_INTERFACE"] = "CGI/1.1";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
-	env["SERVER_PORT"] = ss.str();
-	env["SERVER_NAME"] = response->location->getHost();
+	env["SERVER_PORT"] = ss.str(); // need
+	env["SERVER_NAME"] = response->server_name;
 	env["REQUEST_METHOD"] = response->strMethod;
 	env["SCRIPT_NAME"] = response->path;
 	env["QUERY_STRING"] = response->queryStr;
-	env["REMOTE_ADDR"] = ""; // TODO:
-	env["PATH_INFO"] = "/cgi";
+	env["PATH_INFO"] = response->path_info;
 	env["HTTP_HOST"] = response->headers["Host"];
-	env["CONTENT_TYPE"] = response->headers["Content-type"];
+	env["CONTENT_TYPE"] = response->headers["Content-Type"];
+	env["SCRIPT_FILENAME"] = this->cgi_file;
 	if (response->strMethod == "POST")
-	{
-		ss.clear();
-		ss << response->getBody().size();
-		env["CONTENT_LENGTH"] = ss.str();
-	}
+		env["CONTENT_LENGTH"] = response->headers["Content-Length"];
 	else
-		env["CONTENT_LENGTH"] = "0"; // -1 ??
+		env["CONTENT_LENGTH"] = "0";
 
 	it = env.begin();
 	for (int i = 0; it != env.end(); it++, i++)
@@ -94,55 +96,79 @@ void CGIProcess::loadEnv()
 
 void CGIProcess::child_process()
 {
-	size_t offset =
-		response->location->globalConfig.getAliasOffset() ? response->location->getPath().size() : 0; // offset for alais
-	this->cgi_bin = response->location->globalConfig.getRoot() + response->path.substr(offset);
-
-	this->loadEnv();
-	
-	std::string path = response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique
-	const char *args[3] = {path.data(), cgi_bin.data(), NULL};
-	char **argv = new char *[env.size() + 1];
-	size_t i = 0;
-	for (; i < env.size(); i++)
-		argv[i] = (char *)this->env[i].data();
-	argv[i] = NULL;
-	if (redirectPipe())
+	try
 	{
-		closePipe(this->pipeOut);
-		closePipe(this->pipeIn);
-		throw std::runtime_error("child could not be run: " + std::string(strerror(errno))); 
+		size_t offset = response->location->globalConfig.getAliasOffset() ? response->location->getPath().size()
+																		  : 0; // offset for alais
+		this->cgi_file = response->location->globalConfig.getRoot() + response->path.substr(offset);
+
+		this->cgi_bin =
+			response->location->getCGIPath("." + response->getExtension(response->path)); // INFO: make this dynamique
+																						  //
+		if (this->chdir())
+			throw CGIProcess::ChildException();
+		this->loadEnv();
+		const char *args[3] = {this->cgi_bin.data(), cgi_file.data(), NULL};
+		char **envp = new char *[env.size() + 1];
+		size_t i = 0;
+		for (; i < env.size(); i++)
+			envp[i] = (char *)this->env[i].data();
+		envp[i] = NULL;
+		if (this->redirectPipe())
+		{
+			closePipe(this->pipeOut);
+			throw CGIProcess::ChildException();
+		}
+		execve(*args, (char *const *)args, envp);
 	}
-	execve(*args, (char *const *)args, argv);
-	throw std::runtime_error("child process faild: execve: " + std::string(strerror(errno)));
+	catch (std::exception &e)
+	{
+		throw CGIProcess::ChildException();
+	}
+	throw CGIProcess::ChildException();
 }
 
-GlobalConfig::Proc CGIProcess::RunCGIScript(HttpResponse &response)
+Proc CGIProcess::RunCGIScript(HttpResponse &response)
 {
-	GlobalConfig::Proc proc;
+	Proc proc;
 
 	this->response = &response;
 	if (this->IsFileExist())
 		return (proc);
-	if (pipe(this->pipeIn) < 0)
-		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	else if (pipe(this->pipeOut) < 0)
-		return (closePipe(this->pipeIn), this->response->setHttpResError(500, "Internal Server Error"), proc);
-
+		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	proc.pid = fork();
 	if (proc.pid < 0)
 	{
+<<<<<<< HEAD
 		std::cout << "fork faild: " << strerror(errno) << "\n";
 		closePipe(this->pipeIn);
+=======
+>>>>>>> cMoon
 		closePipe(this->pipeOut);
 		return (this->response->setHttpResError(500, "Internal Server Error"), proc);
 	}
 	else if (proc.pid == 0)
 		this->child_process();
-	close(this->pipeIn[0]);
 	close(this->pipeOut[1]);
 	proc.fout = this->pipeOut[0];
-	proc.fin = this->pipeIn[1];
 	return (proc);
 }
+int CGIProcess::chdir()
+{
+	size_t pos = this->cgi_file.rfind('/');
+	if (pos == std::string::npos)
+		return (-1);
+	std::string dir = this->cgi_file.substr(0, pos);
+	if (::chdir(dir.data()) < 0)
+		return (-1);
+	this->cgi_file = this->cgi_file.substr(pos + 1);
+	return (0);
+}
 
+CGIProcess::ChildException::ChildException() throw() {}
+
+const char *CGIProcess::ChildException::what() const throw()
+{
+	return "child";
+}

@@ -10,9 +10,13 @@ CC = c++
 
 INCD = $(shell find . -name "*.hpp" | grep -v "test")
 
-INC = include/
+INC = include/ 
 
+<<<<<<< HEAD
 CFLAGS = -std=c++98 -Wall -Wextra -fsanitize=address -g -ggdb3
+=======
+CFLAGS = -std=c++98 -Wall -Wextra -Werror -O3 -Ofast
+>>>>>>> cMoon
 
 
 NAME = webserv

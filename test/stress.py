@@ -5,7 +5,11 @@ import concurrent.futures
 import time
 
 # Configuration
+<<<<<<< HEAD
 url = "http://localhost:8080/index.html"
+=======
+url = "http://localhost:3000"
+>>>>>>> cMoon
 num_requests = 10000                      # Total number of requests to send
 # num_requests = 100                      # Total number of requests to send
 concurrent_workers = 128                  # Number of threads to use
@@ -13,8 +17,8 @@ concurrent_workers = 128                  # Number of threads to use
 def send_request():
     try:
         response = requests.get(url)
-        if (response.status_code > 300):
-            print(response.status_code)
+        # if (response.status_code > 300):
+        #     print(response.status_code)
         return response.status_code
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")

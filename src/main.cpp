@@ -2,35 +2,24 @@
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <stdexcept>
-#include "Debug.hpp"
+#include "CGIProcess.hpp"
 #include "Event.hpp"
 #include "HttpResponse.hpp"
-#include "Log.hpp"
 #include "Tokenizer.hpp"
-#ifdef __cplusplus
-extern "C"
-#endif
-	const char *
-	__asan_default_options()
-{
-	return "detect_leaks=0";
-}
 
-#define MAX_EVENTS 128
+#include <cstring>
+#include <cerrno>
+
+#define MAX_EVENTS 256
 #define MAX_CONNECTIONS_QUEUE 256
-
-void atexist()
-{
-	system("openport"); // there is no leaks
-	sleep(1);
-}
+#define CONF_FILE "webserv.conf"
 
 ServerContext *LoadConfig(const char *path)
 {
 	ServerContext *ctx = NULL;
-
 	try
 	{
 		Tokenizer tokenizer;
@@ -39,68 +28,48 @@ ServerContext *LoadConfig(const char *path)
 		ctx = new ServerContext();
 		tokenizer.parseConfig(ctx);
 		ctx->init();
-		Log::init();
 	}
-	catch (const Tokenizer::ParserException &e)
+	catch (std::exception &e)
 	{
-		std::cout << e.what() << std::endl;
-		delete ctx;
-		return (NULL);
-	}
-	catch (const std::bad_alloc &e)
-	{
-		std::cout << e.what() << std::endl;
+		std::cerr << e.what() << std::endl;
 		delete ctx;
 		return (NULL);
 	}
 	return (ctx);
 }
 
-void sigpipe_handler(int signum)
-{
-	(void)signum;
-	printf("Caught SIGPIPE. Ignoring.\n");
-}
 
-/*
- * TODO: 
- */
-int main()
+int main(int ac, char **argv)
 {
-	Event *event = NULL;
 	ServerContext *ctx = NULL;
-	struct sigaction sa;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = sigpipe_handler;
-	sigemptyset(&sa.sa_mask);
-	std::srand(std::time(NULL));
-	if (sigaction(SIGPIPE, &sa, NULL) == -1)
+	if (ac > 2)
 	{
-		printf("Failed to set SIGPIPE handler: %s\n", strerror(errno));
-		return 1;
+		std::cerr << "invalid number of argument \n";
+		return (1);
 	}
-	ctx = LoadConfig("config/nginx.conf");
+	else if (ac == 2)
+		ctx = LoadConfig(argv[1]);
+	else
+		ctx = LoadConfig(CONF_FILE);
 	if (!ctx)
 		return 1;
 	try
 	{
-		event = new Event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE, ctx);
-		event->init();
-		event->Listen();
-		event->initIOmutltiplexing();
-		event->eventLoop();
+		Event event(MAX_EVENTS, MAX_CONNECTIONS_QUEUE, ctx);
+		event.init();
+		event.Listen();
+		event.initIOmutltiplexing();
+		event.eventLoop();
 	}
-	catch (const std::runtime_error &e)
+	catch (const CGIProcess::ChildException &e)
 	{
-		std::cerr << e.what() << "\n";
+		delete ctx;
+		return (1);
 	}
-	catch (const std::bad_alloc &e)
+	catch (std::exception &e)
 	{
 		std::cerr << e.what() << "\n";
 	}
 
-	
-	delete event;
 	delete ctx;
-	Log::close();
 }
