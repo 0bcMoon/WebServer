@@ -34,7 +34,7 @@ void Connections::closeConnection(int fd)
 	std::cout << ss.str() << " ";
 	std::cout << "client disconnect\n";
 	std::cout << _reset;
-	close(fd); // after close file fd all event will be clear
+	close(fd); // after close  fd all event will be clear
 	delete clients[fd];
 	clients.erase(fd);
 }

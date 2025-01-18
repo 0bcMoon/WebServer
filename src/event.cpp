@@ -9,16 +9,13 @@
 #include <unistd.h>
 #include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <cerrno>
-#include <csignal>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <new>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -514,6 +511,11 @@ void Event::eventLoop()
 					this->PorcTimerEvent(ev);
 				else if (ev->filter == EVFILT_TIMER)
 					this->connections.closeConnection(ev->ident);
+			}
+			catch (const CGIProcess::ChildException &e)
+			{
+				serverError(e.what());
+				throw CGIProcess::ChildException();
 			}
 			catch (std::exception &e)
 			{

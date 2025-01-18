@@ -9,6 +9,7 @@
 #include <sys/unistd.h>
 #include <unistd.h>
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cerrno>
 #include <cstddef>
@@ -141,6 +142,7 @@ HttpResponse::~HttpResponse()
 {
 	if (responseFd >= 0)
 		close(responseFd);
+	remove(this->cgiOutFile.data());
 }
 
 std::string HttpResponse::getAutoIndexStyle()

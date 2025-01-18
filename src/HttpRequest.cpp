@@ -19,26 +19,6 @@
 #include "DataType.hpp"
 #include "HttpResponse.hpp"
 
-// ERROR: tmp for some tests
-void storeRequestData(std::vector<char> &vec, reqState state, size_t size)
-{
-	static int fd = -1;
-
-	if (state == NEW || fd == -1)
-	{
-		if (fd != -1)
-			close(fd);
-		fd = open("/tmp/socket_data.log", O_CREAT | O_TRUNC | O_RDWR, 0777);
-		if (fd == -1)
-		{
-			std::cout << "DEBUG: cannot open the socket logfile" << std::endl;
-			return;
-		}
-	}
-	if (write(fd, vec.data(), size) < 0)
-		std::cout << "DEBUG: cannot write in socket logfile" << std::endl;
-	std::cout << "DEBUG: the socket log is done" << std::endl;
-}
 
 HttpRequest::HttpRequest() : fd(-1)
 {
