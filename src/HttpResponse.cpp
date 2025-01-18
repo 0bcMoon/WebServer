@@ -514,7 +514,7 @@ void HttpResponse::writeResponse()
 	write2client(this->fd, getContentType().c_str(), getContentType().size());
 	write2client(this->fd, getContentLenght(bodyType).c_str(), getContentLenght(bodyType).size());
 	write2client(fd, getDate().c_str(), getDate().size());
-	write2client(fd, "Server: YOUR DADDY\r\n", strlen("Server: YOUR DADDY\r\n"));
+	write2client(fd, "Server: Lwla-Dorouf\r\n", strlen("Server: Lwla-Dorouf\r\n"));
 	for (map_it it = resHeaders.begin(); it != resHeaders.end(); it++)
 	{
 		write2client(this->fd, it->first.c_str(), it->first.size());
@@ -715,31 +715,3 @@ void HttpResponse::responseCooking()
 	}
 }
 
-std::string getRandomName()
-{
-	std::stringstream ss;
-	time_t now = time(0);
-	struct tm *tstruct = localtime(&now);
-
-	ss << "_" << tstruct->tm_year + 1900 << "_";
-	ss << tstruct->tm_mon << "_";
-	ss << tstruct->tm_mday << "_";
-	ss << tstruct->tm_hour << "_";
-	ss << tstruct->tm_min << "_";
-	ss << tstruct->tm_sec;
-	std::string rstr(24, ' ');
-	const char charset[] = {
-
-		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
-		'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-
-		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
-		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
-	int n = sizeof(charset) / sizeof(charset[0]);
-	for (int i = 0; i < 24; i++)
-	{
-		int idx = (std::rand() % n);
-		rstr[i] = charset[idx];
-	}
-	return (rstr + ss.str());
-}

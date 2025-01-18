@@ -7,8 +7,8 @@
 class ServerContext
 {
   private:
-	static const int CGITimeOut = 30;// 5 second //TODO: make it dynamique and set min value of 3 seconds
-	static const int ClientReadTime = 30;// 30 second
+	int CGITimeOut;
+	int ClientReadTime;
 	typedef std::map<std::string, std::string> Type;
 	int keepAliveTimeout;
 	GlobalConfig globalConfig;
@@ -30,6 +30,7 @@ class ServerContext
 
 	const std::string &getType(const std::string &ext);
 	void setKeepAlive(Tokens &token, Tokens &end);
+	void setCGITimeout(Tokens &token, Tokens &end);
 	int	getKeepAliveTime() const;
 	int getCGITimeOut() const;
 	int getClientReadTime() const ;

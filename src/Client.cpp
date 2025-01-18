@@ -22,8 +22,6 @@ Client::Client(int fd, int serverFd, ServerContext *ctx)
 {
 	this->writeEventState = 0;
 	this->cgi_pid = -1;
-	state = None;
-	this->timerType = NEW_CONNECTION;
 }
 
 void Client::respond(size_t data, size_t index)
@@ -68,11 +66,6 @@ const std::string &Client::getPath() const
 int Client::getServerFd() const
 {
 	return (this->serverFd);
-}
-
-Client::TimerType Client::getTimerType() const
-{
-	return (this->timerType);
 }
 
 Client::~Client()

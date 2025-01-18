@@ -41,6 +41,7 @@ ServerContext::ServerContext() : globalConfig(0, "/tmp")
 	for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); i++)
 		this->types[ext[i]] = types[i];
 	this->keepAliveTimeout = 75; // second
+	this->CGITimeOut = 75;
 }
 
 ServerContext::~ServerContext()
@@ -134,6 +135,19 @@ void ServerContext::setKeepAlive(Tokens &token, Tokens &end)
 	ss >> this->keepAliveTimeout;
 	if (ss.fail() || !ss.eof() || this->keepAliveTimeout < 3)
 		throw Tokenizer::ParserException("invalid keepAlive value " + time);
+	this->globalConfig.CheckIfEnd(token, end);
+}
+
+void ServerContext::setCGITimeout(Tokens &token, Tokens &end)
+{
+	this->globalConfig.validateOrFaild(token, end);
+	std::string time = this->globalConfig.consume(token, end);
+
+	std::stringstream ss;
+	ss << time;
+	ss >> this->CGITimeOut;
+	if (ss.fail() || !ss.eof() || this->CGITimeOut < 3)
+		throw Tokenizer::ParserException("invalid CGITimeOut value " + time);
 	this->globalConfig.CheckIfEnd(token, end);
 }
 

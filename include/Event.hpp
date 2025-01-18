@@ -26,7 +26,6 @@ class Event
 		typedef std::set<VirtualServer::SocketAddr> SocketAddrSet_t;
 		typedef std::map<int, Proc> ProcMap_t;
 
-		// typedef std::map<int, > SockAddr_in;
 		VirtualServerMap_t virtuaServers;
 		SocketMap_t socketMap;
 		ProcMap_t procs;
@@ -38,7 +37,7 @@ class Event
 		int numOfSocket;
 
 		int CreateSocket(SocketAddrSet_t::iterator &address);
-		int setNonBlockingIO(int serverFd);
+		int setNonBlockingIO(int serverFd, bool sockserver);
 		bool Listen(int serverFd);
 		void insertServerNameMap(ServerNameMap_t &serverNameMap, VirtualServer *server, int socketFd);
 		void InsertDefaultServer(VirtualServer *server, int socketFd);
@@ -47,7 +46,6 @@ class Event
 		bool checkNewClient(int socketFd);
 		void setWriteEvent(Client *client, uint16_t flags);
 		Location *getLocation(Client *client);
-		bool IsFileExist(HttpResponse &response);
 		Proc RunCGIScript(HttpResponse &response);
 
 		void ReadEvent(const struct kevent *ev);

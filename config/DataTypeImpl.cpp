@@ -91,7 +91,7 @@ void GlobalConfig::setRoot(Tokens &token, Tokens &end)
 	validateOrFaild(token, end);
 	this->root = consume(token, end);
 	if (stat(this->root.c_str(), &buf) != 0)
-		throw Tokenizer::ParserException("Root directory does not exist");
+		throw Tokenizer::ParserException("Root directory does not exist: " + this->root);
 	if (S_ISDIR(buf.st_mode) == 0)
 		throw Tokenizer::ParserException("Root is not a directory");
 	CheckIfEnd(token, end);

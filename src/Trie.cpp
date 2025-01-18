@@ -68,7 +68,7 @@ Location *Trie::findPath(const std::string &route)
 	{
 		idx = route[i];
 		if (idx < 0 || idx > 128)
-			return location; // TODO this this work
+			return location;
 		if (currNode->children[idx] == NULL)
 			break;
 		if (currNode->children[idx]->isEnd)
