@@ -8,7 +8,6 @@ class ServerContext
 {
   private:
 	int CGITimeOut;
-	int ClientReadTime;
 	typedef std::map<std::string, std::string> Type;
 	int keepAliveTimeout;
 	GlobalConfig globalConfig;
@@ -33,7 +32,6 @@ class ServerContext
 	void setCGITimeout(Tokens &token, Tokens &end);
 	int	getKeepAliveTime() const;
 	int getCGITimeOut() const;
-	int getClientReadTime() const ;
 
 };
 

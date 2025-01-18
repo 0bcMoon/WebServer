@@ -369,6 +369,7 @@ void Event::WriteEvent(const struct kevent *ev)
 void Event::ReadPipe(const struct kevent *ev)
 {
 	const char seq[4] = {'\r', '\n', '\r', '\n'};
+
 	if (ev->flags & EV_EOF && !ev->data)
 		return (void)close(ev->ident);
 	ProcMap_t::iterator p = this->procs.find((size_t)ev->udata);
@@ -441,7 +442,9 @@ int Event::waitProc(int pid)
 void Event::ProcEvent(const struct kevent *ev)
 {
 	int status = this->waitProc(ev->ident);
-	ProcMap_t::iterator p = this->procs.find(ev->ident); // need to crash for testing
+	ProcMap_t::iterator p = this->procs.find(ev->ident);
+	if (p == this->procs.end())
+		return ;
 	Proc &proc = p->second;
 	Client *client = this->connections.getClient(proc.client);
 	if (!client)
@@ -461,6 +464,23 @@ void Event::ProcEvent(const struct kevent *ev)
 	this->deleteProc(p);
 }
 
+static void serverError(const char *error)
+{
+	time_t now = time(NULL);
+	struct tm *timeinfo = localtime(&now);
+
+	std::stringstream ss;
+	const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+	const char *days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+	ss << "[" << days[timeinfo->tm_wday] << " " << months[timeinfo->tm_mon] << " " << std::setfill('0') << std::setw(2)
+	   << timeinfo->tm_mday << " " << std::setfill('0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill('0')
+	   << std::setw(2) << timeinfo->tm_min << ":" << std::setfill('0') << std::setw(2) << timeinfo->tm_sec << " "
+	   << (1900 + timeinfo->tm_year) << "]";
+	std::cerr << red;
+	std::cerr << ss.str() << " ";
+	std::cerr << "Intrenal Server Error: " << error << "\n";
+	std::cerr << _reset;
+}
 void Event::eventLoop()
 {
 	connections.init(this->ctx, this->kqueueFd);
@@ -478,7 +498,6 @@ void Event::eventLoop()
 				this->newConnection(ev->ident, connections);
 				continue;
 			}
-
 			try
 			{
 				if (ev->fflags & EV_ERROR)
@@ -496,19 +515,9 @@ void Event::eventLoop()
 				else if (ev->filter == EVFILT_TIMER)
 					this->connections.closeConnection(ev->ident);
 			}
-			catch (HttpResponse::IOException &e)
-			{
-				std::cerr << e.what() << " Error\n";
-				this->connections.closeConnection(ev->ident);
-			}
-			catch (Event::EventExpection &e)
-			{
-				std::cerr << e.what() << " Error\n";
-				this->connections.closeConnection(ev->ident);
-			}
 			catch (std::exception &e)
 			{
-				std::cerr << e.what() << " Error\n";
+				serverError(e.what());
 				this->connections.closeConnection(ev->ident);
 			}
 		}

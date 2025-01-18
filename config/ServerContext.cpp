@@ -156,10 +156,6 @@ int ServerContext::getCGITimeOut() const
 	return (this->CGITimeOut);
 }
 
-int ServerContext::getClientReadTime() const
-{
-	return (this->ClientReadTime);
-}
 
 int ServerContext::getKeepAliveTime() const
 {
