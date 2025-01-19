@@ -9,7 +9,8 @@
 #include "Location.hpp"
 
 #define URI_MAX 2048
-#define BUFFER_SIZE 5 * 1024 * 1024
+#define BUFFER_SIZE 1 * 1024 * 1024UL
+#define SOCK_BUFFER_SIZE 2 * 1024 * 1024
 
 typedef std::map<std::string, std::string>::iterator map_it;
 typedef std::map<std::string, std::string> Headers;

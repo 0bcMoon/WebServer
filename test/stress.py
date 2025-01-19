@@ -5,10 +5,10 @@ import concurrent.futures
 import time
 
 # Configuration
-url = "http://localhost:8000"
-num_requests = 1000                      # Total number of requests to send
+url = "http://127.0.0.1:8080"
+num_requests = 10000                      # Total number of requests to send
 # num_requests = 100                      # Total number of requests to send
-concurrent_workers = 256                  # Number of threads to use
+concurrent_workers = 24                  # Number of threads to use
 
 def send_request():
     try:

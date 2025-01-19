@@ -19,7 +19,6 @@
 #include "DataType.hpp"
 #include "HttpResponse.hpp"
 
-
 HttpRequest::HttpRequest() : fd(-1)
 {
 	reqSize = 0;
@@ -111,7 +110,7 @@ HttpRequest::~HttpRequest()
 
 void HttpRequest::readRequest(int data)
 {
-	size_t read_size = std::min(data, BUFFER_SIZE);
+	size_t read_size = std::min((size_t)data, BUFFER_SIZE);
 	int size = read(fd, this->reqBuffer.data(), read_size);
 	if (size < 0)
 		throw HttpResponse::IOException();
@@ -366,7 +365,8 @@ void HttpRequest::nLineHandle()
 	else if (crlfState == LRETURN)
 		crlfState = LNLINE;
 	else if (crlfState == LNLINE)
-	{}
+	{
+	}
 }
 
 void HttpRequest::crlfGetting()

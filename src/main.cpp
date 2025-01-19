@@ -13,8 +13,8 @@
 #include <cstring>
 #include <cerrno>
 
-#define MAX_EVENTS 256
-#define MAX_CONNECTIONS_QUEUE 256
+#define MAX_EVENTS 32
+#define MAX_CONNECTIONS_QUEUE 128
 #define CONF_FILE "webserv.conf"
 
 ServerContext *LoadConfig(const char *path)

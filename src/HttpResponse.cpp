@@ -74,7 +74,7 @@ void HttpResponse::clear()
 		close(responseFd);
 	if (!this->cgiOutFile.empty())
 	{
-		std::remove(this->cgiOutFile.data());
+		// std::remove(this->cgiOutFile.data());
 		this->cgiOutFile.clear();
 	}
 	responseFd = -1;
@@ -142,7 +142,7 @@ HttpResponse::~HttpResponse()
 {
 	if (responseFd >= 0)
 		close(responseFd);
-	remove(this->cgiOutFile.data());
+	// remove(this->cgiOutFile.data());
 }
 
 std::string HttpResponse::getAutoIndexStyle()
@@ -268,7 +268,7 @@ std::string HttpResponse::getErrorRes()
 	errorRes.statusLine = "HTTP/1.1 " + oss.str() + " " + status.description + "\r\n";
 	errorRes.title = oss.str() + " " + status.description;
 	errorRes.htmlErrorId = oss.str() + " " + status.description;
-	errorRes.connection = "Connection: close\r\n";
+	errorRes.connection = "Connection: Close\r\n";
 	errorRes.contentLen = getContentLenght();
 	if (this->responseFd >= 0)
 		close(responseFd);
@@ -487,7 +487,7 @@ void HttpResponse::writeCgiResponse()
 	if (resHeaders.count("Connection") == 0)
 	{
 		if (keepAlive)
-			resHeaders["Connection"] = "keep-alive";
+			resHeaders["Connection"] = "Keep-Alive";
 		else
 			resHeaders["Connection"] = "Close";
 	}
@@ -542,7 +542,7 @@ std::string HttpResponse::getStatusLine()
 std::string HttpResponse::getConnectionState()
 {
 	if (keepAlive)
-		return ("Connection: keep-alive\r\n");
+		return ("Connection: Keep-Alive\r\n");
 	return ("Connection: Close\r\n");
 }
 
@@ -594,9 +594,10 @@ int HttpResponse::sendBody(enum responseBodyType type)
 			return (1);
 		}
 		size_t readbuffer;
-		readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
+		// readbuffer = BUFFER_SIZE < (eventByte - writeByte) ? BUFFER_SIZE : (eventByte - writeByte);
+		readbuffer = std::min(BUFFER_SIZE,	eventByte - writeByte);
 		int size = read(responseFd, buff, readbuffer);
-		if (size < 0)
+		if (size < 0 || size == 0)
 			throw IOException("Read : " + std::string(strerror(errno)));
 		else if (size == 0)
 		{
@@ -710,7 +711,7 @@ void HttpResponse::responseCooking()
 			deleteMethodeHandler();
 		if (bodyType == LOAD_FILE)
 		{
-			this->responseFd = open(fullPath.c_str(), O_RDONLY);
+			this->responseFd = open(fullPath.c_str(), O_RDONLY | O_NONBLOCK);
 			if (responseFd < 0)
 				setHttpResError(500, "Internal Server Error");
 		}

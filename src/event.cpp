@@ -162,7 +162,7 @@ int Event::setNonBlockingIO(int sockfd, bool sockserver)
 		return (-1);
 	if (sockserver)
 		return (0);
-	int sock_buf_size = BUFFER_SIZE; // set socket send and recv buffer size
+	int sock_buf_size = SOCK_BUFFER_SIZE; // set socket send and recv buffer size
 	int result = setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &sock_buf_size, sizeof(sock_buf_size));
 	if (result < 0)
 		return (-1);
@@ -350,10 +350,11 @@ void Event::WriteEvent(const struct kevent *ev)
 		client->handleResponseError();
 	if (client->response.state == END_BODY)
 	{
+		bool conn = (!client->response.keepAlive || client->response.state == ERROR);
 		client->response.clear();
 		delete client->request.data[0];
 		client->request.data.erase(client->request.data.begin());
-		if (!client->response.keepAlive)
+		if (conn)
 			this->connections.closeConnection(client->getFd());
 		else if (client->request.data.size() == 0)
 		{
@@ -453,7 +454,7 @@ void Event::ProcEvent(const struct kevent *ev)
 		return (client->response.setHttpResError(502, "Bad Gateway"), this->deleteProc(p));
 	client->response.state = START_CGI_RESPONSE;
 	proc.clean();
-	int fd = open(proc.output.data(), O_RDONLY);
+	int fd = open(proc.output.data(), O_RDONLY | O_NONBLOCK);
 	if (fd < 0)
 		return client->response.setHttpResError(500, "Internal Server Error"), this->deleteProc(p);
 	client->response.responseFd = fd;
@@ -480,8 +481,9 @@ static void serverError(const char *error)
 }
 void Event::eventLoop()
 {
-	connections.init(this->ctx, this->kqueueFd);
 	int nev;
+
+	connections.init(this->ctx, this->kqueueFd);
 	while (1)
 	{
 		nev = kevent(this->kqueueFd, NULL, 0, this->evList, MAX_EVENTS, NULL);
